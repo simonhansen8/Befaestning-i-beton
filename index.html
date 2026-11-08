@@ -3824,6 +3824,8 @@ function ZqGov(r){let c=(r.kombinationer||[r])[r.styrendeKombination||0]||r,d=(c
 function ZqWith(b,ops){let m=structuredClone(b);for(let[p,v]of ops)ta(m,p,v);return m}
 function ZqPlate(b,anch){let t=Math.ceil(ai(b.anker.d)/2+1.2*ai(b.anker.d)),i=o=>Math.ceil(o/10)*10,x=Math.max(...anch.map(o=>Math.abs(o.x))),y=Math.max(...anch.map(o=>Math.abs(o.y))),ops=[],bx=i(2*(x+t)),by=i(2*(y+t));bx>b.plade.bx&&ops.push(["plade.bx",bx]);by>b.plade.by&&ops.push(["plade.by",by]);return ops}
 function ZqLayout(b,patch){let o={...b.opstilling,...patch},anch=Rl(o).map(u=>({...u,slids:null}));return[...Object.keys(patch).map(k=>["opstilling."+k,patch[k]]),["opstilling.anker",anch],...ZqPlate(b,anch)]}
+function ZqArmT(T,ds,ns,fo){let l=[],P="beton.armering.ankerarmeringTraek.";for(let d of ds)for(let n of ns)for(let f of(fo?[T.foering,T.foering==="stoed"?"ingen":"stoed"]:[T.foering])){let ops=[[P+"aktiv",!0],[P+"diameter",d],[P+"antalBoejler",n]];f!==T.foering&&ops.push([P+"foering",f]);l.push({txt:n+" bøjle"+(n>1?"r":"")+" Ø"+d+" ("+2*n+" ben pr. anker)"+(f!==T.foering?(f==="stoed"?", trækket ført videre ved stød i elementets armering":", ikke ført videre"):""),ops,cost:2*n*d*d+(f!==T.foering?1:0)})}return l.sort((p,q)=>p.cost-q.cost)}
+function ZqArmV(V,ds,cn){let l=[],P="beton.armering.ankerarmeringForskydning.",nm={overflade:"overfladearmering",boejle:"bøjle",loekke:"løkke"},fk={overflade:"benPrAnker",boejle:"antalBoejler",loekke:"antalLoekker"};for(let t of Object.keys(nm))for(let d of ds)for(let n of cn[t]){let legs=t==="overflade"?n:2*n;l.push({txt:nm[t]+": "+n+(t==="overflade"?" ben":t==="boejle"?" bøjle(r)":" løkke(r) pr. anker")+" Ø"+d,ops:[[P+"aktiv",!0],[P+"type",t],[P+"diameter",d],[P+fk[t],n]],cost:legs*d*d+(t===V.type?0:1)})}return l.sort((p,q)=>p.cost-q.cost)}
 function ZqSpecs(b){
  let a=b.anker,be=b.beton,op=b.opstilling,S=[];
  let num=(key,lbl,unit,v0,vmax,step,mk)=>{if(Number.isFinite(v0)&&vmax>v0)S.push({key,lbl,unit,kind:"num",v0,vmax,step,mk})},
@@ -3840,9 +3842,10 @@ function ZqSpecs(b){
  else if(op.type==="cirk"){let n0=Math.round(+op.n||4),l=[];for(let n=n0+1;n<=Math.min(24,n0+8);n++)l.push({txt:n+" bolte",ops:ZqLayout(b,{n})});disc("opstilling.n","Antal bolte",n0+" bolte",l)}
  let an=b.opstilling.anker||[],xs=an.map(u=>u.x),ys_=an.map(u=>u.y);
  if(an.length)for(let e of["xNeg","xPos","yNeg","yPos"]){if(be.kanter[e]==null)continue;let c0={xNeg:be.kanter.xNeg+Math.min(...xs),xPos:be.kanter.xPos-Math.max(...xs),yNeg:be.kanter.yNeg+Math.min(...ys_),yPos:be.kanter.yPos-Math.max(...ys_)}[e];num("beton.kanter."+e,"Kantafstand "+ZqEdgeSym[e],"mm",c0,Math.max(c0*3,c0+600),5,v=>[["beton.kanter."+e,{xNeg:v-Math.min(...xs),xPos:v+Math.max(...xs),yNeg:v-Math.min(...ys_),yPos:v+Math.max(...ys_)}[e]]])}
- let ar=be.armering||{};
- ar.ankerarmeringTraek&&!ar.ankerarmeringTraek.aktiv&&disc("beton.armering.ankerarmeringTraek.aktiv","Ankerarmering for træk","ingen",[{txt:"aktivér (Ø"+ar.ankerarmeringTraek.diameter+", "+ar.ankerarmeringTraek.antalBoejler+" bøjle(r), f<sub>yk</sub> "+ar.ankerarmeringTraek.fyk+" MPa)",ops:[["beton.armering.ankerarmeringTraek.aktiv",!0]]}]);
- ar.ankerarmeringForskydning&&!ar.ankerarmeringForskydning.aktiv&&disc("beton.armering.ankerarmeringForskydning.aktiv","Ankerarmering for forskydning","ingen",[{txt:"aktivér (Ø"+ar.ankerarmeringForskydning.diameter+", "+ar.ankerarmeringForskydning.antalBoejler+" bøjle(r), f<sub>yk</sub> "+ar.ankerarmeringForskydning.fyk+" MPa)",ops:[["beton.armering.ankerarmeringForskydning.aktiv",!0]]}]);
+ let ar=be.armering||{},T=ar.ankerarmeringTraek,V=ar.ankerarmeringForskydning,P="beton.armering.";
+ if(T){let cur=T.aktiv?T.antalBoejler+" bøjle(r) Ø"+T.diameter:"ingen",l=ZqArmT(T,[8,10,12,14,16],[1,2,3,4,5,6],!0);disc(P+"ankerarmeringTraek","Ankerarmering for træk (stangdiameter, antal bøjler)",cur,l)}
+ if(V){let tn={overflade:"overfladearmering",boejle:"bøjle",loekke:"løkke"}[V.type]||V.type,cnt=V.type==="overflade"?V.benPrAnker:V.type==="loekke"?V.antalLoekker:V.antalBoejler,cur=V.aktiv?tn+" "+(cnt??"")+" Ø"+V.diameter:"ingen",l=ZqArmV(V,[8,10,12,14,16],{overflade:[2,3,4,5,6,8,10,12],boejle:[1,2,3,4,5,6],loekke:[1,2,3,4,5,6]});disc(P+"ankerarmeringForskydning","Ankerarmering for forskydning (type, diameter, antal)",cur,l)}
+ if(T&&V){let lt=ZqArmT(T,[10,12,16],[1,2,3,4,6],!1),lv=ZqArmV(V,[10,12,16],{overflade:[2,4,6,8,12],boejle:[1,2,3,4,6],loekke:[1,2,3,4,6]}),l=[];for(let x of lt)for(let y of lv)l.push({txt:x.txt+" + "+y.txt,ops:[...x.ops,...y.ops],cost:x.cost+y.cost});l.sort((p,q)=>p.cost-q.cost);disc(P+"begge","Ankerarmering for træk og forskydning samtidig","ingen",l);S[S.length-1].lazy=!0}
  return S}
 function ZqSolve(b,s,cur){
  let res={s,hit:null,best:null};
@@ -3858,7 +3861,7 @@ function ZqSolve(b,s,cur){
 function ZqRun(){
  let b=structuredClone(he),cur=ZqEv(b);if(!cur){ZqS={sig:JSON.stringify(he),fail:!0};return}
  let gov=ZqGov(cur.r),out=[],none=[];
- for(let s of ZqSpecs(b)){let r=ZqSolve(b,s,cur);if(r.hit)out.push(r);else if(r.best&&r.best.u<cur.u*.98)out.push(r);else none.push(s.lbl)}
+ let armHit=!1;for(let s of ZqSpecs(b)){if(s.lazy&&armHit)continue;let r=ZqSolve(b,s,cur);if(r.hit){out.push(r);/ankerarmering/.test(s.key)&&(armHit=!0)}else if(r.best&&r.best.u<cur.u*.98&&!s.lazy)out.push(r);else if(r.best&&s.lazy&&r.best.u<cur.u*.98&&!armHit)out.push(r);else s.lazy||none.push(s.lbl)}
  let rel=r=>r.hit?(r.s.kind==="num"?(r.hit.v-r.s.v0)/r.s.v0:.08*(r.hit.rank+1)):1e3-(cur.u-r.best.u);
  out.sort((p,q)=>rel(p)-rel(q));
  ZqS={sig:JSON.stringify(he),cur:cur.u,gov,out,none}}
@@ -3923,7 +3926,7 @@ NB: Beregnet med midlertidig mock-beregningskerne \u2013 m\xE5 ikke anvendes til
 
 <div class="ajour-pop" id="ajour-pop" hidden role="dialog" aria-label="Versionstjek"></div>
 <script>(function(){
-var APP_BUILD="2026-11-08.2",REPO="simonhansen8/Befaestning-i-beton",chip=document.getElementById("ajour-chip"),pop=document.getElementById("ajour-pop");
+var APP_BUILD="2026-11-08.3",REPO="simonhansen8/Befaestning-i-beton",chip=document.getElementById("ajour-chip"),pop=document.getElementById("ajour-pop");
 if(!chip)return;
 var info={state:"check",html:"Tjekker …"};
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
