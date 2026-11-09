@@ -453,7 +453,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let valgtBrud: string | null = null;
   let visMaal = true;
   let visLast = true;
-  let visTilbehoer = false; // skematisk overfladearmering (grøn): vises kun på forlangende
+  let visTilbehoer = true; // overfladearmering (stænger); kan skjules for overblikket
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
 
   function tegning(): HTMLElement {
@@ -485,7 +485,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal, visLast, valgtBrud, visTilbehoer);
       scene3d.opdater(b);
       sek.append(
-        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visLast ? 'aktiv' : '', 'data-kraefter': '1', onclick: () => { visLast = !visLast; draw(); } }, 'Kræfter'), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visTilbehoer ? 'aktiv' : '', 'data-tilbehoer': '1', title: 'Viser den overfladearmering/kantarmering, som bøjlernes bøjning forudsættes at omslutte (skematisk, ikke et input)', onclick: () => { visTilbehoer = !visTilbehoer; draw(); } }, 'Overfladearm.'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
+        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visLast ? 'aktiv' : '', 'data-kraefter': '1', onclick: () => { visLast = !visLast; draw(); } }, 'Kræfter'), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visTilbehoer ? 'aktiv' : '', 'data-tilbehoer': '1', title: 'Viser/skjuler overfladearmeringen (stænger) som bøjlerne omslutter', onclick: () => { visTilbehoer = !visTilbehoer; draw(); } }, 'Overfladearm.'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
         scene3d.element,
         h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', inaktiv: '#9ca3af', forankring: '#f59e0b', tilbehoer: '#0f766e', zone: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
         h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Klik på et mål eller en last for at rette den (Enter anvender, Esc fortryder). Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
