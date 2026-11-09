@@ -93,7 +93,15 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     try { await navigator.clipboard.writeText(t); dialog('Rapport kopieret', [h('p', {}, 'Tekstrapporten er kopieret til udklipsholderen.')], []); }
     catch { dialog('Kopiér rapport', [h('p', {}, 'Kopiering blev afvist af browseren. Markér og kopiér teksten her:'), h('textarea', { readonly: true, rows: 14, style: 'width:100%' }, t)], []); }
   };
+  // Anker for rulleposition: det betjente element (fokus eller sidste tryk). Efter gentegning rulles siden, så netop det element står samme sted på skærmen – også når indhold over det skifter højde.
+  const ANKER = 'input, select, textarea, button, summary';
+  let sidsteTryk: HTMLElement | null = null;
+  document.addEventListener('pointerdown', (e) => { sidsteTryk = (e.target as HTMLElement | null)?.closest?.(ANKER) as HTMLElement | null; }, true);
+  const ankerNoegle = (n: HTMLElement): string | null => n.dataset.felt ? 'f:' + n.dataset.felt : n.dataset.armvis ? 'a:' + n.dataset.armvis : null;
   const draw = () => {
+    let ankerN = (document.activeElement as HTMLElement | null);
+    if (!ankerN || !rod.contains(ankerN) || !ankerN.matches?.(ANKER)) ankerN = sidsteTryk && rod.contains(sidsteTryk) ? sidsteTryk : null;
+    const ankerKey = ankerN ? ankerNoegle(ankerN) : null, ankerTop = ankerN && ankerKey ? ankerN.getBoundingClientRect().top : null;
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
     const faelles = 'input, select, textarea, button, summary';
@@ -106,6 +114,11 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     const nyOutput = rod.querySelector('.output');
     if (nyOutput) nyOutput.scrollTop = outputTop;
     window.scrollTo(sideX, sideY);
+    if (ankerKey && ankerTop != null) {
+      const [t, k] = [ankerKey[0], ankerKey.slice(2)];
+      const ny = rod.querySelector<HTMLElement>(t === 'f' ? `[data-felt="${CSS.escape(k)}"]` : `[data-armvis="${CSS.escape(k)}"]`);
+      if (ny) { const d = ny.getBoundingClientRect().top - ankerTop; if (Math.abs(d) > 0.5) window.scrollBy(0, d); }
+    }
     if (fokusIdx >= 0) Array.from(rod.querySelectorAll<HTMLElement>(faelles))[fokusIdx]?.focus({ preventScroll: true });
     if (fokus) {
       const n = rod.querySelector<HTMLElement>(`[data-felt="${CSS.escape(fokus)}"]`);
