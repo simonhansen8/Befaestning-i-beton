@@ -83,6 +83,24 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
   scene.add(new THREE.AmbientLight(0xffffff, 1.1), lys);
   const kontrol = new OrbitControls(kamera, labels.domElement);
   kontrol.enableDamping = false;
+  // Hjulet scroller siden; zoom kun med Ctrl/⌘ + hjul, efter klik i visningen, eller med knapperne (som i kortvisninger).
+  kontrol.enableZoom = false;
+  let aktiv = false, hintTimer = 0;
+  const hint = document.createElement('div'); hint.className = 'hint3d'; hint.textContent = 'Hold Ctrl (⌘) nede og scroll for at zoome – eller klik i visningen';
+  const zoomKnapper = document.createElement('div'); zoomKnapper.className = 'zoom3d';
+  const zoom = (f: number) => { kamera.position.sub(kontrol.target).multiplyScalar(f).add(kontrol.target); kontrol.update(); bed(); };
+  for (const [txt, f, navn] of [['+', 0.8, 'Zoom ind'], ['−', 1.25, 'Zoom ud']] as const) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.title = navn; b.setAttribute('aria-label', navn);
+    b.addEventListener('click', () => zoom(f)); zoomKnapper.append(b);
+  }
+  element.append(hint, zoomKnapper);
+  element.addEventListener('wheel', (e) => {
+    const ok = e.ctrlKey || e.metaKey || aktiv;
+    kontrol.enableZoom = ok;
+    if (!ok) { hint.classList.add('synlig'); clearTimeout(hintTimer); hintTimer = window.setTimeout(() => hint.classList.remove('synlig'), 1500); }
+  }, { capture: true, passive: true });
+  element.addEventListener('pointerdown', () => { aktiv = true; });
+  element.addEventListener('pointerleave', () => { aktiv = false; });
   let indhold = new THREE.Group(); scene.add(indhold);
   let beskrivelse: Scene3DBeskrivelse | null = null;
   let planlagt = 0;
@@ -130,10 +148,10 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
   function tilfoej(d: Del, g: THREE.Group, s: number) {
     if (d.type === 'boks') {
       const geo = new THREE.BoxGeometry(d.x1 - d.x0, d.z1 - d.z0, d.y1 - d.y0);
-      const beton = d.rolle === 'beton';
-      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: beton ? FARVE.beton : FARVE.plade, transparent: beton, opacity: beton ? 0.28 : 1, roughness: 0.8, depthWrite: !beton, side: beton ? THREE.DoubleSide : THREE.FrontSide }));
+      const beton = d.rolle === 'beton', brud = d.rolle === 'brud';
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: brud ? 0xdc2626 : beton ? FARVE.beton : FARVE.plade, transparent: beton || brud, opacity: brud ? 0.28 : beton ? 0.28 : 1, roughness: 0.8, depthWrite: !beton && !brud, side: beton ? THREE.DoubleSide : THREE.FrontSide }));
       mesh.position.copy(v((d.x0 + d.x1) / 2, (d.y0 + d.y1) / 2, (d.z0 + d.z1) / 2));
-      const kant = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: beton ? 0x6b7280 : 0x2f343c }));
+      const kant = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: brud ? 0xdc2626 : beton ? 0x6b7280 : 0x2f343c }));
       kant.position.copy(mesh.position);
       g.add(mesh, kant);
       if (beton && d.afbrudt) { const e = etiket('(afbrudt)'); e.position.copy(v(d.x0, d.y0, d.z0)); g.add(e); }
@@ -151,6 +169,14 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
         m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
         g.add(m);
       }
+    } else if (d.type === 'linjer') {
+      const pts = d.segmenter.flatMap(([a, b]) => [v(...a), v(...b)]);
+      g.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xdc2626, depthTest: false })));
+    } else if (d.type === 'tekst') {
+      const e = etiket(d.tekst, 'etiket3d brud'); e.position.copy(v(...d.pos)); g.add(e);
+    } else if (d.type === 'markering') {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(d.r, d.r, d.z1 - d.z0, 24), new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: d.r > 0 && d.z1 - d.z0 > 4 * d.r ? 0.25 : 0.6, depthWrite: false }));
+      m.position.copy(v(d.x, d.y, (d.z0 + d.z1) / 2)); g.add(m);
     } else if (d.type === 'cirkel') {
       const pts = Array.from({ length: 97 }, (_, i) => v(d.x + d.radius * Math.cos((i / 96) * 2 * Math.PI), d.y + d.radius * Math.sin((i / 96) * 2 * Math.PI), d.z));
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: FARVE.zone })));
