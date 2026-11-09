@@ -13,7 +13,7 @@ Genereres af `app/src/core/sporbarhed.test.ts` (`npm run sporbarhed`); CI fejler
 | N_p | Udtrækning | EN 1992-4, 7.2.1.5 (indstøbt), 7.2.1.6 (indlimet) | (7.12) | `tension.ts / bond.ts` | ja | `tension.golden.test.ts` | – |
 | N_c | Betonkegle | EN 1992-4, 7.2.1.4 | – | `cone.ts` | ja | `cone.golden.test.ts` | – |
 | N_sp | Spaltning | EN 1992-4, 7.2.1.7 | – | `splitting.ts` | nej | `splitting.golden.test.ts` | #11 ccr,sp og hmin skønnet |
-| N_cb | Sidebrud | EN 1992-4, 7.2.1.8 | – | `sideblowout.ts` | nej | `sideblowout.golden.test.ts` | – |
+| N_cb | Sidebrud | EN 1992-4, 7.2.1.8 | – | `sideblowout.ts` | ja | `sideblowout.golden.test.ts` | – |
 | N_re | Ankerarmering i træk (stål) | EN 1992-4, 7.2.1.2(2) | – | `reinforcement.ts` | nej | `kombination.golden.test.ts` | #14 dnom/ben pr. anker |
 | N_a | Ankerarmering i træk (forankring) | EN 1992-4, 7.2.1.2(2) | – | `reinforcement.ts` | nej | `kombination.golden.test.ts` | #14 dnom/ben pr. anker |
 | N_cre | Betonkegle med ankerarmering | EN 1992-4, 7.2.1.2(2) | – | `reinforcement.ts` | nej | `kombination.golden.test.ts` | – |

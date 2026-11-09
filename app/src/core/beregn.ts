@@ -48,7 +48,7 @@ export function beregnProjekt(m: Projektmodel): ProjektResultat {
   const { indstillinger: ind, bemaerkninger } = parseIndstillinger(m.indstillinger ?? {});
   const fck = fckAf(m.beton);
   const Ec = youngBeton(ind, fck);
-  const st = afledStaal({ staalklasse: m.anker.staalklasse, d: m.anker.d, gevind: m.anker.gevind, As: m.anker.As });
+  const st = afledStaal({ staalklasse: m.anker.staalklasse, fuk: m.anker.fuk, fyk: m.anker.fyk, duktil: m.anker.duktil, d: m.anker.d, gevind: m.anker.gevind, As: m.anker.As });
   const p = partialkoefficienter(ind, { type: m.anker.type, fuk: st.fuk, fyk: st.fyk, gammaInstIndlimet: m.anker.gammaInst });
   const modelDiag: Diagnostik[] = [
     ...bemaerkninger.map((b): Diagnostik => ({ niveau: b.niveau, kode: 'indstilling-justeret', felt: b.felt, paragraf: '', data: { tekst: b.tekst } })),
