@@ -24,7 +24,7 @@ export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; s
 
 const dk = (v: number, d = 1) => v.toFixed(d).replace('.', ',').replace('-', '−');
 
-export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true, valgtBrud: string | null = null): Scene3DBeskrivelse {
+export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true, valgtBrud: string | null = null, visTilbehoer = true): Scene3DBeskrivelse {
   const a = m.anker, be = m.beton, pl = m.plade, ankre: { id: number; x: number; y: number }[] = m.opstilling.anker ?? [];
   const hef = a.hef, d = a.d, e = pl.afstandTilBeton ?? 0, t = pl.t;
   const indstoebt = a.type !== 'indlimet';
@@ -67,8 +67,10 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         if (at.krog) {
           stang(pt(1, zt), pt(-1, zt), r, { inaktiv });
           // overfladearmering som bøjlens bøjning omslutter (skematisk; ikke et input)
-          const fl = (ww: number): Pkt3 => [q.x + w[0] * ww, q.y + w[1] * ww, zt - p];
-          stang(fl(M), fl(M + 8 * p), r, { variant: 'tilbehoer' });
+          // gennemgående stang over hele ankergruppen (bøjlens bøjning omslutter den) – i bøjlens normalretning w
+          const ws = ankre.map((a2) => a2.x * w[0] + a2.y * w[1]), lo = Math.min(...ws) - 200, hi = Math.max(...ws) + M + 200, uq = q.x * u[0] + q.y * u[1];
+          const fl = (ww: number): Pkt3 => [u[0] * uq + w[0] * ww, u[1] * uq + w[1] * ww, zt - p];
+          stang(fl(lo), fl(hi), r, { variant: 'tilbehoer' });
         }
       }
     }
@@ -198,6 +200,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   if (aktiv('Mx')) dele.push({ type: 'bue', rolle: 'last', centrum: c, akse: 'x', radius: L * 0.32, fortegn: l.Mx! > 0 ? 1 : -1, tekst: `Mx = ${dk(l.Mx! / 1e6)} kNm`, felt: 'last:Mx', vaerdi: l.Mx! / 1e6, vinkel: 270 });
   if (aktiv('My')) dele.push({ type: 'bue', rolle: 'last', centrum: c, akse: 'y', radius: L * 0.32, fortegn: l.My! > 0 ? 1 : -1, tekst: `My = ${dk(l.My! / 1e6)} kNm`, felt: 'last:My', vaerdi: l.My! / 1e6, vinkel: 270 });
   if (aktiv('T')) dele.push({ type: 'bue', rolle: 'last', centrum: [0, 0, topZ + 2], akse: 'z', radius: Math.max(pl.bx, pl.by) * 0.42, fortegn: l.T! > 0 ? 1 : -1, tekst: `T = ${dk(l.T! / 1e6)} kNm`, felt: 'last:T', vaerdi: l.T! / 1e6, vinkel: 300 });
+  if (!visTilbehoer) dele.splice(0, dele.length, ...dele.filter((x) => !(x.type === 'stang' && x.variant === 'tilbehoer')));
   if (!visLast) dele.splice(0, dele.length, ...dele.filter((x) => x.type !== 'pil' && x.type !== 'bue'));
   // idealiserede brudlegemer for den styrende brudform (EN 1992-4, 35°-model); kun vejledende
   const styr = k?.styrendeBrudform ?? null;

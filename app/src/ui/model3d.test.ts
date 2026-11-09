@@ -136,3 +136,13 @@ describe('3D-beskrivelse', () => {
     expect(antal(100)).toBeGreaterThan(antal(200));
   });
 });
+
+describe('skematisk overfladearmering kan skjules', () => {
+  it('tilbehør (grøn) udelades når visTilbehoer er falsk, bøjlerne bevares', () => {
+    const i: any = structuredClone(standardModel('2026-01-01')); i.beton.armering.ankerarmeringTraek.aktiv = true;
+    const st = (vis: boolean) => (byg3d(i, null, null, false, true, true, null, vis).dele.filter((x) => x.type === 'stang') as any[]);
+    expect(st(true).some((x) => x.variant === 'tilbehoer')).toBe(true);
+    expect(st(false).some((x) => x.variant === 'tilbehoer')).toBe(false);
+    expect(st(false).length).toBeGreaterThan(0);
+  });
+});
