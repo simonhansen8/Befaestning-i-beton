@@ -12,7 +12,8 @@ import { eftervisBetonkegle } from './cone';
 import { minKantafstand } from './geometry';
 
 const G = JSON.parse(readFileSync(new URL('../../../golden/cases.json', import.meta.url), 'utf8'));
-const cases = G.cases.filter((c: any) => c.resultat.tilstand === 'ok');
+// Modeller med aktiv ankerarmering for træk erstatter N_c (7.2.1.9) – armeringsmodulet er endnu ikke porteret.
+const cases = G.cases.filter((c: any) => c.resultat.tilstand === 'ok' && !c.model.beton.armering.ankerarmeringTraek.aktiv);
 const naer = (a: number | null, b: number | null) => (a == null || b == null ? a === b : Math.abs(a - b) <= 1e-7 * Math.max(1, Math.abs(b)));
 
 describe('betonkegle mod facit', () => {
