@@ -1,6 +1,6 @@
 // Samlet eftervisning af én lastkombination: alle brudformer og interaktion. Rene tal; ingen tekst.
-import { eftervisBond } from './bond';
-import { eftervisBetonkegle } from './cone';
+import { eftervisBond, type BondResultat } from './bond';
+import { eftervisBetonkegle, type KegleResultat } from './cone';
 import { fckAf } from './concrete';
 import { kantbrud, type KantbrudResultat } from './edgebreakout';
 import { interaktionBeton, interaktionStaal, type ArmeringsTilfaelde } from './interaction';
@@ -11,10 +11,10 @@ import {
   armeringForskydningVirkning, armeringTraekVirkning, armeringsKant, eftervisForskydningsArmering, eftervisTraekArmering, vaelgArmKant,
   type ArmeringT, type ArmeringV, type ForskydningsArmering, type TraekArmering,
 } from './reinforcement';
-import { sideblowout } from './sideblowout';
+import { sideblowout, type SideblowoutGruppe } from './sideblowout';
 import { harLoeftestang, pryout, staalbrudForskydning } from './shear';
 import type { Indstillinger } from './settings';
-import { spaltning } from './splitting';
+import { spaltning, type SpaltningMellem } from './splitting';
 import type { AnkerStaal } from './steel';
 import { hovedareal, staalbrudTraek, traekOversigt, udtraekning, type TraekOversigt } from './tension';
 
@@ -45,7 +45,24 @@ export interface Brudform {
   styrendeAnker: number | number[] | null;
 }
 
+/** Mellemresultater til visning af beregningen og brudlegemerne pr. brudform (ingen ny beregning). */
+export interface Detaljer {
+  gamma: { Ms: number; Mp: number; Mc: number; Msp: number; McV: number; MsV: number; MsRe: number };
+  N_s?: { As: number; fuk: number; eta: number | null };
+  N_p?: { ah?: number; k2?: number; bond?: BondResultat };
+  N_c?: KegleResultat;
+  N_sp?: SpaltningMellem;
+  N_cb?: SideblowoutGruppe;
+  V_s?: { As: number; fuk: number; loeftestang: boolean; duktil: boolean };
+  V_cp?: { kegle?: KegleResultat; k8?: number; enkeltStyrer?: boolean };
+  /** Forreste række og excentricitet er i kantbrud.styrende / kanterPr. */
+  NV_s?: { betaN: number; betaV: number };
+  NV?: { betaN: number; betaV: number; styrendeTraek: string | null; styrendeForskydning: string | null; ligning: string; I755?: number; I756?: number; k11: number; valg: string };
+  stor: boolean;
+}
+
 export interface KombinationsResultat {
+  detaljer: Detaljer;
   brudformer: Brudform[];
   maksUdnyttelse: number; styrendeBrudform: string | null;
   fordeling: TraekFordeling; traek: TraekOversigt; forskydning: ForskydningsFordeling;
@@ -154,7 +171,17 @@ export function beregnKombination(
     const u = b.udnyttelse == null || Number.isNaN(b.udnyttelse) ? Infinity : b.udnyttelse;
     if (u > maks || (styrende == null && u >= maks)) { maks = u; styrende = b.id; }
   }
-  return { brudformer: out, maksUdnyttelse: maks, styrendeBrudform: styrende, fordeling: f, traek: t, forskydning: v, armT, armV, tilfaelde, kantbrud: forste, spaltningAarsag: N_sp.aarsag, staalForskydningAarsag: V_s.aarsag ?? null, loeftestang: lof.medLoeftestang, armKant: armKant ? { kant: armKant.kant } : null };
+  const detaljer: Detaljer = {
+    gamma: { Ms: p.gammaMs, Mp: p.gammaMp, Mc: p.gammaMc, Msp: p.gammaMsp, McV: p.gammaMcV, MsV: p.gammaMsV, MsRe: p.gammaMsRe }, stor,
+    N_s: { As: st.As, fuk: st.fuk, eta: m.anker.NRksEta ?? null },
+    N_p: indl ? { bond: (N_p as { mellem?: BondResultat }).mellem } : { ah: hovedareal(m.anker), k2: m.beton.revnet ? 7.5 : 10.5 },
+    N_c: (N_c as { mellem?: KegleResultat }).mellem, N_sp: (N_sp as { mellem?: SpaltningMellem }).mellem, N_cb: (N_cb as { styrende?: SideblowoutGruppe }).styrende,
+    V_s: { As: st.As, fuk: st.fuk, loeftestang: lof.medLoeftestang, duktil: st.duktil },
+    V_cp: { kegle: V_cp.kegle, k8: V_cp.k8, enkeltStyrer: V_cp.enkeltStyrer },
+    NV_s: { betaN: NV_s.betaN, betaV: NV_s.betaV },
+    NV: { betaN: NV.betaN, betaV: NV.betaV, styrendeTraek: NV.styrendeTraek, styrendeForskydning: NV.styrendeForskydning, ligning: NV.ligning, I755: NV.I755, I756: NV.I756, k11: m.anker.k11, valg: ind.interaktion },
+  };
+  return { detaljer, brudformer: out, maksUdnyttelse: maks, styrendeBrudform: styrende, fordeling: f, traek: t, forskydning: v, armT, armV, tilfaelde, kantbrud: forste, spaltningAarsag: N_sp.aarsag, staalForskydningAarsag: V_s.aarsag ?? null, loeftestang: lof.medLoeftestang, armKant: armKant ? { kant: armKant.kant } : null };
 }
 
 /**
