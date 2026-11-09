@@ -50,6 +50,10 @@ export interface KombinationsResultat {
   maksUdnyttelse: number; styrendeBrudform: string | null;
   fordeling: TraekFordeling; traek: TraekOversigt; forskydning: ForskydningsFordeling;
   armT: ArmeringT; armV: ArmeringV; tilfaelde: ArmeringsTilfaelde; kantbrud: KantbrudResultat;
+  /** Hvorfor spaltning/stålbrud er irrelevant (til diagnostik). */
+  spaltningAarsag: string | null; staalForskydningAarsag: string | null; loeftestang: boolean;
+  /** Valgt armeringskant (forreste række) og om forskydningsarmeringen dækker en kant. */
+  armKant: { kant: KantNavn } | null;
 }
 
 const trad = (b: { id: string; relevant: boolean; udnyttelse: number | null; styrendeAnker: number | number[] | null }, Ed: number, Rd: number, Rk: number): Brudform =>
@@ -150,7 +154,7 @@ export function beregnKombination(
     const u = b.udnyttelse == null || Number.isNaN(b.udnyttelse) ? Infinity : b.udnyttelse;
     if (u > maks || (styrende == null && u >= maks)) { maks = u; styrende = b.id; }
   }
-  return { brudformer: out, maksUdnyttelse: maks, styrendeBrudform: styrende, fordeling: f, traek: t, forskydning: v, armT, armV, tilfaelde, kantbrud: forste };
+  return { brudformer: out, maksUdnyttelse: maks, styrendeBrudform: styrende, fordeling: f, traek: t, forskydning: v, armT, armV, tilfaelde, kantbrud: forste, spaltningAarsag: N_sp.aarsag, staalForskydningAarsag: V_s.aarsag ?? null, loeftestang: lof.medLoeftestang, armKant: armKant ? { kant: armKant.kant } : null };
 }
 
 /**
