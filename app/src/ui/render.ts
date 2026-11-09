@@ -5,6 +5,7 @@ import { standardModel } from '../core/indlaes';
 import { KANTFELTER, SEKTIONER } from './felter';
 import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
+import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { tekst } from './tekster';
 import { FEJLTEKST, laesSti, visFelt } from './vaerdi';
 
@@ -38,7 +39,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
     const sel = aktivt instanceof HTMLInputElement ? [aktivt.selectionStart, aktivt.selectionEnd] : null;
-    rod.replaceChildren(topbar(), h('main', { class: 'layout' }, h('div', { class: 'input' }, ...sektioner()), h('div', { class: 'output' }, resultat(), diagnostik())));
+    rod.replaceChildren(topbar(), h('main', { class: 'layout' }, h('div', { class: 'input' }, ...sektioner()), h('div', { class: 'output' }, resultat(), tegning(), diagnostik())));
     if (fokus) {
       const n = rod.querySelector<HTMLElement>(`[data-felt="${CSS.escape(fokus)}"]`);
       n?.focus();
@@ -173,6 +174,12 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           h('td', {}, h('code', {}, b.id), ' ', BRUDFORM[b.id] ?? ''),
           h('td', {}, b.Ed ? kN(b.Ed) : ''), h('td', {}, b.Rd ? kN(b.Rd) : ''),
           h('td', {}, h('div', { class: 'bar' }, h('div', { class: `fyld ${b.udnyttelse! > 1 ? 'over' : ''}`, style: `width:${Math.min(100, b.udnyttelse! * 100)}%` }), h('span', {}, proc(b.udnyttelse)))))))));
+  }
+
+  function tegning(): HTMLElement {
+    const t = store.tilstand;
+    const k = t.resultat ? t.resultat.kombinationer[t.valgtKombination ?? 0]?.resultat ?? null : null;
+    return h('section', { class: 'res' }, h('h2', {}, 'Plantegning'), h('div', { class: 'planbox', html: plantegningSvg(t.model, k) }), h('p', { class: 'note' }, PLAN_FORKLARING));
   }
 
   function diagnostik(): HTMLElement {
