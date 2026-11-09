@@ -1,8 +1,11 @@
+import { ecmAfFck } from './concrete';
 import { DK_NA, GAMMA3_AF_KONTROLKLASSE, type Konsekvensklasse, type Kontrolklasse } from './constants';
 
 /** Indstillinger som brugeren kan sætte. Kun RÅ valg gemmes: γ3 er IKKE et input – den udledes af kontrolklassen. */
 export interface IndstillingerInput {
   kontrolklasse?: Kontrolklasse | 'skaerpet';
+  /** Manuel overstyring af γ3. Uden værdi udledes γ3 af kontrolklassen. */
+  gamma3?: number | null;
   konsekvensklasse?: Konsekvensklasse;
   kfiPaaLaster?: boolean;
   interaktion?: 'gunstigst' | 'potens' | 'lineaer';
@@ -13,11 +16,13 @@ export interface IndstillingerInput {
   gammaMsTraekFaktor?: number; gammaMsTraekMin?: number;
   gammaMsForskFaktor?: number; gammaMsForskMin?: number; gammaMsForskHoej?: number;
   gammaMsRe?: number; gammaCt?: number; alphaCt?: number;
-  Es?: number; Ec?: number;
+  Es?: number; Ec?: number | null;
 }
 
 export interface Indstillinger {
   kontrolklasse: Kontrolklasse;
+  /** Manuel γ3 (≥ 1,0) eller null = udledt af kontrolklassen. */
+  gamma3Overstyring: number | null;
   konsekvensklasse: Konsekvensklasse;
   kfiPaaLaster: boolean;
   interaktion: 'gunstigst' | 'potens' | 'lineaer';
@@ -28,7 +33,9 @@ export interface Indstillinger {
   gammaMsTraekFaktor: number; gammaMsTraekMin: number;
   gammaMsForskFaktor: number; gammaMsForskMin: number; gammaMsForskHoej: number;
   gammaMsRe: number; gammaCt: number; alphaCt: number;
-  Es: number; Ec: number;
+  Es: number;
+  /** Manuel Ec [MPa] eller null = udledt af betonklassen (EN 1992-1-1 Tabel 3.1). */
+  EcOverstyring: number | null;
 }
 
 export interface Bemaerkning { niveau: 'advarsel' | 'fejl'; felt: string; tekst: string }
@@ -45,8 +52,16 @@ export function parseIndstillinger(rå: IndstillingerInput = {}): { indstillinge
     kontrolklasse = 'normal';
     bemaerkninger.push({ niveau: 'advarsel', felt: 'indstillinger.kontrolklasse', tekst: 'Skærpet kontrolklasse (γ3 = 0,95) er ikke hjemlet for befæstninger og er sat til udførelsesklasse (γ3 = 1,00).' });
   } else kontrolklasse = oneOf(rå.kontrolklasse, ['lempet', 'normal'] as const, 'normal');
+  let gamma3Overstyring: number | null = null;
+  if (typeof rå.gamma3 === 'number' && Number.isFinite(rå.gamma3) && rå.gamma3 > 0) {
+    if (rå.gamma3 < 1) {
+      bemaerkninger.push({ niveau: 'advarsel', felt: 'indstillinger.gamma3', tekst: `γ3 = ${String(rå.gamma3).replace('.', ',')} < 1,0 er ikke hjemlet for befæstninger (kontrolklasser udgår under BR18 § 16, stk. 1). Der regnes med γ3 = 1,0.` });
+      gamma3Overstyring = 1;
+    } else gamma3Overstyring = rå.gamma3;
+  }
   const indstillinger: Indstillinger = {
     kontrolklasse,
+    gamma3Overstyring,
     konsekvensklasse: oneOf(rå.konsekvensklasse, ['CC1', 'CC2', 'CC3'] as const, 'CC2'),
     kfiPaaLaster: rå.kfiPaaLaster === true,
     interaktion: oneOf(rå.interaktion, ['gunstigst', 'potens', 'lineaer'] as const, 'gunstigst'),
@@ -64,9 +79,13 @@ export function parseIndstillinger(rå: IndstillingerInput = {}): { indstillinge
     gammaCt: positivt(rå.gammaCt, DK_NA.gammaCt),
     alphaCt: positivt(rå.alphaCt, DK_NA.alphaCt),
     Es: positivt(rå.Es, DK_NA.Es),
-    Ec: positivt(rå.Ec, DK_NA.Ec),
+    EcOverstyring: typeof rå.Ec === 'number' && Number.isFinite(rå.Ec) && rå.Ec > 0 ? rå.Ec : null,
   };
   return { indstillinger, bemaerkninger };
 }
 
-export const gamma3 = (i: Indstillinger): number => GAMMA3_AF_KONTROLKLASSE[i.kontrolklasse];
+/** γ3: manuel overstyring hvis angivet, ellers udledt af kontrolklassen. */
+export const gamma3 = (i: Indstillinger): number => i.gamma3Overstyring ?? GAMMA3_AF_KONTROLKLASSE[i.kontrolklasse];
+
+/** Ec [MPa]: manuel overstyring hvis angivet, ellers Ecm af betonens fck. */
+export const youngBeton = (i: Indstillinger, fck: number): number => i.EcOverstyring ?? ecmAfFck(fck);

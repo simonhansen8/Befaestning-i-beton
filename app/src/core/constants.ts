@@ -43,5 +43,4 @@ export const DK_NA = {
   gammaCt: 1.7,
   alphaCt: 1,
   Es: 210000,
-  Ec: 30000,
 } as const;
