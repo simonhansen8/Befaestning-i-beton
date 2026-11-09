@@ -44,3 +44,20 @@ export const DK_NA = {
   alphaCt: 1,
   Es: 210000,
 } as const;
+
+/** DK NA:2024 Tabel 4.1, højre kolonne: ulykkesdimensioneringstilfælde og seismiske tilfælde. γc = 1,00 og γ3 indgår ikke. */
+export const DK_NA_ULYKKE = {
+  gammaC: 1,
+  gammaInstIndstoebt: 1,
+  gammaMsTraekFaktor: 1.05,
+  gammaMsTraekMin: 1.35,
+  gammaMsForskFaktor: 1,
+  gammaMsForskMin: 1.35,
+  gammaMsForskHoej: 1.45,
+  gammaMsRe: 1,
+  gammaCt: 1.7,
+  alphaCt: 1,
+  Es: 210000,
+} as const;
+
+export type Dimensioneringstilfaelde = 'varig' | 'ulykke';

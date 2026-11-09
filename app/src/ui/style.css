@@ -1,5 +1,5 @@
 :root { --bg:#f6f7f9; --fg:#1d2330; --muted:#667085; --card:#fff; --line:#d9dee7; --accent:#1b5fd0; --ok:#1c7c3f; --warn:#a15c00; --err:#b42318; color-scheme: light dark; }
-@media (prefers-color-scheme: dark) { :root { --bg:#12151b; --fg:#e6e9ef; --muted:#9aa3b2; --card:#1a1f29; --line:#2d3544; --accent:#6ea0ff; --ok:#4cc27a; --warn:#e0a13a; --err:#ff7a70; } }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="lys"]) { --bg:#12151b; --fg:#e6e9ef; --muted:#9aa3b2; --card:#1a1f29; --line:#2d3544; --accent:#6ea0ff; --ok:#4cc27a; --warn:#e0a13a; --err:#ff7a70; } }
 * { box-sizing:border-box; } body { margin:0; font:14px/1.45 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
 .top { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:10px 16px; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
 .top h1 { font-size:18px; margin:0; } .top small { color:var(--muted); font-weight:400; } .knapper { display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:wrap; }
@@ -24,3 +24,13 @@ button.primaer { background:var(--accent); color:#fff; border-color:var(--accent
 .forslag li { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .45rem 0; border-top: 1px solid var(--linje, #8884); }
 .forslag li.delvis { opacity: .75; }
 .forslag li small { display: block; opacity: .8; }
+
+:root[data-tema="lys"] { color-scheme: light; }
+:root[data-tema="moerk"] { --bg:#12151b; --fg:#e6e9ef; --muted:#9aa3b2; --card:#1a1f29; --line:#2d3544; --accent:#6ea0ff; --ok:#4cc27a; --warn:#e0a13a; --err:#ff7a70; color-scheme: dark; }
+.ajour { border-radius: 999px; border: 1px solid var(--line); padding: .2rem .7rem; font-size: .85em; background: var(--card); color: var(--fg); cursor: pointer; }
+.ajour[data-state="ok"] { border-color: var(--ok); color: var(--ok); }
+.ajour[data-state="pending"] { border-color: var(--warn); color: var(--warn); }
+.ajour[data-state="old"] { border-color: var(--err); color: var(--err); font-weight: 600; }
+dialog { max-width: min(42rem, 92vw); background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; }
+dialog textarea { width: 100%; min-height: 14rem; font-family: ui-monospace, monospace; }
+dialog menu { display: flex; gap: .5rem; justify-content: flex-end; padding: 0; margin: .75rem 0 0; }

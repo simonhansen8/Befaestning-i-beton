@@ -151,9 +151,17 @@ def case(name, d, hef, dh, th, As, fuk, fyk, ductile, klasse, cracked, h, edges,
         c1 = min(edge_dist(a, edges) for a in anchors)
         coords = [a[1] if k in ('xNeg', 'xPos') else a[0] for a in anchors]
         e['V_c'] = v_rk_c(anchors, d, hef, fck, cracked, h, c1, coords)
-    return {'navn': name, 'beskrivelse': beskrivelse, 'd': d, 'hef': hef, 'dh': dh, 'th': th, 'As': As, 'fuk': fuk, 'fyk': fyk,
+    pub = PUBLICERET.get(name)
+    return {**({'publiceret': pub} if pub else {}), 'navn': name, 'beskrivelse': beskrivelse, 'd': d, 'hef': hef, 'dh': dh, 'th': th, 'As': As, 'fuk': fuk, 'fyk': fyk,
             'duktil': ductile, 'klasse': klasse, 'revnet': cracked, 'h': h, 'kanter': edges, 'ankre': anchors, 'last': loads, 'forventet': e}
 
+
+# Værdier trykt i en offentlig Hilti PROFIS Engineering-rapport (3.0.87, 09.08.2023, indstøbt hovedbolt M16 5.8, hef 120, C20/25 revnet):
+# https://files-ask.hilti.com/original/cf/cfip8ziqve.pdf  – N0Rk,c = 52,321 kN og V0Rk,c = 24,305 kN (c1 = 150 mm). Enhed: N.
+PUBLICERET = {
+    'P1 PROFIS-rapport: N0Rk,c': {'kilde': 'Hilti PROFIS Engineering 3.0.87 (2023-08-09), CastInPlace M16, hef 120, C20/25 revnet', 'N_c': 52321, 'tolerance': 1e-5},
+    'P2 PROFIS-rapport: V0Rk,c': {'kilde': 'Hilti PROFIS Engineering 3.0.87 (2023-08-09), CastInPlace M16, hef 120, C20/25 revnet, c1 = 150', 'V_c': 24305, 'tolerance': 1e-5},
+}
 
 NOEDGE = {'xNeg': None, 'xPos': None, 'yNeg': None, 'yPos': None}
 
@@ -189,6 +197,10 @@ CASES = [
          {'N': 80000}, 'Gruppe: s2 = 100 < 4c1 = 240 → ψg,N = √2 + (1-√2)·100/240.'),
     case('B3 sidebrud, tynd plade, urevnet', 16, 200, 29, 13, 157, 400, 240, True, 'C30/37', False, 250, edge(xNeg=80), [(0, 0)],
          {'N': 50000}, 'h - hef = 50 < 2c1 → Hb = 2c1 + 50. k5 = 12,2.'),
+    case('P1 PROFIS-rapport: N0Rk,c', 16, 120, 29, 13, 157, 500, 300, True, 'C20/25', True, 1000, NOEDGE, [(0, 0)],
+         {'N': 20000}, 'Enkeltbolt M16, hef 120, C20/25 revnet uden kanter: N0Rk,c = 8,9·√20·120^1,5 (offentlig PROFIS-rapport).'),
+    case('P2 PROFIS-rapport: V0Rk,c', 16, 120, 29, 13, 157, 500, 300, True, 'C20/25', True, 1000, edge(xNeg=150), [(0, 0)],
+         {'N': 0, 'Vx': -10000, 'Vedge': 'xNeg'}, 'Enkeltbolt M16, hef 120, c1 = 150, tyk plade (Ac,V = A0c,V, ψh = 1): V0Rk,c fra offentlig PROFIS-rapport.'),
 ]
 
 if __name__ == '__main__':

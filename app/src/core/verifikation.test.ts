@@ -34,6 +34,9 @@ describe('verifikation mod uafhængig reference', () => {
       if ((traekMode && l.N <= 0) || (skydMode && l.Vx === 0 && l.Vy === 0)) continue;
       expect(b.relevant, `${id} relevant`).toBe(true);
       expect(Math.abs(b.Rk - forventet) / forventet, `${id}: kerne ${b.Rk} vs reference ${forventet}`).toBeLessThan(1e-9);
+      // Værdier trykt i en offentlig kommerciel rapport (Hilti PROFIS): kernen skal ramme dem inden for afrundingen
+      const pub = c.publiceret?.[id];
+      if (pub != null) expect(Math.abs(b.Rk - pub) / pub, `${id}: kerne ${b.Rk} vs publiceret ${pub} (${c.publiceret.kilde})`).toBeLessThan(c.publiceret.tolerance);
     }
   });
 });

@@ -1,6 +1,6 @@
 // Modelvalidering på tværs af felter (geometri, produktgrænser, gyldighedsområder). Rene funktioner → Diagnostik[].
 import { fckAfKlasse } from './concrete';
-import { DK_NA, GAMMA3_AF_KONTROLKLASSE } from './constants';
+import { DK_NA, DK_NA_ULYKKE, GAMMA3_AF_KONTROLKLASSE } from './constants';
 import { diag, EN, type Diagnostik } from './diagnostik';
 import { kantafstand, KANTER } from './geometry';
 import type { Indstillinger } from './settings';
@@ -96,7 +96,7 @@ export function validerModel(m: ValideringsModel, ind: Indstillinger, fck: numbe
 
 /** Nationale parametre der afviger fra DK NA (til dokumentation). γ3 sammenlignes med værdien fra kontrolklassen. */
 export function afvigelserFraDkNa(ind: Indstillinger, gamma3Effektiv: number): Diagnostik[] {
-  const std: Record<string, number> = { ...DK_NA, gamma3: GAMMA3_AF_KONTROLKLASSE[ind.kontrolklasse] };
+  const std: Record<string, number> = { ...(ind.situation === 'ulykke' ? DK_NA_ULYKKE : DK_NA), gamma3: ind.situation === 'ulykke' ? 1 : GAMMA3_AF_KONTROLKLASSE[ind.kontrolklasse] };
   const nu: Record<string, number> = {
     gammaC: ind.gammaC, gamma3: gamma3Effektiv, gammaInstIndstoebt: ind.gammaInstIndstoebt, gammaMsRe: ind.gammaMsRe, gammaCt: ind.gammaCt, alphaCt: ind.alphaCt,
     gammaMsTraekFaktor: ind.gammaMsTraekFaktor, gammaMsTraekMin: ind.gammaMsTraekMin, gammaMsForskFaktor: ind.gammaMsForskFaktor, gammaMsForskMin: ind.gammaMsForskMin,
