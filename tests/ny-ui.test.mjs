@@ -126,10 +126,59 @@ test('ny UI: Hilti-præsæt udfylder produktdata for indlimet anker', { skip: !f
     await page.waitForSelector('.hoved');
     await page.evaluate(() => window.__ny.store.aendr((m) => { m.anker.type = 'indlimet'; }));
     await page.waitForSelector('.praeset');
-    await page.selectOption('.praesetvalg select >> nth=0', '16');
+    await page.selectOption('.praesetvalg select >> nth=0', 'hilti');
+    await page.selectOption('.praesetvalg select >> nth=1', '16');
     await page.click('.praesetvalg button');
     const a = await page.evaluate(() => window.__ny.store.tilstand.model.anker);
     assert.equal(a.d, 16); assert.equal(a.d0, 18); assert.equal(a.tauRkCr, 9.5); assert.equal(a.tauRkUcr, 18); assert.equal(a.psi0Sus, 0.8);
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});
+
+test('ny UI: eget produkt kan gemmes og anvendes igen', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.anker.type = 'indlimet'; m.anker.d0 = 22; m.anker.tauRkCr = 8.1; m.anker.produkt = 'Test ETA'; }));
+    await page.selectOption('.praesetvalg select >> nth=0', 'eget');
+    await page.fill('.praesetvalg input[type=text]', 'Leverandør X');
+    await page.click('.praesetvalg button:text-is("Gem")');
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.anker.d0 = 10; m.anker.tauRkCr = 5; }));
+    await page.click('.praesetvalg button:has-text("Anvend")');
+    const a = await page.evaluate(() => window.__ny.store.tilstand.model.anker);
+    assert.equal(a.d0, 22); assert.equal(a.tauRkCr, 8.1); assert.equal(a.produkt, 'Test ETA');
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});
+
+test('ny UI: mål kan rettes ved klik i 3D, og kræfter kan skjules', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch({ ...LAUNCH, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.click('[data-view="3d"]');
+    await page.waitForSelector('.etiket3d.last');
+    await page.click('[data-kraefter="1"]');
+    await page.waitForSelector('.scene3d canvas');
+    assert.equal(await page.locator('.etiket3d.last').count(), 0);
+    await page.click('[data-kraefter="1"]');
+    await page.waitForSelector('.etiket3d.last');
+    await page.locator('.etiket3d.redigerbar', { hasText: 'hef' }).click();
+    await page.fill('input.maalinput', '220');
+    await page.press('input.maalinput', 'Enter');
+    await page.waitForFunction(() => window.__ny.store.tilstand.model.anker.hef === 220);
+    // ugyldig værdi ændrer ikke modellen
+    await page.locator('.etiket3d.redigerbar', { hasText: 'hef' }).click();
+    await page.fill('input.maalinput', 'abc');
+    await page.press('input.maalinput', 'Enter');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 220);
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });

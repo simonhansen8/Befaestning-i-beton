@@ -56,3 +56,29 @@ export function hiltiHY200V3(d: Stoerrelse, t: Temperaturomraade, hul: Borehul):
 export function tilOpdateringer(p: ProduktVaerdier): [string, number | string][] {
   return (Object.keys(p) as (keyof ProduktVaerdier)[]).map((k) => [`anker.${k}`, p[k]]);
 }
+
+// ---------------------------------------------------------------- Egne produkter (andre leverandører)
+
+/** Produktrelaterede felter i modellen (anker.*), som et eget produkt gemmer og anvender. */
+export const PRODUKTNOEGLER = [
+  'type', 'produkt', 'd', 'd0', 'hefMin', 'hefMax', 'smin', 'cmin', 'hmin', 'dnom', 'dh', 'th', 'hovedForm', 'hovedSide',
+  'tauRkCr', 'tauRkUcr', 'psiC', 'psi0Sus', 'kcrN', 'kucrN', 'ccrN', 'scrN', 'ccrSp', 'scrSp', 'gammaInst',
+  'NRksEta', 'VRksEta', 'M0RksEta', 'k7', 'k8', 'betonMin', 'betonMax',
+] as const;
+
+export interface EgetProdukt { navn: string; vaerdier: Record<string, number | string | null> }
+
+/** Udtrækker produktfelterne af modellens anker-blok (kun felter, der findes). */
+export function produktFraAnker(anker: Record<string, unknown>): Record<string, number | string | null> {
+  const ud: Record<string, number | string | null> = {};
+  for (const k of PRODUKTNOEGLER) {
+    const v = anker[k];
+    if (typeof v === 'number' || typeof v === 'string' || v === null) ud[k] = v;
+  }
+  return ud;
+}
+
+/** Stier og værdier til anvendelse; ukendte nøgler ignoreres. */
+export function produktOpdateringer(v: Record<string, unknown>): [string, number | string | null][] {
+  return PRODUKTNOEGLER.filter((k) => k in v && (typeof v[k] === 'number' || typeof v[k] === 'string' || v[k] === null)).map((k) => [`anker.${k}`, v[k] as number | string | null]);
+}

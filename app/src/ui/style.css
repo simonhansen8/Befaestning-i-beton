@@ -47,3 +47,7 @@ dialog menu { display: flex; gap: .5rem; justify-content: flex-end; padding: 0; 
 .forklaring3d i { display:inline-block; width:10px; height:10px; margin-right:4px; border-radius:2px; }
 .snitbox { max-width:520px; } svg.snit { width:100%; height:auto; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; }
 .praeset { border:1px solid var(--line); border-radius:6px; padding:8px; margin-bottom:10px; background:var(--card); } .praesetvalg { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-top:6px; }
+.etiket3d.redigerbar { pointer-events:auto; cursor:pointer; border:1px dashed var(--accent, #2563eb); }
+.etiket3d.laast { pointer-events:auto; cursor:not-allowed; }
+.etiket3d input.maalinput { font:inherit; width:5.5em; padding:0 2px; }
+.etiket3d input.maalinput.ugyldig { outline:2px solid #b42318; }

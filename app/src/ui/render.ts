@@ -10,7 +10,10 @@ import { byg3d } from './model3d';
 import { hiltiHY200V3, tilOpdateringer, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
 import { GEVINDAREAL } from '../core/constants';
 import { fckAf } from '../core/concrete';
+import { produktFraAnker, produktOpdateringer } from '../core/produkter';
+import { gemEgetProdukt, laesEgneProdukter, sletEgetProdukt } from './egne-produkter';
 import { snitSvg, type SnitAkse } from './snit';
+import { anvendMaal, maalRedigerbarhed } from './maal-redigering';
 import { opret3D, type Kamera, type Scene3D } from './scene3d';
 import { rapportHtml, rapportTekst } from './rapport';
 import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
@@ -232,28 +235,60 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       h('details', { class: 'sektion', open: aaben || sessionStorageGet(id), ontoggle: (e: Event) => sessionStorageSet(id, (e.target as HTMLDetailsElement).open) },
         h('summary', {}, h('b', {}, titel), ' ', h('span', { class: 'resume', html: resume })), h('div', { class: 'indhold' }, ...indhold));
     return SEKTIONER.map((s) => mk(s.id, `${s.no}. ${s.title}`, s.summary(m),
-      s.custom === 'layout' ? [opstilling(m)] : s.custom === 'loads' ? [laster(m)] : [...(s.id === 'anker' && m.anker.type === 'indlimet' ? [produktPraeset()] : []), ...fraSkema(s, m)], s.id === 'anker' || s.id === 'laster'));
+      s.custom === 'layout' ? [opstilling(m)] : s.custom === 'loads' ? [laster(m)] : [...(s.id === 'anker' ? [produktPraeset()] : []), ...fraSkema(s, m)], s.id === 'anker' || s.id === 'laster'));
   }
 
+  type Valg = 'ingen' | 'hilti' | 'eget';
+  let produktValg: Valg = 'ingen';
+  let egneProdukter = laesEgneProdukter();
+  let valgtEget = '';
   let praeset: { d: Stoerrelse; t: Temperaturomraade; hul: Borehul } = { d: 12, t: 'I', hul: 'toert-vaadt' };
+  let nytNavn = '';
   function produktPraeset(): HTMLElement {
     const vaelg = <T extends string | number>(label: string, vaerdier: [T, string][], aktuel: T, saet: (v: string) => void) =>
       h('label', {}, label, ' ', h('select', { onchange: (e: Event) => saet((e.target as HTMLSelectElement).value) },
         ...vaerdier.map(([v, tekst]) => h('option', { value: String(v), selected: v === aktuel }, tekst))));
-    return h('div', { class: 'praeset' },
-      h('b', {}, 'Udfyld fra Hilti HIT-HY 200 V3 (ETA-19/0601, gevindstænger)'),
-      h('div', { class: 'praesetvalg' },
+    const anvendHilti = () => store.aendr((mm) => {
+      const p = hiltiHY200V3(praeset.d, praeset.t, praeset.hul);
+      for (const [sti, v] of tilOpdateringer(p)) saetSti(mm, sti, v);
+      saetSti(mm, 'anker.type', 'indlimet');
+      saetSti(mm, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
+      saetSti(mm, 'anker.gevind', true);
+      saetSti(mm, 'anker.psiC', Math.max(1, Math.floor((fckAf(mm.beton) / 20) ** 0.1 * 100) / 100));
+    });
+    const valgListe: [Valg, string][] = [['ingen', 'Vælg produkt …'], ['hilti', 'Hilti HIT-HY 200 V3 (indlimet, ETA-19/0601)'], ['eget', 'Mine produkter / anden leverandør']];
+    const felter: Node[] = [];
+    if (produktValg === 'hilti') {
+      felter.push(
         vaelg('Gevind', STOERRELSER.map((d) => [d, `M${d}`] as [Stoerrelse, string]), praeset.d, (v) => { praeset.d = Number(v) as Stoerrelse; }),
         vaelg('Temperaturområde', [['I', 'I (24/40 °C)'], ['II', 'II (50/80 °C)'], ['III', 'III (72/120 °C)']] as [Temperaturomraade, string][], praeset.t, (v) => { praeset.t = v as Temperaturomraade; }),
         vaelg('Borehul', [['toert-vaadt', 'Tørt/vådt'], ['vandfyldt', 'Vandfyldt']] as [Borehul, string][], praeset.hul, (v) => { praeset.hul = v as Borehul; }),
-        h('button', { onclick: () => store.aendr((mm) => {
-          const p = hiltiHY200V3(praeset.d, praeset.t, praeset.hul);
-          for (const [sti, v] of tilOpdateringer(p)) saetSti(mm, sti, v);
-          saetSti(mm, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
-          saetSti(mm, 'anker.gevind', true);
-          saetSti(mm, 'anker.psiC', Math.max(1, Math.floor((fckAf(mm.beton) / 20) ** 0.1 * 100) / 100));
-        }) }, 'Anvend')),
-      h('p', { class: 'note' }, 'Sætter d, d0, h_ef-interval, s_min, c_min, τRk,cr/ucr (C20/25), ψ⁰sus, k_cr/k_ucr og γinst fra ETA\'en. ψc beregnes som (fck/20)^0,1 (rundet ned) for den aktuelle betonklasse; tryk Anvend igen, hvis betonklassen ændres. Stålklasse og hef vælges selv.'));
+        h('button', { onclick: anvendHilti }, 'Anvend'));
+    } else if (produktValg === 'eget') {
+      if (egneProdukter.length) {
+        if (!egneProdukter.some((p) => p.navn === valgtEget)) valgtEget = egneProdukter[0]!.navn;
+        felter.push(
+          vaelg('Mit produkt', egneProdukter.map((p) => [p.navn, p.navn] as [string, string]), valgtEget, (v) => { valgtEget = v; }),
+          h('button', { onclick: () => { const p = egneProdukter.find((x) => x.navn === valgtEget); if (p) store.aendr((mm) => { for (const [sti, v] of produktOpdateringer(p.vaerdier)) saetSti(mm, sti, v); }); } }, 'Anvend'),
+          h('button', { onclick: () => { egneProdukter = sletEgetProdukt(valgtEget, egneProdukter); draw(); } }, 'Slet'));
+      }
+      felter.push(h('label', {}, 'Gem aktuelle produktdata som ', h('input', { type: 'text', value: nytNavn, placeholder: 'fx Leverandør – produkt', oninput: (e: Event) => { nytNavn = (e.target as HTMLInputElement).value; } })),
+        h('button', { onclick: () => {
+          const navn = nytNavn.trim();
+          if (!navn) return;
+          egneProdukter = gemEgetProdukt({ navn, vaerdier: produktFraAnker(store.tilstand.model.anker) }, egneProdukter);
+          valgtEget = navn; nytNavn = ''; draw();
+        } }, 'Gem'));
+    }
+    return h('div', { class: 'praeset' },
+      h('b', {}, 'Produkt og leverandør'),
+      h('div', { class: 'praesetvalg' },
+        vaelg('Produkt', valgListe, produktValg, (v) => { produktValg = v as Valg; draw(); }), ...felter),
+      h('p', { class: 'note' }, produktValg === 'hilti'
+        ? 'Sætter d, d0, hef-interval, smin, cmin, τRk,cr/ucr (C20/25), ψ⁰sus, kcr/kucr og γinst fra ETA\'en. ψc beregnes som (fck/20)^0,1 (rundet ned) for den aktuelle betonklasse; tryk Anvend igen, hvis betonklassen ændres. Stålklasse og hef vælges selv.'
+        : produktValg === 'eget'
+          ? 'Anden leverandør: indtast værdierne fra produktets ETA i felterne nedenfor, og gem dem her som dit eget produkt, så de kan genbruges. Dine produkter gemmes kun i denne browser.'
+          : 'Vælg et produkt for at udfylde produktdata fra ETA\'en, eller indtast værdierne selv i felterne nedenfor.'));
   }
 
   function resultat(): HTMLElement {
@@ -317,6 +352,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let scene3d: Scene3D | null = null;
   let visBrud = false;
   let visMaal = true;
+  let visLast = true;
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
 
   function tegning(): HTMLElement {
@@ -336,14 +372,21 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       return sek;
     }
     try {
-      scene3d ??= opret3D();
-      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal);
+      scene3d ??= opret3D({
+        kanRettes: (felt) => { const r = maalRedigerbarhed(store.tilstand.model, felt); return r.ok ? null : r.hvorfor; },
+        ret: (felt, v) => {
+          if (!anvendMaal(structuredClone(store.tilstand.model), felt, v)) return false;
+          store.aendr((mm) => { anvendMaal(mm, felt, v); });
+          return true;
+        },
+      });
+      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal, visLast);
       scene3d.opdater(b);
       sek.append(
-        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
+        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visLast ? 'aktiv' : '', 'data-kraefter': '1', onclick: () => { visLast = !visLast; draw(); } }, 'Kræfter'), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
         scene3d.element,
         h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
-        h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
+        h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Klik på et mål for at rette det (Enter anvender, Esc fortryder). Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
     } catch {
       sek.append(h('p', { class: 'note' }, '3D-visning kræver WebGL, som ikke er tilgængelig i denne browser.'));
     }

@@ -20,3 +20,14 @@ describe('Hilti HIT-HY 200 V3 (ETA-19/0601)', () => {
     expect(tilOpdateringer(hiltiHY200V3(10, 'I', 'toert-vaadt')).every(([s]) => s.startsWith('anker.'))).toBe(true);
   });
 });
+
+import { produktFraAnker, produktOpdateringer, PRODUKTNOEGLER } from './produkter';
+describe('egne produkter', () => {
+  it('udtrækker og genanvender produktfelter uden at røre andet', () => {
+    const v = produktFraAnker({ d: 16, d0: 18, tauRkCr: 8, hef: 200, As: 157, produkt: 'X', hmin: null, ukendt: 1 });
+    expect(v).toEqual({ d: 16, d0: 18, tauRkCr: 8, produkt: 'X', hmin: null });
+    const o = produktOpdateringer({ ...v, hef: 999, evil: 1 });
+    expect(o.map(([s]) => s).sort()).toEqual(['anker.d', 'anker.d0', 'anker.hmin', 'anker.produkt', 'anker.tauRkCr']);
+    expect(PRODUKTNOEGLER).not.toContain('hef' as never);
+  });
+});
