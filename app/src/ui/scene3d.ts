@@ -133,6 +133,12 @@ export function opret3D(): Scene3D {
     } else if (d.type === 'maal') {
       const a = v(...d.fra), b = v(...d.til);
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), new THREE.LineBasicMaterial({ color: FARVE.akse, depthTest: false })));
+      const dir = b.clone().sub(a), len = dir.length();
+      if (len > 1e-6) {
+        dir.normalize();
+        const perp = new THREE.Vector3().crossVectors(dir, Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0)).normalize().multiplyScalar(s * 0.012);
+        for (const p of [a, b]) g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p.clone().sub(perp), p.clone().add(perp)]), new THREE.LineBasicMaterial({ color: FARVE.akse, depthTest: false })));
+      }
       const e = etiket(d.tekst, 'etiket3d maal'); e.position.copy(a.clone().add(b).multiplyScalar(0.5)); g.add(e);
     } else if (d.type === 'pil') {
       g.add(pil(v(...d.fra), v(...d.til), FARVE.last, s * 0.004));

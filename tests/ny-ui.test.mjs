@@ -95,6 +95,11 @@ test('ny UI: 3D-visning tegner scenen og kameraknapper virker', { skip: !fs.exis
     await page.waitForSelector('.scene3d canvas');
     await page.waitForSelector('.etiket3d');
     for (const k of ['top', 'front', 'side', 'iso']) await page.click(`[data-kamera="${k}"]`);
+    assert.ok(await page.locator('.etiket3d.maal').count() > 3);
+    await page.click('[data-maal="1"]');
+    await page.waitForSelector('.scene3d canvas');
+    assert.equal(await page.locator('.etiket3d.maal').count(), 0);
+    await page.click('[data-maal="1"]');
     await page.click('[data-brud="1"]');
     await page.waitForSelector('.scene3d canvas');
     // canvas er tegnet (ikke helt tom)
@@ -107,6 +112,24 @@ test('ny UI: 3D-visning tegner scenen og kameraknapper virker', { skip: !fs.exis
     await page.waitForSelector('svg.snit');
     await page.click('[data-view="plan"]');
     await page.waitForSelector('.planbox');
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});
+
+test('ny UI: Hilti-præsæt udfylder produktdata for indlimet anker', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.anker.type = 'indlimet'; }));
+    await page.waitForSelector('.praeset');
+    await page.selectOption('.praesetvalg select >> nth=0', '16');
+    await page.click('.praesetvalg button');
+    const a = await page.evaluate(() => window.__ny.store.tilstand.model.anker);
+    assert.equal(a.d, 16); assert.equal(a.d0, 18); assert.equal(a.tauRkCr, 9.5); assert.equal(a.tauRkUcr, 18); assert.equal(a.psi0Sus, 0.8);
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });

@@ -7,6 +7,9 @@ import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
+import { hiltiHY200V3, tilOpdateringer, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
+import { GEVINDAREAL } from '../core/constants';
+import { fckAf } from '../core/concrete';
 import { snitSvg, type SnitAkse } from './snit';
 import { opret3D, type Kamera, type Scene3D } from './scene3d';
 import { rapportHtml, rapportTekst } from './rapport';
@@ -229,7 +232,28 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       h('details', { class: 'sektion', open: aaben || sessionStorageGet(id), ontoggle: (e: Event) => sessionStorageSet(id, (e.target as HTMLDetailsElement).open) },
         h('summary', {}, h('b', {}, titel), ' ', h('span', { class: 'resume', html: resume })), h('div', { class: 'indhold' }, ...indhold));
     return SEKTIONER.map((s) => mk(s.id, `${s.no}. ${s.title}`, s.summary(m),
-      s.custom === 'layout' ? [opstilling(m)] : s.custom === 'loads' ? [laster(m)] : fraSkema(s, m), s.id === 'anker' || s.id === 'laster'));
+      s.custom === 'layout' ? [opstilling(m)] : s.custom === 'loads' ? [laster(m)] : [...(s.id === 'anker' && m.anker.type === 'indlimet' ? [produktPraeset()] : []), ...fraSkema(s, m)], s.id === 'anker' || s.id === 'laster'));
+  }
+
+  let praeset: { d: Stoerrelse; t: Temperaturomraade; hul: Borehul } = { d: 12, t: 'I', hul: 'toert-vaadt' };
+  function produktPraeset(): HTMLElement {
+    const vaelg = <T extends string | number>(label: string, vaerdier: [T, string][], aktuel: T, saet: (v: string) => void) =>
+      h('label', {}, label, ' ', h('select', { onchange: (e: Event) => saet((e.target as HTMLSelectElement).value) },
+        ...vaerdier.map(([v, tekst]) => h('option', { value: String(v), selected: v === aktuel }, tekst))));
+    return h('div', { class: 'praeset' },
+      h('b', {}, 'Udfyld fra Hilti HIT-HY 200 V3 (ETA-19/0601, gevindstænger)'),
+      h('div', { class: 'praesetvalg' },
+        vaelg('Gevind', STOERRELSER.map((d) => [d, `M${d}`] as [Stoerrelse, string]), praeset.d, (v) => { praeset.d = Number(v) as Stoerrelse; }),
+        vaelg('Temperaturområde', [['I', 'I (24/40 °C)'], ['II', 'II (50/80 °C)'], ['III', 'III (72/120 °C)']] as [Temperaturomraade, string][], praeset.t, (v) => { praeset.t = v as Temperaturomraade; }),
+        vaelg('Borehul', [['toert-vaadt', 'Tørt/vådt'], ['vandfyldt', 'Vandfyldt']] as [Borehul, string][], praeset.hul, (v) => { praeset.hul = v as Borehul; }),
+        h('button', { onclick: () => store.aendr((mm) => {
+          const p = hiltiHY200V3(praeset.d, praeset.t, praeset.hul);
+          for (const [sti, v] of tilOpdateringer(p)) saetSti(mm, sti, v);
+          saetSti(mm, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
+          saetSti(mm, 'anker.gevind', true);
+          saetSti(mm, 'anker.psiC', Math.max(1, Math.floor((fckAf(mm.beton) / 20) ** 0.1 * 100) / 100));
+        }) }, 'Anvend')),
+      h('p', { class: 'note' }, 'Sætter d, d0, h_ef-interval, s_min, c_min, τRk,cr/ucr (C20/25), ψ⁰sus, k_cr/k_ucr og γinst fra ETA\'en. ψc beregnes som (fck/20)^0,1 (rundet ned) for den aktuelle betonklasse; tryk Anvend igen, hvis betonklassen ændres. Stålklasse og hef vælges selv.'));
   }
 
   function resultat(): HTMLElement {
@@ -292,6 +316,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let snitAkse: SnitAkse = 'x';
   let scene3d: Scene3D | null = null;
   let visBrud = false;
+  let visMaal = true;
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
 
   function tegning(): HTMLElement {
@@ -312,10 +337,10 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     }
     try {
       scene3d ??= opret3D();
-      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud);
+      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal);
       scene3d.opdater(b);
       sek.append(
-        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
+        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
         scene3d.element,
         h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
         h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));

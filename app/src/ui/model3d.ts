@@ -19,7 +19,7 @@ export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; s
 
 const dk = (v: number, d = 1) => v.toFixed(d).replace('.', ',').replace('-', '−');
 
-export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false): Scene3DBeskrivelse {
+export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true): Scene3DBeskrivelse {
   const a = m.anker, be = m.beton, pl = m.plade, ankre: { id: number; x: number; y: number }[] = m.opstilling.anker ?? [];
   const hef = a.hef, d = a.d, e = pl.afstandTilBeton ?? 0, t = pl.t;
   const indstoebt = a.type !== 'indlimet';
@@ -70,8 +70,34 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       dele.push({ type: 'stang', rolle: 'armering', fra: [x0 + c, y, -dybde + c], til: [x1 - c, y, -dybde + c], r: dk2 }, { type: 'stang', rolle: 'armering', fra: [x0 + c, y, -c], til: [x1 - c, y, -c], r: dk2 });
     }
   }
-  // målelinje: effektiv forankringsdybde
-  if (ankre.length) { const q = ankre[0]!; dele.push({ type: 'maal', fra: [q.x + 1.6 * d, q.y, -hef], til: [q.x + 1.6 * d, q.y, 0], tekst: `hef = ${dk(hef, 0)} mm` }); }
+  // mål (kan slås fra): hef, h, fodplade, stand-off, boltafstande og kantafstande
+  if (visMaal && ankre.length) {
+    const mm = (v: number) => `${dk(v, 0)} mm`;
+    const q0 = ankre[0]!, zO = 0.5;
+    dele.push({ type: 'maal', fra: [q0.x + 1.6 * d, q0.y, -hef], til: [q0.x + 1.6 * d, q0.y, 0], tekst: `hef = ${mm(hef)}` });
+    dele.push({ type: 'maal', fra: [x1, y0, -dybde], til: [x1, y0, 0], tekst: `h = ${mm(be.h)}` });
+    const off = Math.max(80, 0.16 * Math.max(pl.bx, pl.by));
+    dele.push({ type: 'maal', fra: [-pl.bx / 2, -pl.by / 2 - off, topZ + 0.4 * d], til: [pl.bx / 2, -pl.by / 2 - off, topZ + 0.4 * d], tekst: `bx = ${mm(pl.bx)}` });
+    dele.push({ type: 'maal', fra: [pl.bx / 2 + off, -pl.by / 2, topZ + 0.4 * d], til: [pl.bx / 2 + off, pl.by / 2, topZ + 0.4 * d], tekst: `by = ${mm(pl.by)}` });
+    dele.push({ type: 'maal', fra: [-pl.bx / 2 - off, -pl.by / 2, e], til: [-pl.bx / 2 - off, -pl.by / 2, e + t], tekst: `t = ${mm(t)}` });
+    if (e > 0) dele.push({ type: 'maal', fra: [-pl.bx / 2 - off, pl.by / 2, 0], til: [-pl.bx / 2 - off, pl.by / 2, e], tekst: `e = ${mm(e)}` });
+    const unik = (v: number[]) => [...new Set(v.map((x) => Math.round(x * 10) / 10))].sort((p, r) => p - r);
+    const ux = unik(xs), uy = unik(ys), yMaal = Math.max(...ys) + 0.6 * off, xMaal = Math.max(...xs) + 0.6 * off;
+    for (let j = 1; j < ux.length; j++) dele.push({ type: 'maal', fra: [ux[j - 1]!, yMaal, zO], til: [ux[j]!, yMaal, zO], tekst: `sx = ${mm(ux[j]! - ux[j - 1]!)}` });
+    for (let j = 1; j < uy.length; j++) dele.push({ type: 'maal', fra: [xMaal, uy[j - 1]!, zO], til: [xMaal, uy[j]!, zO], tekst: `sy = ${mm(uy[j]! - uy[j - 1]!)}` });
+    const kanter: [string, number, (q: { x: number; y: number }) => number, (q: { x: number; y: number }, c: number) => [[number, number, number], [number, number, number]]][] = [
+      ['xNeg', 0, (q) => q.x + (be.kanter?.xNeg ?? 0), (q, c) => [[q.x, q.y, zO], [q.x - c, q.y, zO]]],
+      ['xPos', 0, (q) => (be.kanter?.xPos ?? 0) - q.x, (q, c) => [[q.x, q.y, zO], [q.x + c, q.y, zO]]],
+      ['yNeg', 0, (q) => q.y + (be.kanter?.yNeg ?? 0), (q, c) => [[q.x, q.y, zO], [q.x, q.y - c, zO]]],
+      ['yPos', 0, (q) => (be.kanter?.yPos ?? 0) - q.y, (q, c) => [[q.x, q.y, zO], [q.x, q.y + c, zO]]],
+    ];
+    for (const [kant, , afst, linje] of kanter) {
+      if (!fri(kant)) continue;
+      const naer = ankre.reduce((b, q) => (afst(q) < afst(b) ? q : b), ankre[0]!);
+      const c = afst(naer), [fra, til] = linje(naer, c);
+      dele.push({ type: 'maal', fra, til, tekst: `c = ${mm(c)}` });
+    }
+  }
   const udst: Udstraekning = { x0, x1, y0, y1, z0: -dybde, z1: topZ + 2 * d };
   const stoerrelse = Math.max(x1 - x0, y1 - y0, dybde);
   // laster
