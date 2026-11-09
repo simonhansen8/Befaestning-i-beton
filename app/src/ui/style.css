@@ -61,3 +61,5 @@ table.brud tr.valgbar { cursor:pointer; } table.brud tr.valgbar:hover td { backg
 .hint3d.synlig { opacity:1; }
 .zoom3d { position:absolute; right:8px; top:8px; display:flex; flex-direction:column; gap:4px; }
 .zoom3d button { width:28px; height:28px; border-radius:6px; border:1px solid var(--line); background:var(--card); font-size:16px; line-height:1; cursor:pointer; }
+
+.armgruppe.dimmet { opacity:.55; } .armvis { margin:2px 0 6px; font-size:12px; background:none; border:none; color:var(--accent,#2563eb); cursor:pointer; padding:2px 0; }
