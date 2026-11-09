@@ -6,6 +6,8 @@ import { KANTFELTER, SEKTIONER } from './felter';
 import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
+import { byg3d } from './model3d';
+import { opret3D, type Kamera, type Scene3D } from './scene3d';
 import { rapportHtml } from './rapport';
 import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
 import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
@@ -279,10 +281,33 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     return sek;
   }
 
+  let visning: 'plan' | '3d' = 'plan';
+  let scene3d: Scene3D | null = null;
+  const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
+
   function tegning(): HTMLElement {
     const t = store.tilstand;
-    const k = t.resultat ? t.resultat.kombinationer[t.valgtKombination ?? 0]?.resultat ?? null : null;
-    return h('section', { class: 'res' }, h('h2', {}, 'Plantegning'), h('div', { class: 'planbox', html: plantegningSvg(t.model, k) }), h('p', { class: 'note' }, PLAN_FORKLARING));
+    const kom = t.resultat ? t.resultat.kombinationer[t.valgtKombination ?? 0] ?? null : null;
+    const k = kom?.resultat ?? null;
+    const knap = (v: 'plan' | '3d', txt: string) => h('button', { class: visning === v ? 'aktiv' : '', 'data-view': v, onclick: () => { visning = v; draw(); } }, txt);
+    const sek = h('section', { class: 'res' }, h('h2', {}, visning === 'plan' ? 'Plantegning' : '3D-model'), h('div', { class: 'visningsvalg' }, knap('plan', 'Plan'), knap('3d', '3D')));
+    if (visning === 'plan') {
+      sek.append(h('div', { class: 'planbox', html: plantegningSvg(t.model, k) }), h('p', { class: 'note' }, PLAN_FORKLARING));
+      return sek;
+    }
+    try {
+      scene3d ??= opret3D();
+      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null);
+      scene3d.opdater(b);
+      sek.append(
+        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn))),
+        scene3d.element,
+        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
+        h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
+    } catch {
+      sek.append(h('p', { class: 'note' }, '3D-visning kræver WebGL, som ikke er tilgængelig i denne browser.'));
+    }
+    return sek;
   }
 
   function diagnostik(): HTMLElement {
