@@ -61,7 +61,7 @@ describe('3D-beskrivelse', () => {
     i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 2, diameter: 12, afstand: 50, daeklagTop: 40, krog: true, foering: 'stoed' };
     const s = byg3d(i, null, null);
     const st = s.dele.filter((x) => x.type === 'stang') as any[];
-    // lukket bøjle: to lodrette ben + to vandrette sider + fire buede hjørner (8 segmenter hver)
+    // åben bøjle (hårnål): to ben, vandret overkant og to buede hjørner (8 segmenter hver); ingen bøjning i bunden
     const boejle = st.filter((x) => !x.variant);
     const lodret = boejle.filter((x) => x.fra[0] === x.til[0] && x.fra[1] === x.til[1] && x.fra[2] !== x.til[2]);
     expect(lodret.length).toBeGreaterThanOrEqual(n * 2 * 2); // mindst benene (buerne giver yderligere skrå segmenter)
@@ -69,7 +69,10 @@ describe('3D-beskrivelse', () => {
     // bøjlen når overkant (daeklagTop) og nederst hef; bøjningen findes både foroven og forneden
     expect(Math.max(...boejle.map((x) => Math.max(x.fra[2], x.til[2])))).toBeCloseTo(topZ(0), 5);
     expect(Math.min(...boejle.map((x) => Math.min(x.fra[2], x.til[2])))).toBeCloseTo(-i.anker.hef, 5);
-    expect(boejle.length).toBe(n * 2 * (2 + 2 + 4 * 8)); // 2 ben, 2 sider, 4 hjørner à 8 buesegmenter
+    expect(boejle.length).toBe(n * 2 * (2 + 1 + 2 * 8)); // 2 ben, overkant, 2 hjørner à 8 buesegmenter
+    // bunden er åben: ingen vandret stang i bøjlens nedre ende
+    const zMin = Math.min(...boejle.map((x) => Math.min(x.fra[2], x.til[2])));
+    expect(boejle.filter((x) => x.fra[2] === x.til[2] && Math.abs(x.fra[2] - zMin) < 1e-6)).toHaveLength(0);
     // overfladearmering: rigtige stænger med ⌀s, ligger inde i bøjlen (under overkanten) og går gennem hver bøjle
     const flade = st.filter((x) => x.variant === 'tilbehoer');
     expect(flade.length).toBeGreaterThanOrEqual(2); // en stang pr. bøjleplan (sammenfaldende gennem flere bolte slås sammen)

@@ -164,7 +164,7 @@ export function beregnKombination(
   const NV_s = interaktionStaal({ ankreIds: ankre.map((a) => a.id), F: f.F, Veff: V_s.Veff, VRd_i: V_s.VRd_i, NRd_s: N_s.NRd });
   out.push({ id: 'NV_s', relevant: undtag ? false : NV_s.relevant, Ed: 0, Rd: 0, Rk: 0, udnyttelse: undtag ? null : NV_s.udnyttelse, styrendeAnker: NV_s.styrendeAnker });
   const fl = (a: { aktiv: boolean; diameter: number; eta1: number | null; fyk: number; krog: boolean; cd: number | null }, id: string): ForankringsLaengde | null =>
-    a.aktiv ? forankringsLaengde({ fck, eta1: a.eta1 ?? 1, ds: a.diameter, fyk: a.fyk, gammaS: p.gammaMsRe, krog: a.krog, cd: a.cd, alphaCt: p.alphaCt, gammaCt: p.gammaCt, udnyttelse: out.find((b) => b.id === id)?.udnyttelse ?? 1 }) : null;
+    a.aktiv ? forankringsLaengde({ fck, eta1: a.eta1 ?? 1, ds: a.diameter, fyk: a.fyk, gammaS: p.gammaMsRe, krog: false, cd: null, alphaCt: p.alphaCt, gammaCt: p.gammaCt, udnyttelse: out.find((b) => b.id === id)?.udnyttelse ?? 1 }) : null;
   const forank = { T: fl(ar.ankerarmeringTraek, 'N_re'), V: fl(ar.ankerarmeringForskydning, 'V_re') };
   const tilfaelde: ArmeringsTilfaelde = armT.virksom && armV.virksom ? 'begge' : armT.virksom ? 'traek' : armV.virksom ? 'forskydning' : 'ingen';
   const NV = interaktionBeton(out.map((b) => ({ id: b.id, relevant: b.relevant, udnyttelse: b.udnyttelse })), tilfaelde, ind.interaktion, m.anker.k11);

@@ -50,7 +50,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   }
   type Pkt3 = [number, number, number];
   const stang = (fra: Pkt3, til: Pkt3, r: number, ekstra: { inaktiv?: boolean; variant?: 'forankring' | 'tilbehoer' } = {}) => dele.push({ type: 'stang', rolle: 'armering', fra, til, r, ...ekstra });
-  // ankerarmering for træk (EN 1992-4, 7.2.1.2; CEN/TS 1992-4-2, 6.2.2): bøjler/løkker i lodrette planer, parvis og symmetrisk om ankeret,
+  // ankerarmering for træk (EN 1992-4, 7.2.1.2; CEN/TS 1992-4-2, 6.2.2): åbne bøjler (hårnåle) i lodrette planer, parvis og symmetrisk om ankeret,
   // så tæt på ankeret som praktisk muligt (virksomme inden for 0,75·hef) og helst omsluttende overfladearmeringen.
   // Planet er forskudt M fra boltens akse, benene sidder ±x fra planets midte (radial afstand √(x²+M²)).
   // Hjørnerne er bukket om en dorn (EN 1992-1-1, Tabel 8.1N: 4⌀ for ⌀ ≤ 16 mm, ellers 7⌀).
@@ -90,13 +90,13 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         const zt = -(at.daeklagTop ?? 40) - j * (p + 1), zb = Math.min(bundZ, zt - 10), inaktiv = alleInaktive || j >= n - ikkeVirk;
         const pt = (sv: number, z: number): Pkt3 => [q.x + u[0] * sv + w[0] * M, q.y + u[1] * sv + w[1] * M, z];
         if (at.krog) {
-          const Rb = Math.max(0.1, Math.min(dorn / 2 + r, x, (zt - zb) / 2)), N = 8;
+          const Rb = Math.max(0.1, Math.min(dorn / 2 + r, x, zt - zb)), N = 8;
           const bue = (cs: number, cz: number, a0: number, a1: number): [number, number][] => Array.from({ length: N + 1 }, (_, i) => [cs + Rb * Math.cos(a0 + ((a1 - a0) * i) / N), cz + Rb * Math.sin(a0 + ((a1 - a0) * i) / N)]);
+          // åben bøjle (hårnål): bøjning foroven om overfladearmeringen, benene fortsætter lige ned og forankres med lbd uden for keglen
           const sti: [number, number][] = [
-            [-x + Rb, zt], [x - Rb, zt], ...bue(x - Rb, zt - Rb, Math.PI / 2, 0), ...bue(x - Rb, zb + Rb, 0, -Math.PI / 2),
-            ...bue(-x + Rb, zb + Rb, -Math.PI / 2, -Math.PI), ...bue(-x + Rb, zt - Rb, Math.PI, Math.PI / 2),
+            [-x, zb], [-x, zt - Rb], ...bue(-x + Rb, zt - Rb, Math.PI, Math.PI / 2), [x - Rb, zt], ...bue(x - Rb, zt - Rb, Math.PI / 2, 0), [x, zb],
           ];
-          for (let i = 0; i < sti.length; i++) { const a2 = sti[i]!, b2 = sti[(i + 1) % sti.length]!; if (Math.hypot(a2[0] - b2[0], a2[1] - b2[1]) > 1e-6) stang(pt(a2[0], a2[1]), pt(b2[0], b2[1]), r, { inaktiv }); }
+          for (let i = 0; i + 1 < sti.length; i++) { const a2 = sti[i]!, b2 = sti[i + 1]!; if (Math.hypot(a2[0] - b2[0], a2[1] - b2[1]) > 1e-6) stang(pt(a2[0], a2[1]), pt(b2[0], b2[1]), r, { inaktiv }); }
         } else {
           stang(pt(1 * x, zt), pt(1 * x, zb), r, { inaktiv });
           stang(pt(-x, zt), pt(-x, zb), r, { inaktiv });
