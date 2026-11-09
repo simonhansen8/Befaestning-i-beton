@@ -46,6 +46,7 @@ const proc = (u: number | null | undefined) => (u == null ? '–' : Number.isFin
 const kN = (n: number) => (Number.isFinite(n) ? (n / 1000).toFixed(1).replace('.', ',').replace('-', '−') : '∞');
 
 export function opsaet(rod: HTMLElement, store: Store, build: string): void {
+  let medLigninger = (() => { try { return localStorage.getItem('rapport.ligninger') !== '0'; } catch { return true; } })();
   let avanceret = false;
   // Justeringsforslag beregnes først, når brugeren beder om det, og gælder kun for den model, de blev beregnet for.
   let forslag: { sig: string; res: ForslagResultat } | null = null;
@@ -137,11 +138,12 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           a.click(); URL.revokeObjectURL(a.href);
         } }, 'Gem'),
         h('button', { class: 'primaer', onclick: () => {
-          const html = rapportHtml(store.tilstand.model, store.tilstand.resultat, build);
+          const html = rapportHtml(store.tilstand.model, store.tilstand.resultat, build, undefined, { ligninger: medLigninger, detalje: beregningsdetalje });
           const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
           const w = window.open(url, '_blank');
           if (!w) { const a = h('a', { href: url, download: 'anker-rapport.html' }); a.click(); }
         } }, 'Rapport'),
+        h('label', { class: 'adv', title: 'Tag ligninger med i rapporten: formler, normhenvisninger og indsatte værdier pr. brudform' }, h('input', { type: 'checkbox', 'data-rapport-ligninger': '1', checked: medLigninger, onchange: (e: Event) => { medLigninger = (e.target as HTMLInputElement).checked; try { localStorage.setItem('rapport.ligninger', medLigninger ? '1' : '0'); } catch { /* ingen lagring */ } } }), ' Med ligninger'),
         h('button', { title: 'Kopiér en kort tekstrapport til udklipsholderen', onclick: () => { void kopierRapport(); } }, 'Kopiér rapport'),
         h('button', { onclick: indsaetDialog }, 'Indsæt JSON'),
         h('button', { title: 'Skift mellem system, mørkt og lyst tema', onclick: () => { tema = naesteTema(tema); saetTema(tema); draw(); } }, TEMA_NAVN[tema]),

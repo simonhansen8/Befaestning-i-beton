@@ -177,7 +177,7 @@ export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, 
           ? c.resultat.brudformer.filter((b) => b.relevant).map((b) => {
             const d = valg.detalje!(b.id, m, c.resultat);
             if (!d || !d.trin.length) return '';
-            return `<div class="ligning"><h3 class="fl"><span>${esc(b.id)} ${esc(d.titel)} <small>${esc(d.ref)}</small></span><span class="u ${KLASSE(b.udnyttelse)}">η = ${proc(b.udnyttelse)}</span></h3>${d.noter.length ? `<p class="noter">${d.noter.join(' ')}</p>` : ''}<table class="st"><tbody>${d.trin.map((t) => `<tr><td>${t.s}</td><td class="f">${t.f ?? ''}</td><td>${t.v}</td></tr>`).join('')}</tbody></table></div>`;
+            return `<div class="ligning"><h3 class="fl"><span>${esc(d.titel)} <small>${esc(d.ref)}</small></span><span class="u ${KLASSE(b.udnyttelse)}">η = ${proc(b.udnyttelse)}</span></h3>${d.noter.length ? `<p class="noter">${d.noter.join(' ')}</p>` : ''}<table class="st"><tbody>${d.trin.map((t) => `<tr><td>${t.s}</td><td class="f">${t.f ?? ''}</td><td>${t.v}</td></tr>`).join('')}</tbody></table></div>`;
           }).join('')
           : '';
         return `<h3 class="fl"><span>${esc(c.navn)}${ci === gk ? ' <small>styrende kombination</small>' : ''}</span><span class="u ${KLASSE(c.maksUdnyttelse)}">η<sub>maks</sub> = ${proc(c.maksUdnyttelse)}</span></h3><table><thead><tr><th>Brudform</th><th>Norm</th><th class="n">E<sub>d</sub> [kN]</th><th class="n">R<sub>k</sub> [kN]</th><th class="n">R<sub>d</sub> [kN]</th><th class="n">Udnyttelse</th><th>Styrende anker</th></tr></thead><tbody>${rows}</tbody></table>${lign}`;

@@ -232,3 +232,23 @@ test('ny UI: Ctrl+Z / Ctrl+Y og knapperne fortryder og gentager ændringer', { s
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
+
+test('ny UI: rapport kan vælge ligninger til og fra', async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    const aabn = async () => {
+      const [pop] = await Promise.all([ctx.waitForEvent('page'), page.click('button.primaer')]);
+      await pop.waitForLoadState();
+      const n = await pop.locator('.ligning').count();
+      await pop.close();
+      return n;
+    };
+    assert.ok((await aabn()) > 0, 'ligninger med som standard');
+    await page.uncheck('[data-rapport-ligninger]');
+    assert.equal(await aabn(), 0);
+  } finally { await browser.close(); }
+});
