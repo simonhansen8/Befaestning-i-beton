@@ -792,7 +792,7 @@ export const SEKTIONER: Sektion[] = [
         k: "beton.armering.kantarmeringBredde",
         hl: "arm.kant",
         sym: "b<sub>s</sub>",
-        lbl: "Kantbøjlens bredde ind i elementet",
+        lbl: "Kantbøjlens ben ind i elementet",
         unit: "mm",
         type: "num",
         min: 20,

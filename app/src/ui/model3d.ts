@@ -214,7 +214,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       }
     }
   }
-  // kantarmering (7.2.2.5, ψre,V): kantstænger (⌀) langs den frie kant, omsluttet af lukkede bøjler (samme ⌀) med afstanden a.
+  // kantarmering (7.2.2.5, ψre,V): kantstænger (⌀) langs den frie kant, omsluttet af åbne hårnålebøjler (samme ⌀) med bøjningen ved kanten med afstanden a.
   // Bøjlen ligger i planet vinkelret på kanten: dæklag cnom til bøjlens yderside, dornbøjede hjørner (EN 1992-1-1, Tabel 8.1N),
   // bredde bs ind i elementet og højde over hele elementet (afkortet i tegningen); fire kantstænger i bøjlens hjørner.
   if (be.armering?.kantarmering === 'boejler' && be.armering.kantarmeringDiameter) {
@@ -231,23 +231,22 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       const P = (t: number, sv: number, z: number): Pkt3 => (e2.langs ? [e2.e0 + e2.inw * sv, t, z] : [t, e2.e0 + e2.inw * sv, z]);
       const s0 = c + rk, s1 = c + bs - rk, zt0 = -(c + rk), zb0 = -(Math.min(be.h, dybde) - c - rk); // bøjlens akse (yderste fibre i cnom)
       const sk = [c + 2 * rk + rk, c + bs - 3 * rk], zk = [-(c + 3 * rk), -(Math.min(be.h, dybde) - c - 3 * rk)]; // kantstængernes akser inde i hjørnerne
-      for (const sv of sk) for (const zv of zk) stang(P(e2.lo, sv, zv), P(e2.hi, sv, zv), rk);
+      for (const zv of zk) stang(P(e2.lo, sk[0]!, zv), P(e2.hi, sk[0]!, zv), rk);
       if (a != null && a > 0) {
         const n = Math.min(200, Math.floor((e2.hi - e2.lo) / a)), N = 6;
         const hj = (cs: number, cz: number, a0: number, a1: number): [number, number][] => Array.from({ length: N + 1 }, (_, i) => [cs + Rb * Math.cos(a0 + ((a1 - a0) * i) / N), cz + Rb * Math.sin(a0 + ((a1 - a0) * i) / N)]);
-        const sti: [number, number][] = [
-          ...hj(s1 - Rb, zt0 - Rb, Math.PI / 2, 0), ...hj(s1 - Rb, zb0 + Rb, 0, -Math.PI / 2), ...hj(s0 + Rb, zb0 + Rb, -Math.PI / 2, -Math.PI), ...hj(s0 + Rb, zt0 - Rb, Math.PI, Math.PI / 2),
-        ];
+        // åben hårnålebøjle (C): bøjningen ligger ved kanten (dornbøjede hjørner) om kantstængerne, benene går vandret ind i elementet
+        const sti: [number, number][] = [[s1, zt0], ...hj(s0 + Rb, zt0 - Rb, Math.PI / 2, Math.PI), ...hj(s0 + Rb, zb0 + Rb, Math.PI, (3 * Math.PI) / 2), [s1, zb0]];
         for (let i = 0; i <= n; i++) {
           const t = e2.lo + i * a;
-          for (let j2 = 0; j2 < sti.length; j2++) { const p1 = sti[j2]!, p2 = sti[(j2 + 1) % sti.length]!; if (Math.hypot(p1[0] - p2[0], p1[1] - p2[1]) > 1e-6) stang(P(t, p1[0], p1[1]), P(t, p2[0], p2[1]), rk); }
+          for (let j2 = 0; j2 + 1 < sti.length; j2++) { const p1 = sti[j2]!, p2 = sti[j2 + 1]!; if (Math.hypot(p1[0] - p2[0], p1[1] - p2[1]) > 1e-6) stang(P(t, p1[0], p1[1]), P(t, p2[0], p2[1]), rk, { variant: 'forankring' }); }
         }
         if (visMaal && !markeret && n >= 1) {
           markeret = true;
           dele.push({ type: 'maal', fra: P(e2.lo, s0, zt0), til: P(e2.lo + a, s0, zt0), tekst: `a = ${dk(a, 0)} mm` });
           dele.push({ type: 'maal', fra: P(e2.lo, 0, 0.5), til: P(e2.lo, c, 0.5), tekst: `cnom = ${dk(c, 0)} mm` });
-          dele.push({ type: 'maal', fra: P(e2.lo, c, zt0 + rk + 1), til: P(e2.lo, c + bs, zt0 + rk + 1), tekst: `bs = ${dk(bs, 0)} mm` });
-          dele.push({ type: 'tekst', pos: P(e2.lo, s1, zt0 + 15), tekst: `kantbøjle ⌀${dk(dkb, 0)}: bukkediameter ${dk(dornK, 0)} mm (${dkb <= 16 ? '4' : '7'}⌀)` });
+          dele.push({ type: 'maal', fra: P(e2.lo, c, zt0 + rk + 1), til: P(e2.lo, c + bs, zt0 + rk + 1), tekst: `ben ind i elementet = ${dk(bs, 0)} mm (min. 10⌀ = ${dk(10 * dkb, 0)})` });
+          dele.push({ type: 'tekst', pos: P(e2.lo, s1, zt0 + 15), tekst: `åben kantbøjle (åben ind mod elementet) ⌀${dk(dkb, 0)}: bukkediameter ${dk(dornK, 0)} mm (${dkb <= 16 ? '4' : '7'}⌀)` });
           const c1 = Math.abs(((e2.navn === 'xNeg' ? q0x(ankre, 'x') + (be.kanter?.xNeg ?? 0) : e2.navn === 'xPos' ? (be.kanter?.xPos ?? 0) - q0x(ankre, 'xmax') : e2.navn === 'yNeg' ? q0x(ankre, 'y') + (be.kanter?.yNeg ?? 0) : (be.kanter?.yPos ?? 0) - q0x(ankre, 'ymax'))));
           dele.push({ type: 'tekst', pos: P(e2.lo + a, s1, zt0 - 40), tekst: `krav ψre,V = 1,4: a ≤ 100 mm og a ≤ 2·c1 = ${dk(2 * c1, 0)} mm${a <= 100 && a <= 2 * c1 ? ' (opfyldt)' : ' (IKKE opfyldt)'}` });
         }
