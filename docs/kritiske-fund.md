@@ -12,8 +12,11 @@ Løbende liste over ting i den gamle kerne, der ser forkerte, tvivlsomme eller u
 | 6 | γMs,V-betingelsen bruger `fuk ≤ 800` og `fyk/fuk ≤ 0,8`, ellers 1,65. Værdierne 1,35/1,65 og træk-minimum 1,5 er DK NA-værdier; EN-standard er hhv. 1,25/1,5 og 1,4. | **Tjek mod DK NA** |
 | 7 | Kernen indeholder tegne-/3D-geometri (fx armeringsbøjler, ca. 350 linjer) blandet med beregning, og resultattekster som HTML (`<sub>`). Hører ikke hjemme i regnekernen. | Verificeret; adskilles i trin 4/8 |
 | 8 | Ikke-relevante brudformer returneres uden tal (`NEd`/`NRd` mangler), mens relevante har. Inkonsistent resultatkontrakt. | Verificeret; rettes i trin 4 |
-| 9 | Ankerarmeringsfelter er kun testet i en model, hvor armeringen er slået fra. Det er ikke vist, at fx `kantarmeringAfstand` eller `ankerarmeringTraek.*` påvirker resultatet, når armeringen er aktiv. | Åben: kræver facit-modeller med aktiv armering |
+| 9 | Ankerarmeringsfelter var kun testet med armeringen slået fra. | **Lukket**: facit-sættet har nu 617 modeller, heraf mange med varieret aktiv armering (alle typer, krog/ingen krog, stød, l1, es, kant), og ny kerne matcher alle |
 | 11 | `ccr,sp = 2,0·hef` og `hmin` for indstøbte anker uden produktdata er skøn, markeret "SKAL VERIFICERES" i den gamle kerne. Spaltning afhænger direkte af dem. | **Tjek mod produktdata/EAD 330924** |
+| 12 | Forskydningsarmeringens kant vælges én gang på tværs af ALLE lastkombinationer (mest udnyttede kant for kantbrud uden armering) og bruges i alle kombinationer. Det kan give en kant, som ikke er den kritiske i den styrende kombination. Gammel adfærd bevares i testadapteren; i produktet bør kanten kunne angives eller vælges pr. kombination. | **Beslutning ønskes** |
+| 13 | `V_re` bruger NEd = (es/z + 1)·VEd,h med z = 0,85·min(h − cnom; 2hef; 2c1) og k10 = 1 (overflade) eller 0,5 (bøjle/løkke). Formen og k10-værdierne er ikke sammenholdt med 7.2.2.6/Fig. 7.10 i denne omgang. | **Tjek mod norm** |
+| 14 | `dnom` falder tilbage til `d`, og `benPrAnker` for trækarmering udledes af `antalBoejler` (altid ≥ 2); kravet "mindst ét ben pr. anker" kan derfor aldrig fejle. | Verificeret; ryddes i datamodellen (trin 3/5) |
 | 10 | Facit-sættet har få modeller med indlimede anker, armering og slidshuller; brudformerne dér er derfor endnu svagt dækket. | Åben: udvid generatoren |
 
 Normformlerne for N_s, N_p og N_c er sammenholdt med EN 1992-4 (7.1), (7.2), (7.4)–(7.7), (7.12)–(7.14) og stemmer i form; faktiske værdier i DK NA er ikke verificeret mod NA-teksten.

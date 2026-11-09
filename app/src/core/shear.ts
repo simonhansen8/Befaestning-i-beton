@@ -19,7 +19,7 @@ const ikkeRelevant = (id: string, aarsag: ForskydningsEftervisning['aarsag']): F
 });
 
 /** Løftestang: forskydning med afstand mellem plade og beton (6.2.2.3). */
-export function harLoeftestang(plade: { afstandTilBeton: number; mellemlaeg: string }, d: number): { medLoeftestang: boolean; inkonsistent: boolean } {
+export function harLoeftestang(plade: { afstandTilBeton?: number; mellemlaeg: string }, d: number): { medLoeftestang: boolean; inkonsistent: boolean } {
   const e = plade.afstandTilBeton || 0;
   const inkonsistent = plade.mellemlaeg === 'ingen' && e > 0;
   return { medLoeftestang: (plade.mellemlaeg === 'aaben' && e > 0) || (plade.mellemlaeg === 'moertel' && e > d / 2) || inkonsistent, inkonsistent };

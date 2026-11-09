@@ -69,8 +69,15 @@ function makeCase(i, base) {
   if (chance(0.2)) patch.beton.armering.afskalning = 'aaben';
   if (chance(0.15)) patch.beton.armering.splitArmering = true;
   if (chance(0.15)) patch.beton.armering.kantarmering = 'boejler', patch.beton.armering.kantarmeringAfstand = 100, patch.beton.armering.kantarmeringDiameter = 12;
-  if (chance(0.15)) patch.beton.armering.ankerarmeringTraek = { aktiv: true };
-  if (chance(0.15)) patch.beton.armering.ankerarmeringForskydning = { aktiv: true };
+  if (chance(0.2)) patch.beton.armering.ankerarmeringTraek = chance(0.4) ? { aktiv: true } : {
+    aktiv: true, diameter: pick([10, 12, 16, 20]), antalBoejler: pick([1, 2, 3]), krog: chance(0.6), foering: pick(['ingen', 'ingen', 'stoed']),
+    forankringsdybde: chance(0.4) ? int(150, 400, 50) : null, daeklagTop: pick([30, 40, 60]), afstand: pick([40, 50, 70]), eta1: chance(0.3) ? 0.7 : 1, cd: chance(0.3) ? pick([25, 40]) : null,
+  };
+  if (chance(0.2)) patch.beton.armering.ankerarmeringForskydning = chance(0.3) ? { aktiv: true } : {
+    aktiv: true, type: pick(['boejle', 'overflade', 'loekke']), diameter: pick([8, 10, 12, 16]), benPrAnker: pick([1, 2, 3, 4]), antalBoejler: chance(0.4) ? pick([1, 2]) : null,
+    antalLoekker: chance(0.4) ? pick([1, 2]) : null, krog: chance(0.6), kant: chance(0.3) ? pick(['xNeg', 'xPos', 'yNeg', 'yPos']) : null, l1: chance(0.3) ? int(60, 200, 20) : null,
+    eta1: chance(0.3) ? 0.7 : null, es: chance(0.3) ? int(30, 100, 10) : null, cd: chance(0.3) ? pick([25, 40]) : null, daekToAkse: pick([30, 40, 50]),
+  };
   if (chance(0.2)) patch.plade.hulfrigang = 'stor';
   if (chance(0.1)) { patch.plade.afstandTilBeton = int(10, 40, 10); patch.plade.mellemlaeg = pick(['aaben', 'moertel']); }
   if (indl) { patch.anker.tauRkCr = pick([5, 7.5, 9]); patch.anker.tauRkUcr = pick([10, 13]); patch.anker.d0 = d + 4; patch.anker.dh = null; patch.anker.th = null; }
