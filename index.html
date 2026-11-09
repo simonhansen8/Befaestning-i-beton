@@ -3932,7 +3932,7 @@ NB: Beregnet med midlertidig mock-beregningskerne \u2013 m\xE5 ikke anvendes til
 
 <div class="ajour-pop" id="ajour-pop" hidden role="dialog" aria-label="Versionstjek"></div>
 <script>(function(){
-var APP_BUILD="2026-11-09.3",REPO="simonhansen8/Befaestning-i-beton",chip=document.getElementById("ajour-chip"),pop=document.getElementById("ajour-pop");
+var APP_BUILD="2026-11-09.4",REPO="simonhansen8/Befaestning-i-beton",chip=document.getElementById("ajour-chip"),pop=document.getElementById("ajour-pop");
 if(!chip)return;
 var info={state:"check",html:"Tjekker …"};
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -3942,15 +3942,16 @@ function run(){
  set("check","Tjekker version …","Tjekker mod GitHub …");
  var t=Date.now();
  Promise.all([
-  fetch("https://raw.githubusercontent.com/"+REPO+"/main/index.html?t="+t,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error(r.status);return r.text()}),
-  jget("https://api.github.com/repos/"+REPO+"/pulls?state=open&per_page=20"),
-  jget("https://api.github.com/repos/"+REPO+"/commits?sha=main&per_page=1")
+  fetch("https://raw.githubusercontent.com/"+REPO+"/main/index.html?t="+t).then(function(r){if(!r.ok)throw new Error(r.status);return r.text()}),
+  jget("https://api.github.com/repos/"+REPO+"/pulls?state=open&per_page=20").catch(function(){return null}),
+  jget("https://api.github.com/repos/"+REPO+"/commits?sha=main&per_page=1").catch(function(){return null})
  ]).then(function(a){
-  var m=/APP_BUILD="([^"]+)"/.exec(a[0]),latest=m&&m[1],prs=a[1]||[],c=a[2]&&a[2][0];
+  var m=/APP_BUILD="([^"]+)"/.exec(a[0]),latest=m&&m[1],prs=a[1]||[],c=a[2]&&a[2][0],noPr=!a[1];
   var base="<b>Din version:</b> "+esc(APP_BUILD)+"<br><b>Seneste på main:</b> "+esc(latest||"ukendt")+(c?"<br><small>Seneste commit: "+esc((c.commit.message||"").split("\n")[0])+" ("+esc((c.commit.author.date||"").slice(0,10))+")</small>":"");
   var pl=prs.length?"<br><br><b>Under udvikling ("+prs.length+" åbne PR):</b><ul>"+prs.map(function(p){return"<li><a href=\""+esc(p.html_url)+"\" target=\"_blank\" rel=\"noopener\">#"+p.number+" "+esc(p.title)+"</a>"+(p.draft?" (kladde)":"")+"</li>"}).join("")+"</ul>":"";
   if(latest&&latest!==APP_BUILD)set("old","Ny version findes",base+"<br><br><b>Der findes en nyere version.</b> Genindlæs siden (Ctrl/Cmd+Shift+R) eller hent den nyeste index.html."+pl);
   else if(prs.length)set("pending","Opdateret · "+prs.length+" på vej",base+"<br><br>Du har den seneste version, men der er ændringer på vej."+pl);
+  else if(noPr)set("ok","Opdateret","<b>Din version:</b> "+esc(APP_BUILD)+"<br><br>Du har den seneste version. Listen over åbne PR'er kunne ikke hentes.")
   else set("ok","Opdateret",base+"<br><br>Du har den seneste version. Intet på vej."+pl);
  }).catch(function(){set("off","Version "+APP_BUILD+" (ikke tjekket)","<b>Din version:</b> "+esc(APP_BUILD)+"<br><br>Kunne ikke kontakte GitHub (offline eller blokeret), så det kan ikke ses om der er en nyere version.")});
 }
