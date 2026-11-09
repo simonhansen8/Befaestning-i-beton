@@ -30,7 +30,9 @@ describe('3D-beskrivelse', () => {
     const id = i.opstilling.anker[0].id;
     const k: any = { styrendeBrudform: null, traek: { traekAnkre: [] }, kantbrud: { styrende: null, forreste: { xNeg: { c1: 130, ankre: [id] } } }, armKant: { kant: 'xNeg' }, armV: { ben: 4, virksom: false } };
     const st = byg3d(i, k, null).dele.filter((x) => x.type === 'stang') as any[];
-    expect(st.filter((x) => !x.variant)).toHaveLength(2 * 3);
+    // 2 løkker (4 ben): hver med to ben, to bukkede hjørner (8 buesegmenter) og tværstykke, samt to forankringsstykker (lbd)
+    expect(st.filter((x) => !x.variant).length).toBeGreaterThan(2 * 6); // buede hjørner giver mange segmenter
+    expect(st.filter((x) => x.variant === 'forankring')).toHaveLength(2 * 2);
     expect(st.every((x) => x.inaktiv)).toBe(true);
   });
   it('har mål for hef, h, plade, boltafstand og kantafstand, og kan slå dem fra', () => {
@@ -152,5 +154,23 @@ describe('skematisk overfladearmering kan skjules', () => {
     expect(st(true).some((x) => x.variant === 'tilbehoer')).toBe(true);
     expect(st(false).some((x) => x.variant === 'tilbehoer')).toBe(false);
     expect(st(false).length).toBeGreaterThan(0);
+  });
+});
+
+describe('trækbøjlens ben føres lbd forbi brudkeglen', () => {
+  it('bunden ligger ved keglens skæring + lbd, og l1, lbd og bukkediameter vises som mål', async () => {
+    const { beregnTilstand } = await import('./state');
+    const i: any = structuredClone(m); i.beton.h = 1000;
+    i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 1, diameter: 12, afstand: 50, daeklagTop: 40, krog: true, foering: 'stoed' };
+    const t = beregnTilstand(i), k = t.resultat!.kombinationer[0]!.resultat;
+    const s = byg3d(t.model, k, null);
+    const rad = Math.hypot(50, i.anker.d / 2 + 6 + 2), zKegle = -(i.anker.hef - Math.tan((35 * Math.PI) / 180) * rad);
+    const lbd = k.forank.T!.lbd;
+    const st = s.dele.filter((x) => x.type === 'stang' && !x.variant) as any[];
+    expect(Math.min(...st.map((x) => Math.min(x.fra[2], x.til[2])))).toBeCloseTo(zKegle - lbd, 4);
+    const tekster = s.dele.filter((x) => x.type === 'maal' || x.type === 'tekst').map((x: any) => x.tekst as string);
+    expect(tekster.some((x) => x.startsWith('l1 = '))).toBe(true);
+    expect(tekster.some((x) => x.startsWith('lbd = '))).toBe(true);
+    expect(tekster.some((x) => x.startsWith('bukkediameter 48 mm (4⌀)'))).toBe(true);
   });
 });
