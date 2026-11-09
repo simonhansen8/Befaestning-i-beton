@@ -178,7 +178,7 @@ describe('trækbøjlens ben føres lbd forbi brudkeglen', () => {
   });
 });
 
-describe('kantarmering som lukkede bøjler om kantstænger', () => {
+describe('kantarmering som åbne U-bøjler om kantstænger', () => {
   it('fire kantstænger i bøjlens hjørner, bøjler med dorn og dæklag, afstand a og krav-tekst', () => {
     const k: any = structuredClone(m);
     k.beton.kanter.xNeg = 300; k.beton.cnom = 30; k.beton.h = 400;
@@ -191,6 +191,8 @@ describe('kantarmering som lukkede bøjler om kantstænger', () => {
     const boejle = st.filter((x) => x.fra[1] === x.til[1]);
     expect(boejle.length).toBeGreaterThan(20);
     for (const x of boejle) { expect(Math.min(x.fra[0], x.til[0]) - 6).toBeGreaterThanOrEqual(-300 + 30 - 1e-6); expect(Math.max(x.fra[2], x.til[2]) + 6).toBeLessThanOrEqual(-30 + 1e-6); }
+    // åben: intet tværstykke foroven (z = −(cnom+⌀/2) med forskellig x)
+    expect(boejle.filter((x) => Math.abs(x.fra[2] + 36) < 1e-6 && Math.abs(x.til[2] + 36) < 1e-6 && x.fra[0] !== x.til[0])).toHaveLength(0);
     // bøjlebredde (yderside til yderside) = bs
     const xs = boejle.flatMap((x) => [x.fra[0], x.til[0]]);
     expect(Math.max(...xs) - Math.min(...xs) + 12).toBeCloseTo(150, 5);
