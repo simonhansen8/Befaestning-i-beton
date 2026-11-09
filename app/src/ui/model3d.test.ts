@@ -59,15 +59,23 @@ describe('3D-beskrivelse', () => {
     i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 2, diameter: 12, afstand: 50, daeklagTop: 40, krog: true, foering: 'stoed' };
     const s = byg3d(i, null, null);
     const st = s.dele.filter((x) => x.type === 'stang') as any[];
-    // pr. bøjle: to ben, bøjning og overfladestang
-    expect(st).toHaveLength(n * 2 * 4);
-    expect(st.filter((x) => x.variant === 'tilbehoer')).toHaveLength(n * 2);
+    // lukket bøjle: to lodrette ben + to vandrette sider + fire buede hjørner (8 segmenter hver)
+    const boejle = st.filter((x) => !x.variant);
+    const lodret = boejle.filter((x) => x.fra[0] === x.til[0] && x.fra[1] === x.til[1] && x.fra[2] !== x.til[2]);
+    expect(lodret.length).toBeGreaterThanOrEqual(n * 2 * 2); // mindst benene (buerne giver yderligere skrå segmenter)
+    const topZ = (j: number) => -40 - j * 13;
+    // bøjlen når overkant (daeklagTop) og nederst hef; bøjningen findes både foroven og forneden
+    expect(Math.max(...boejle.map((x) => Math.max(x.fra[2], x.til[2])))).toBeCloseTo(topZ(0), 5);
+    expect(Math.min(...boejle.map((x) => Math.min(x.fra[2], x.til[2])))).toBeCloseTo(-i.anker.hef, 5);
+    expect(boejle.length).toBe(n * 2 * (2 + 2 + 4 * 8)); // 2 ben, 2 sider, 4 hjørner à 8 buesegmenter
+    // overfladearmering: rigtige stænger med ⌀s, ligger inde i bøjlen (under overkanten) og går gennem hver bøjle
+    const flade = st.filter((x) => x.variant === 'tilbehoer');
+    expect(flade.length).toBeGreaterThanOrEqual(2); // en stang pr. bøjleplan (sammenfaldende gennem flere bolte slås sammen)
+    expect(new Set(flade.map((x) => x.r))).toEqual(new Set([5]));
+    expect(flade.some((x) => Math.abs(x.fra[2] - (topZ(0) - 6 - 5)) < 1e-6)).toBe(true);
+    // fladearmeringens længde er langt større end bøjlens bredde (gennemgående)
+    expect(Math.max(...flade.map((x) => Math.hypot(x.til[0] - x.fra[0], x.til[1] - x.fra[1])))).toBeGreaterThan(300);
     expect(s.dele.some((x) => x.type === 'cirkel')).toBe(false); // zonen 0,75·hef tegnes ikke
-    // benene er lodrette og går ned til hef; bøjningen ligger øverst, ikke nederst
-    const lodret = st.filter((x) => x.fra[0] === x.til[0] && x.fra[1] === x.til[1] && !x.variant);
-    expect(lodret).toHaveLength(n * 4);
-    for (const l of lodret) { expect(l.fra[2]).toBeCloseTo(-40 - (st.indexOf(l) % 8 >= 4 ? 13 : 0), 0); expect(l.til[2]).toBe(-i.anker.hef); }
-    expect(st.filter((x) => x.fra[2] === x.til[2] && !x.variant).every((x) => x.fra[2] > -i.anker.hef)).toBe(true);
     i.beton.armering.ankerarmeringTraek.krog = false;
     const lige = byg3d(i, null, null).dele.filter((x) => x.type === 'stang') as any[];
     expect(lige).toHaveLength(n * 2 * 2);
@@ -134,5 +142,15 @@ describe('3D-beskrivelse', () => {
     const k: any = structuredClone(m); k.beton.kanter.xNeg = 300; k.beton.armering.kantarmering = 'boejler'; k.beton.armering.kantarmeringDiameter = 12;
     const antal = (afst: number) => { k.beton.armering.kantarmeringAfstand = afst; return byg3d(k, null, null, false, false).dele.filter((x) => x.type === 'stang').length; };
     expect(antal(100)).toBeGreaterThan(antal(200));
+  });
+});
+
+describe('skematisk overfladearmering kan skjules', () => {
+  it('tilbehør (grøn) udelades når visTilbehoer er falsk, bøjlerne bevares', () => {
+    const i: any = structuredClone(standardModel('2026-01-01')); i.beton.armering.ankerarmeringTraek.aktiv = true;
+    const st = (vis: boolean) => (byg3d(i, null, null, false, true, true, null, vis).dele.filter((x) => x.type === 'stang') as any[]);
+    expect(st(true).some((x) => x.variant === 'tilbehoer')).toBe(true);
+    expect(st(false).some((x) => x.variant === 'tilbehoer')).toBe(false);
+    expect(st(false).length).toBeGreaterThan(0);
   });
 });

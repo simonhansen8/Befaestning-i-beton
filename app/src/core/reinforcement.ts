@@ -13,6 +13,8 @@ export interface TraekArmering {
   bekraeft?: { a: boolean; e: boolean; f: boolean };
   /** Bøjleparrene drejet 90° om ankeret (kun tegning; beregningen er uafhængig af retningen). */
   drejet?: boolean;
+  /** Overfladearmering som bøjlerne omslutter (kun tegning): diameter og c/c-afstand. */
+  fladeDiameter?: number; fladeAfstand?: number;
 }
 export interface ForskydningsArmering {
   aktiv: boolean; type: 'boejle' | 'overflade' | 'loekke'; kant: KantNavn | null; diameter: number;

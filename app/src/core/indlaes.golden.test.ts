@@ -33,7 +33,7 @@ describe('indlaesFil mod facit', () => {
     // Bevidste tilføjelser siden facit: bekræftelser, drejning af bøjlepar og bøjleafstand for forskydningsarmering.
     delete ny.plade?.lasthoejde; // ny valgfri indtastning (højde af forskydningslast)
     const ar = ny.beton?.armering;
-    if (ar?.ankerarmeringTraek) { delete ar.ankerarmeringTraek.bekraeft; delete ar.ankerarmeringTraek.drejet; }
+    if (ar?.ankerarmeringTraek) { delete ar.ankerarmeringTraek.bekraeft; delete ar.ankerarmeringTraek.drejet; delete ar.ankerarmeringTraek.fladeDiameter; delete ar.ankerarmeringTraek.fladeAfstand; }
     if (ar?.ankerarmeringForskydning) delete ar.ankerarmeringForskydning.afstandBoejler;
     expect(ny).toEqual(gl);
   });

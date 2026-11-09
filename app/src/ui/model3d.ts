@@ -24,7 +24,7 @@ export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; s
 
 const dk = (v: number, d = 1) => v.toFixed(d).replace('.', ',').replace('-', '−');
 
-export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true, valgtBrud: string | null = null): Scene3DBeskrivelse {
+export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true, valgtBrud: string | null = null, visTilbehoer = true): Scene3DBeskrivelse {
   const a = m.anker, be = m.beton, pl = m.plade, ankre: { id: number; x: number; y: number }[] = m.opstilling.anker ?? [];
   const hef = a.hef, d = a.d, e = pl.afstandTilBeton ?? 0, t = pl.t;
   const indstoebt = a.type !== 'indlimet';
@@ -49,26 +49,64 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   }
   type Pkt3 = [number, number, number];
   const stang = (fra: Pkt3, til: Pkt3, r: number, ekstra: { inaktiv?: boolean; variant?: 'forankring' | 'tilbehoer' } = {}) => dele.push({ type: 'stang', rolle: 'armering', fra, til, r, ...ekstra });
-  // ankerarmering for træk (7.2.1.2, Fig. 7.2): bøjler i lodrette planer, parvis og symmetrisk om ankeret.
-  // Planet er forskudt M fra boltens akse, benene sidder ±x fra planets midte (radial afstand √(x²+M²) ≤ 0,75·hef),
-  // bøjningen ligger ved overfladen om overfladearmeringen, og benene føres ned forbi brudkeglen. Flere bøjler drejes om ankeret.
+  // ankerarmering for træk (7.2.1.2, Fig. 7.2): lukkede bøjler i lodrette planer, parvis og symmetrisk om ankeret, omsluttende overfladearmeringen.
+  // Planet er forskudt M fra boltens akse, benene sidder ±x fra planets midte (radial afstand √(x²+M²) ≤ 0,75·hef).
+  // Hjørnerne er bukket om en dorn (EN 1992-1-1, 8.3: 4⌀ for ⌀ ≤ 16 mm, ellers 7⌀); benene føres ned forbi brudkeglen.
+  // Overfladearmeringen er rigtige stænger (⌀s, ss) over hele elementet; en stang i hvert lag går gennem hver bøjle.
   const at = be.armering?.ankerarmeringTraek;
   if (at?.aktiv && ankre.length) {
     const p = at.diameter || 12, r = p / 2, n = Math.max(1, Math.round(at.antalBoejler ?? 1)), x = at.afstand, M = d / 2 + r + 2;
+    const fs = at.fladeDiameter ?? 10, ss = at.fladeAfstand ?? 150, cn = be.cnom ?? 30;
     const bundZ = -(at.foering === 'ingen' ? (at.forankringsdybde ?? hef) : hef);
     const alleInaktive = !!k && !k.armT.virksom, ikkeVirk = k?.armT.ikkeVirksomme ?? 0;
+    const dorn = p <= 16 ? 4 * p : 7 * p;
+    // stykke af en linje (p0 + t·dv) inden for elementet minus dæklag
+    const klip = (p0: [number, number], dv: [number, number]): [number, number] | null => {
+      let a0 = -1e9, a1 = 1e9;
+      for (const [po, dd, lo, hi] of [[p0[0], dv[0], x0 + cn, x1 - cn], [p0[1], dv[1], y0 + cn, y1 - cn]] as const) {
+        if (Math.abs(dd) < 1e-9) { if (po < lo || po > hi) return null; continue; }
+        const ta = (lo - po) / dd, tb = (hi - po) / dd; a0 = Math.max(a0, Math.min(ta, tb)); a1 = Math.min(a1, Math.max(ta, tb));
+      }
+      return a1 > a0 ? [a0, a1] : null;
+    };
+    const set = new Set<string>();
+    const flade = (p0: [number, number], dv: [number, number], z: number) => {
+      const key = `${Math.round(p0[0] * 10)}:${Math.round(p0[1] * 10)}:${Math.round(dv[0])}:${Math.round(dv[1])}:${Math.round(z * 10)}`;
+      if (set.has(key)) return; set.add(key);
+      const kl = klip(p0, dv); if (!kl) return;
+      stang([p0[0] + dv[0] * kl[0], p0[1] + dv[1] * kl[0], z], [p0[0] + dv[0] * kl[1], p0[1] + dv[1] * kl[1], z], fs / 2, { variant: 'tilbehoer' });
+    };
+    const th0 = at.drejet ? Math.PI / 2 : 0;
+    const aksial = n === 1;
     for (const q of ankre) {
       for (let j = 0; j < n; j++) {
-        const th = (j * Math.PI) / n + (at.drejet ? Math.PI / 2 : 0), u: [number, number] = [Math.cos(th), Math.sin(th)], w: [number, number] = [-Math.sin(th), Math.cos(th)];
+        const th = (j * Math.PI) / n + th0, u: [number, number] = [Math.cos(th), Math.sin(th)], w: [number, number] = [-Math.sin(th), Math.cos(th)];
         const zt = -(at.daeklagTop ?? 40) - j * (p + 1), zb = Math.min(bundZ, zt - 10), inaktiv = alleInaktive || j >= n - ikkeVirk;
-        const pt = (s: number, z: number): Pkt3 => [q.x + u[0] * s * x + w[0] * M, q.y + u[1] * s * x + w[1] * M, z];
-        stang(pt(1, zt), pt(1, zb), r, { inaktiv });
-        stang(pt(-1, zt), pt(-1, zb), r, { inaktiv });
+        const pt = (sv: number, z: number): Pkt3 => [q.x + u[0] * sv + w[0] * M, q.y + u[1] * sv + w[1] * M, z];
         if (at.krog) {
-          stang(pt(1, zt), pt(-1, zt), r, { inaktiv });
-          // overfladearmering som bøjlens bøjning omslutter (skematisk; ikke et input)
-          const fl = (ww: number): Pkt3 => [q.x + w[0] * ww, q.y + w[1] * ww, zt - p];
-          stang(fl(M), fl(M + 8 * p), r, { variant: 'tilbehoer' });
+          const Rb = Math.max(0.1, Math.min(dorn / 2 + r, x, (zt - zb) / 2)), N = 8;
+          const bue = (cs: number, cz: number, a0: number, a1: number): [number, number][] => Array.from({ length: N + 1 }, (_, i) => [cs + Rb * Math.cos(a0 + ((a1 - a0) * i) / N), cz + Rb * Math.sin(a0 + ((a1 - a0) * i) / N)]);
+          const sti: [number, number][] = [
+            [-x + Rb, zt], [x - Rb, zt], ...bue(x - Rb, zt - Rb, Math.PI / 2, 0), ...bue(x - Rb, zb + Rb, 0, -Math.PI / 2),
+            ...bue(-x + Rb, zb + Rb, -Math.PI / 2, -Math.PI), ...bue(-x + Rb, zt - Rb, Math.PI, Math.PI / 2),
+          ];
+          for (let i = 0; i < sti.length; i++) { const a2 = sti[i]!, b2 = sti[(i + 1) % sti.length]!; if (Math.hypot(a2[0] - b2[0], a2[1] - b2[1]) > 1e-6) stang(pt(a2[0], a2[1]), pt(b2[0], b2[1]), r, { inaktiv }); }
+        } else {
+          stang(pt(1 * x, zt), pt(1 * x, zb), r, { inaktiv });
+          stang(pt(-x, zt), pt(-x, zb), r, { inaktiv });
+        }
+        if (at.krog) {
+          // enclosed bar (lag 1, vinkelret på bøjlens plan): under bøjlens overkant
+          const uq = q.x * u[0] + q.y * u[1], z1 = zt - r - fs / 2;
+          flade([u[0] * uq, u[1] * uq], w, z1);
+          if (aksial && j === 0 && q === ankre[0]) {
+            const z2 = zt + r + fs / 2; // lag 2 (parallelt med bøjlens plan) over bøjlens overkant – kun hvis det ligger i betonen
+            for (let i = -200; i <= 200; i++) {
+              const pu = uq + i * ss;
+              flade([u[0] * pu, u[1] * pu], w, z1);
+            }
+            if (z2 + fs / 2 <= 0) { const wq = q.x * w[0] + q.y * w[1]; for (let i = -200; i <= 200; i++) flade([w[0] * (wq + i * ss), w[1] * (wq + i * ss)], u, z2); }
+          }
         }
       }
     }
@@ -105,7 +143,9 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
             if (av.krog) stang(G(fE, t0 + b.v, zs), G(fE, t0 + b.v, zs - 5 * p), r, { inaktiv });
           }
           if (av.krog) {
-            const vs = lateral.map((b) => b.v), lo = Math.min(...vs) - 3 * p, hi = Math.max(...vs) + 3 * p;
+            // tværstang som krogen omslutter: gennemgående langs kanten (hele elementets bredde minus dæklag)
+            const hj: [number, number][] = [[x0 + cnom, y0 + cnom], [x1 - cnom, y0 + cnom], [x0 + cnom, y1 - cnom], [x1 - cnom, y1 - cnom]];
+            const pr = hj.map((c) => c[0] * per[0] + c[1] * per[1]), lo = Math.min(...pr) - t0, hi = Math.max(...pr) - t0;
             stang(G(fE - p, t0 + lo, zs - p), G(fE - p, t0 + hi, zs - p), r, { variant: 'tilbehoer' });
           }
         }
@@ -198,6 +238,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   if (aktiv('Mx')) dele.push({ type: 'bue', rolle: 'last', centrum: c, akse: 'x', radius: L * 0.32, fortegn: l.Mx! > 0 ? 1 : -1, tekst: `Mx = ${dk(l.Mx! / 1e6)} kNm`, felt: 'last:Mx', vaerdi: l.Mx! / 1e6, vinkel: 270 });
   if (aktiv('My')) dele.push({ type: 'bue', rolle: 'last', centrum: c, akse: 'y', radius: L * 0.32, fortegn: l.My! > 0 ? 1 : -1, tekst: `My = ${dk(l.My! / 1e6)} kNm`, felt: 'last:My', vaerdi: l.My! / 1e6, vinkel: 270 });
   if (aktiv('T')) dele.push({ type: 'bue', rolle: 'last', centrum: [0, 0, topZ + 2], akse: 'z', radius: Math.max(pl.bx, pl.by) * 0.42, fortegn: l.T! > 0 ? 1 : -1, tekst: `T = ${dk(l.T! / 1e6)} kNm`, felt: 'last:T', vaerdi: l.T! / 1e6, vinkel: 300 });
+  if (!visTilbehoer) dele.splice(0, dele.length, ...dele.filter((x) => !(x.type === 'stang' && x.variant === 'tilbehoer')));
   if (!visLast) dele.splice(0, dele.length, ...dele.filter((x) => x.type !== 'pil' && x.type !== 'bue'));
   // idealiserede brudlegemer for den styrende brudform (EN 1992-4, 35°-model); kun vejledende
   const styr = k?.styrendeBrudform ?? null;
@@ -224,7 +265,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
     ...(dele.some((x) => x.type === 'stang' && !x.inaktiv && !x.variant) ? [{ farve: 'armering', tekst: 'Armering' }] : []),
     ...(dele.some((x) => x.type === 'stang' && x.inaktiv) ? [{ farve: 'inaktiv', tekst: 'Armering der ikke regnes virksom' }] : []),
     ...(dele.some((x) => x.type === 'stang' && x.variant === 'forankring') ? [{ farve: 'forankring', tekst: 'Forankring uden for brudlegemet (skematisk, ikke eftervist)' }] : []),
-    ...(dele.some((x) => x.type === 'stang' && x.variant === 'tilbehoer') ? [{ farve: 'tilbehoer', tekst: 'Forudsat overfladearmering/kantarmering (skematisk)' }] : []),
+    ...(dele.some((x) => x.type === 'stang' && x.variant === 'tilbehoer') ? [{ farve: 'tilbehoer', tekst: 'Overflade- og kantarmering (stænger)' }] : []),
     ...(dele.some((x) => x.type === 'cirkel') ? [{ farve: 'zone', tekst: 'Zone 0,75·hef om ankeret' }] : []),
     ...(dele.some((x) => x.type === 'pil' || x.type === 'bue') ? [{ farve: 'last', tekst: 'Laster' }] : []),
   ];

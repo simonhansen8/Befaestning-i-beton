@@ -194,6 +194,8 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
       foering: vaelg(W.foering, ['stoed', 'ingen'] as const, 'ingen'),
       forankringsdybde: r(`${tv}.forankringsdybde`, W.forankringsdybde, null, { gt: 0, nullable: true, krit: Z }),
       drejet: boolsk(W.drejet, false),
+      fladeDiameter: r(`${tv}.fladeDiameter`, W.fladeDiameter, 10, { gt: 0, krit: false }),
+      fladeAfstand: r(`${tv}.fladeAfstand`, W.fladeAfstand, 150, { gt: 0, krit: false }),
       bekraeft: { a: boolsk(Wb.a, false), e: boolsk(Wb.e, false), f: boolsk(Wb.f, false) },
     },
     ankerarmeringForskydning: forsk,
