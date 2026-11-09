@@ -10,7 +10,7 @@ Beslutning (Simon): bevar normlogikken, genopbyg strukturen som TypeScript + Vit
 | 4 | Struktureret resultat; tekst/HTML kun i præsentationslag | |
 | 5 | UI/state: ét state, én vej felt → model → beregning | |
 | 6 | Sporbarhedstabel felt → formel → norm → test, kontrolleret i CI | |
-| 7 | Uafhængig verifikation (Python-reference, håndregnede eksempler, evt. PROFIS) | |
+| 7 | Uafhængig verifikation (Python-reference, håndregnede eksempler, evt. PROFIS) | **I gang**: Python-reference + håndregnet eksempel for 10 rene tilfælde matcher kernen (se `verifikation.md`). Mangler: momenter, armering, indlimede anker, PROFIS |
 | 8 | Migrér 2D/3D/rapport | |
 | 9 | Udfas gammel fil når facit er grønt | |
 

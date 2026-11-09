@@ -16,3 +16,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      - name: Uafhængig reference (Python) er uændret
+        run: |
+          python3 verifikation/reference.py > /dev/null
+          git diff --exit-code verifikation/expected.json

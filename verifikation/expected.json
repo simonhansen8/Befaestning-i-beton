@@ -1,0 +1,412 @@
+[
+ {
+  "navn": "A1 enkeltbolt, revnet, ingen kanter",
+  "beskrivelse": "Én bolt M16 4.6, hef 150, C30/37, revnet. Ac = A0 = (3·150)² → NRk,c = 8,9·√30·150^1,5.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 50000,
+   "Vx": 20000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 89554.52249886657,
+   "V_s": 37680.0,
+   "V_cp": 179109.04499773314
+  }
+ },
+ {
+  "navn": "A2 enkeltbolt, urevnet",
+  "beskrivelse": "Som A1 men urevnet (k1 = 12,7; k2 = 10,5).",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": false,
+  "h": 400,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 50000,
+   "Vx": 20000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 144729.24656006478,
+   "N_c": 127791.28491411297,
+   "V_s": 37680.0,
+   "V_cp": 255582.56982822594
+  }
+ },
+ {
+  "navn": "A3 to bolte s=150, ren træk",
+  "beskrivelse": "To bolte i række, s = 150 < scr = 450 → Ac = (150 + 450)·450.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    -75,
+    0
+   ],
+   [
+    75,
+    0
+   ]
+  ],
+  "last": {
+   "N": 100000,
+   "Vx": 40000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 119406.02999848875,
+   "V_s": 37680.0,
+   "V_cp": 238812.0599969775
+  }
+ },
+ {
+  "navn": "A4 fire bolte 150×150",
+  "beskrivelse": "Rektangulær gruppe M20 8.8, hef 200: Ac = (150+600)².",
+  "d": 20,
+  "hef": 200,
+  "dh": 36,
+  "th": 16,
+  "As": 245,
+  "fuk": 800,
+  "fyk": 640,
+  "duktil": true,
+  "klasse": "C40/50",
+  "revnet": true,
+  "h": 500,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    -75,
+    -75
+   ],
+   [
+    75,
+    -75
+   ],
+   [
+    -75,
+    75
+   ],
+   [
+    75,
+    75
+   ]
+  ],
+  "last": {
+   "N": 200000,
+   "Vx": 80000
+  },
+  "forventet": {
+   "N_s": 196000,
+   "N_p": 211115.02632123412,
+   "N_c": 248762.5624968516,
+   "V_s": 98000.0,
+   "V_cp": 497525.1249937032
+  }
+ },
+ {
+  "navn": "A5 enkeltbolt nær kant (træk)",
+  "beskrivelse": "Kant c = 100 mm på xNeg: Ac = (100 + 225)·450 (kvadratet er klippet), ψs = 0,7 + 0,3·100/225.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": 100,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 50000,
+   "Vx": 20000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 53898.555207651174,
+   "V_s": 37680.0,
+   "V_cp": 107797.11041530235
+  }
+ },
+ {
+  "navn": "A6 enkeltbolt nær kant (forskydning mod kant)",
+  "beskrivelse": "Forskydning mod kant, c1 = 100, h = 300: V0Rk,c, Ac,V = 3·c1·1,5·c1, ψh = 1.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 300,
+  "kanter": {
+   "xNeg": 100,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 0,
+   "Vx": -20000,
+   "Vedge": "xNeg"
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 53898.555207651174,
+   "V_s": 37680.0,
+   "V_cp": 107797.11041530235,
+   "V_c": 18506.23912449107
+  }
+ },
+ {
+  "navn": "A7 to bolte langs kant, forskydning mod kant",
+  "beskrivelse": "To bolte parallelt med kanten, c1 = 120, s = 160 < 3c1: bredde = 160 + 3·120.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 300,
+  "kanter": {
+   "xNeg": 120,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    -80
+   ],
+   [
+    0,
+    80
+   ]
+  ],
+  "last": {
+   "N": 0,
+   "Vx": -40000,
+   "Vedge": "xNeg"
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 80040.51537532032,
+   "V_s": 37680.0,
+   "V_cp": 160081.03075064064,
+   "V_c": 33693.07121788168
+  }
+ },
+ {
+  "navn": "A8 lav hef (k8 = 1)",
+  "beskrivelse": "hef = 50 < 60 → k8 = 1 (VRk,cp = NRk,c).",
+  "d": 12,
+  "hef": 50,
+  "dh": 22,
+  "th": 10,
+  "As": 84.3,
+  "fuk": 500,
+  "fyk": 300,
+  "duktil": true,
+  "klasse": "C25/30",
+  "revnet": true,
+  "h": 200,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 20000,
+   "Vx": 10000
+  },
+  "forventet": {
+   "N_s": 42150.0,
+   "N_p": 50069.13291658733,
+   "N_c": 11799.844411050512,
+   "V_s": 25290.0,
+   "V_cp": 11799.844411050512
+  }
+ },
+ {
+  "navn": "A9 ikke-duktilt stål, to bolte",
+  "beskrivelse": "Ikke-duktil (6.8): k7 = 0,8 for gruppe; fuk = 600 > 500 → k6 = 0,5.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 600,
+  "fyk": 480,
+  "duktil": false,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    -100,
+    0
+   ],
+   [
+    100,
+    0
+   ]
+  ],
+  "last": {
+   "N": 40000,
+   "Vx": 30000
+  },
+  "forventet": {
+   "N_s": 94200,
+   "N_p": 103378.03325718913,
+   "N_c": 129356.53249836282,
+   "V_s": 37680.0,
+   "V_cp": 258713.06499672565
+  }
+ },
+ {
+  "navn": "A10 tynd plade, ψh > 1",
+  "beskrivelse": "h = 120 < 1,5·c1 = 300 → Ac,V = 3c1·h og ψh = √(300/120).",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 120,
+  "kanter": {
+   "xNeg": 200,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 0,
+   "Vx": -10000,
+   "Vedge": "xNeg"
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 81759.96220729854,
+   "V_s": 37680.0,
+   "V_cp": 163519.92441459707,
+   "V_c": 28653.22902643321
+  }
+ }
+]
