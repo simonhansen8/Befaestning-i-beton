@@ -17,7 +17,7 @@ export function standardModel(dato = ''): Obj {
       klasse: 'C30/37', fck: null, revnet: true, urevnet: { sigmaL: null, sigmaR: 3 }, h: 500, cnom: 30,
       kanter: { xNeg: 250, xPos: null, yNeg: null, yPos: null },
       armering: {
-        afskalning: 'taet', kantarmering: 'ingen', kantarmeringAfstand: null, kantarmeringDiameter: null, splitArmering: false,
+        afskalning: 'taet', kantarmering: 'ingen', kantarmeringAfstand: null, kantarmeringDiameter: null, kantarmeringBredde: 150, splitArmering: false,
         ankerarmeringTraek: { aktiv: false, diameter: 12, antalBoejler: 1, fyk: 500, afstand: 50, daeklagTop: 40, krog: true, eta1: 1, foering: 'ingen', forankringsdybde: null, cd: null, drejet: false, fladeDiameter: 10, fladeAfstand: 150, bekraeft: { a: false, e: false, f: false } },
         ankerarmeringForskydning: {
           aktiv: false, type: 'boejle', diameter: 10, benPrAnker: 2, antalBoejler: 1, antalLoekker: 1, fyk: 500, afstand: 50, daekToAkse: 40,

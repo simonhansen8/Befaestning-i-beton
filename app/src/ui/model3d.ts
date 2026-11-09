@@ -23,6 +23,11 @@ export type Del =
 
 export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; stoerrelse: number; forklaring: { farve: string; tekst: string }[] }
 
+/** Afstand fra forreste anker (mindste koordinat for −kanter, største for +kanter) til kanten – til kravet a ≤ 2·c1. */
+const q0x = (ankre: { x: number; y: number }[], w: 'x' | 'y' | 'xmax' | 'ymax'): number => {
+  const v = ankre.map((q) => (w[0] === 'x' ? q.x : q.y));
+  return w.endsWith('max') ? Math.max(...v) : Math.min(...v);
+};
 const dk = (v: number, d = 1) => v.toFixed(d).replace('.', ',').replace('-', '−');
 
 export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true, valgtBrud: string | null = null, visTilbehoer = true): Scene3DBeskrivelse {
@@ -209,22 +214,43 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       }
     }
   }
-  // kantarmering (bøjler langs frie kanter): længdestænger foroven/forneden og bøjleben med afstanden a (7.2.2.5)
+  // kantarmering (7.2.2.5, ψre,V): kantstænger (⌀) langs den frie kant, omsluttet af lukkede bøjler (samme ⌀) med afstanden a.
+  // Bøjlen ligger i planet vinkelret på kanten: dæklag cnom til bøjlens yderside, dornbøjede hjørner (EN 1992-1-1, Tabel 8.1N),
+  // bredde bs ind i elementet og højde over hele elementet (afkortet i tegningen); fire kantstænger i bøjlens hjørner.
   if (be.armering?.kantarmering === 'boejler' && be.armering.kantarmeringDiameter) {
-    const dk2 = be.armering.kantarmeringDiameter / 2, c = be.cnom ?? 30, a = be.armering.kantarmeringAfstand;
-    const kanter2: { fri: boolean; langs: boolean; fast: number; lo: number; hi: number }[] = [
-      { fri: fri('xNeg'), langs: true, fast: x0 + c, lo: y0 + c, hi: y1 - c }, { fri: fri('xPos'), langs: true, fast: x1 - c, lo: y0 + c, hi: y1 - c },
-      { fri: fri('yNeg'), langs: false, fast: y0 + c, lo: x0 + c, hi: x1 - c }, { fri: fri('yPos'), langs: false, fast: y1 - c, lo: x0 + c, hi: x1 - c },
+    const dkb = be.armering.kantarmeringDiameter, rk = dkb / 2, c = be.cnom ?? 30, a = be.armering.kantarmeringAfstand;
+    const bs = be.armering.kantarmeringBredde ?? 150, dornK = dornDiameter(dkb), Rb = Math.min(dornK / 2 + rk, bs / 2 - 1);
+    const kanter2: { fri: boolean; langs: boolean; e0: number; inw: 1 | -1; lo: number; hi: number; navn: string }[] = [
+      { fri: fri('xNeg'), langs: true, e0: x0, inw: 1, lo: y0 + c, hi: y1 - c, navn: 'xNeg' }, { fri: fri('xPos'), langs: true, e0: x1, inw: -1, lo: y0 + c, hi: y1 - c, navn: 'xPos' },
+      { fri: fri('yNeg'), langs: false, e0: y0, inw: 1, lo: x0 + c, hi: x1 - c, navn: 'yNeg' }, { fri: fri('yPos'), langs: false, e0: y1, inw: -1, lo: x0 + c, hi: x1 - c, navn: 'yPos' },
     ];
     let markeret = false;
     for (const e2 of kanter2) {
       if (!e2.fri) continue;
-      const P = (t: number, z: number): Pkt3 => (e2.langs ? [e2.fast, t, z] : [t, e2.fast, z]);
-      stang(P(e2.lo, -dybde + c), P(e2.hi, -dybde + c), dk2); stang(P(e2.lo, -c), P(e2.hi, -c), dk2);
+      // punkt i bøjlens plan: s = afstand fra kanten (indad), z = dybde, t = placering langs kanten
+      const P = (t: number, sv: number, z: number): Pkt3 => (e2.langs ? [e2.e0 + e2.inw * sv, t, z] : [t, e2.e0 + e2.inw * sv, z]);
+      const s0 = c + rk, s1 = c + bs - rk, zt0 = -(c + rk), zb0 = -(Math.min(be.h, dybde) - c - rk); // bøjlens akse (yderste fibre i cnom)
+      const sk = [c + 2 * rk + rk, c + bs - 3 * rk], zk = [-(c + 3 * rk), -(Math.min(be.h, dybde) - c - 3 * rk)]; // kantstængernes akser inde i hjørnerne
+      for (const sv of sk) for (const zv of zk) stang(P(e2.lo, sv, zv), P(e2.hi, sv, zv), rk);
       if (a != null && a > 0) {
-        const n = Math.min(200, Math.floor((e2.hi - e2.lo) / a));
-        for (let i = 0; i <= n; i++) stang(P(e2.lo + i * a, -c), P(e2.lo + i * a, -dybde + c), dk2);
-        if (visMaal && !markeret && n >= 1) { markeret = true; dele.push({ type: 'maal', fra: P(e2.lo, -c), til: P(e2.lo + a, -c), tekst: `a = ${dk(a, 0)} mm` }); }
+        const n = Math.min(200, Math.floor((e2.hi - e2.lo) / a)), N = 6;
+        const hj = (cs: number, cz: number, a0: number, a1: number): [number, number][] => Array.from({ length: N + 1 }, (_, i) => [cs + Rb * Math.cos(a0 + ((a1 - a0) * i) / N), cz + Rb * Math.sin(a0 + ((a1 - a0) * i) / N)]);
+        const sti: [number, number][] = [
+          ...hj(s1 - Rb, zt0 - Rb, Math.PI / 2, 0), ...hj(s1 - Rb, zb0 + Rb, 0, -Math.PI / 2), ...hj(s0 + Rb, zb0 + Rb, -Math.PI / 2, -Math.PI), ...hj(s0 + Rb, zt0 - Rb, Math.PI, Math.PI / 2),
+        ];
+        for (let i = 0; i <= n; i++) {
+          const t = e2.lo + i * a;
+          for (let j2 = 0; j2 < sti.length; j2++) { const p1 = sti[j2]!, p2 = sti[(j2 + 1) % sti.length]!; if (Math.hypot(p1[0] - p2[0], p1[1] - p2[1]) > 1e-6) stang(P(t, p1[0], p1[1]), P(t, p2[0], p2[1]), rk); }
+        }
+        if (visMaal && !markeret && n >= 1) {
+          markeret = true;
+          dele.push({ type: 'maal', fra: P(e2.lo, s0, zt0), til: P(e2.lo + a, s0, zt0), tekst: `a = ${dk(a, 0)} mm` });
+          dele.push({ type: 'maal', fra: P(e2.lo, 0, 0.5), til: P(e2.lo, c, 0.5), tekst: `cnom = ${dk(c, 0)} mm` });
+          dele.push({ type: 'maal', fra: P(e2.lo, c, zt0 + rk + 1), til: P(e2.lo, c + bs, zt0 + rk + 1), tekst: `bs = ${dk(bs, 0)} mm` });
+          dele.push({ type: 'tekst', pos: P(e2.lo, s1, zt0 + 15), tekst: `kantbøjle ⌀${dk(dkb, 0)}: bukkediameter ${dk(dornK, 0)} mm (${dkb <= 16 ? '4' : '7'}⌀)` });
+          const c1 = Math.abs(((e2.navn === 'xNeg' ? q0x(ankre, 'x') + (be.kanter?.xNeg ?? 0) : e2.navn === 'xPos' ? (be.kanter?.xPos ?? 0) - q0x(ankre, 'xmax') : e2.navn === 'yNeg' ? q0x(ankre, 'y') + (be.kanter?.yNeg ?? 0) : (be.kanter?.yPos ?? 0) - q0x(ankre, 'ymax'))));
+          dele.push({ type: 'tekst', pos: P(e2.lo + a, s1, zt0 - 40), tekst: `krav ψre,V = 1,4: a ≤ 100 mm og a ≤ 2·c1 = ${dk(2 * c1, 0)} mm${a <= 100 && a <= 2 * c1 ? ' (opfyldt)' : ' (IKKE opfyldt)'}` });
+        }
       }
     }
   }

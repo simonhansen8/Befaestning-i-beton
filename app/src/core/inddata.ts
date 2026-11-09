@@ -148,6 +148,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
   if (kantarm === 'lige') { info('info', 'kantstang-lige', EN('7.2.2.5'), 'beton.armering.kantarmering'); kantarm = 'ingen'; }
   const kantarmering = vaelg(kantarm, ['ingen', 'boejler'] as const, 'ingen');
   const kA = r('beton.armering.kantarmeringAfstand', h.kantarmeringAfstand, null, { min: 0, nullable: true, krit: false });
+  const kB = r('beton.armering.kantarmeringBredde', h.kantarmeringBredde, 150, { gt: 0, krit: false });
   const kD = r('beton.armering.kantarmeringDiameter', h.kantarmeringDiameter, null, { min: 0, nullable: true, krit: false });
   const benPr = r('beton.armering.ankerarmeringTraek.benPrAnker', W.benPrAnker, null, { min: 0, max: ANTAL_MAX, nullable: true, krit: false });
   const antalBen = r('beton.armering.ankerarmeringTraek.antalBen', W.antalBen, null, { min: 0, max: ANTAL_MAX * 10, nullable: true, krit: false });
@@ -179,7 +180,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
   if (forsk.benPrAnker == null && forsk.antalBenIAlt == null) forsk.benPrAnker = 2;
   const tv = 'beton.armering.ankerarmeringTraek';
   const armering = {
-    afskalning, kantarmering, kantarmeringAfstand: kA, kantarmeringDiameter: kD, splitArmering: boolsk(h.splitArmering, false),
+    afskalning, kantarmering, kantarmeringAfstand: kA, kantarmeringDiameter: kD, kantarmeringBredde: kB, splitArmering: boolsk(h.splitArmering, false),
     ankerarmeringTraek: {
       aktiv: Z, diameter: r(`${tv}.diameter`, W.diameter, 12, { gt: 0, krit: Z }),
       benPrAnker: 2 * antalBoejlerT, antalBoejler: antalBoejlerT,
