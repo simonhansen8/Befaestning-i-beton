@@ -55,3 +55,29 @@ test('ny UI: justeringsforslag kan beregnes og anvendes', async () => {
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
+
+test('ny UI: tema, Om, Indsæt JSON og autogem', async () => {
+  const browser = await chromium.launch();
+  try {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.route(/^https?:\/\//, (r) => r.abort());   // offline: ajour-mærkaten skal vise "ikke tjekket"
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.waitForSelector('.ajour[data-state="off"]');
+    await page.click('text=Tema: system');
+    assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-tema')), 'moerk');
+    await page.click('button:has-text("Om")');
+    await page.waitForSelector('dialog[open]');
+    await page.click('dialog button:has-text("Luk")');
+    // autogem: ændring huskes efter genindlæsning
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.laster[0].N = 12345; }));
+    await page.waitForTimeout(700);
+    await page.reload();
+    await page.waitForSelector('.hoved');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.laster[0].N), 12345);
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});

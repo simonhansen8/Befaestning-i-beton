@@ -11,6 +11,8 @@ import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
 import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
 import { beregnForslag, type ForslagResultat, type SpecResultat } from '../core/forslag';
 import { saetSti } from '../core/sti';
+import { REPO, hentSeneste, vurderVersion, type AjourStatus } from './ajour';
+import { laesTema, naesteTema, saetTema, type Tema } from './autogem';
 import { aendringTekst, etiket, forudsaetning, hvorforTekst } from './forslag-tekster';
 import { tekst } from './tekster';
 import { FEJLTEKST, laesSti, visFelt } from './vaerdi';
@@ -38,6 +40,41 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   // Justeringsforslag beregnes først, når brugeren beder om det, og gælder kun for den model, de blev beregnet for.
   let forslag: { sig: string; res: ForslagResultat } | null = null;
   let forslagBeregner = false;
+  let ajour: AjourStatus = { tilstand: 'check', etiket: 'Tjekker version …', seneste: null, prs: [], commit: null, prsUkendt: false };
+  let tema: Tema = laesTema();
+  const tjekVersion = async () => {
+    ajour = { ...ajour, tilstand: 'check', etiket: 'Tjekker version …' }; draw();
+    ajour = vurderVersion(build, await hentSeneste()); draw();
+  };
+  const TEMA_NAVN: Record<Tema, string> = { system: 'Tema: system', moerk: 'Tema: mørk', lys: 'Tema: lys' };
+  const dialog = (titel: string, indhold: (Node | false | null)[], knapper: Node[] = []) => {
+    const d = h('dialog', {}, h('h3', {}, titel), ...indhold, h('menu', {}, ...knapper, h('button', { onclick: () => { d.close(); d.remove(); } }, 'Luk')));
+    d.addEventListener('close', () => d.remove());
+    document.body.append(d); d.showModal();
+  };
+  const omDialog = () => dialog('Om programmet', [
+    h('p', {}, `Ankerberegning efter DS/EN 1992-4. Version ${build}.`),
+    h('p', {}, 'Programmet er et beregningsværktøj og ikke certificeret. Resultater skal kontrolleres af en ingeniør, og de nationale parametre (DK NA) skal verificeres mod gældende dokumenter før brug til projekter.'),
+    h('p', {}, 'Kontrol: kernen er testet mod den gamle version, mod en uafhængig Python-reference og mod håndskrevne normformler. Se docs/sporbarhed.md og docs/verifikation.md i kodelageret.'),
+    h('p', {}, h('a', { href: `https://github.com/${REPO}`, target: '_blank', rel: 'noopener' }, 'Kodelager på GitHub'))]);
+  const indsaetDialog = () => {
+    const felt = h('textarea', { placeholder: 'Indsæt projekt-JSON her …' });
+    const fejl = h('p', { class: 'note', role: 'alert' });
+    dialog('Indsæt JSON', [felt, fejl], [h('button', { class: 'primaer', onclick: () => {
+      try { JSON.parse(felt.value); } catch (e) { fejl.textContent = `Ugyldig JSON: ${(e as Error).message}`; return; }
+      store.indlaesTekst(felt.value); (felt.closest('dialog') as HTMLDialogElement).close();
+    } }, 'Indlæs')]);
+  };
+  const ajourDialog = () => dialog('Versionstjek', [
+    h('p', {}, h('b', {}, 'Din version: '), build),
+    h('p', {}, h('b', {}, 'Seneste på main: '), ajour.seneste ?? 'ukendt'),
+    ajour.commit && h('p', { class: 'note' }, `Seneste commit: ${ajour.commit.tekst} (${ajour.commit.dato})`),
+    ajour.tilstand === 'old' && h('p', {}, h('b', {}, 'Der findes en nyere version. '), 'Genindlæs siden (Ctrl/Cmd+Shift+R) eller hent den nyeste index.html.'),
+    ajour.tilstand === 'off' && h('p', { class: 'note' }, 'Kunne ikke kontakte GitHub (offline eller blokeret), så det kan ikke ses, om der er en nyere version.'),
+    ajour.prsUkendt && ajour.tilstand !== 'off' && h('p', { class: 'note' }, "Listen over åbne PR'er kunne ikke hentes."),
+    ajour.prs.length > 0 && h('div', {}, h('b', {}, `Under udvikling (${ajour.prs.length} åbne PR):`),
+      h('ul', {}, ...ajour.prs.map((p) => h('li', {}, h('a', { href: p.html_url, target: '_blank', rel: 'noopener' }, `#${p.number} ${p.title}`), p.draft ? ' (kladde)' : ''))))],
+  [h('button', { onclick: () => { void tjekVersion(); } }, 'Tjek igen')]);
   const draw = () => {
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
@@ -49,6 +86,9 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       if (n instanceof HTMLInputElement && sel && sel[0] != null) n.setSelectionRange(sel[0], sel[1] ?? sel[0]);
     }
   };
+
+  setTimeout(() => { void tjekVersion(); }, 0);
+  setInterval(() => { void tjekVersion(); }, 600000);
 
   function topbar(): HTMLElement {
     const fil = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: async (e: Event) => {
@@ -71,6 +111,10 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           if (w) w.addEventListener('load', () => w.print());
           else { const a = h('a', { href: url, download: 'anker-rapport.html' }); a.click(); }
         } }, 'Rapport'),
+        h('button', { onclick: indsaetDialog }, 'Indsæt JSON'),
+        h('button', { title: 'Skift mellem system, mørkt og lyst tema', onclick: () => { tema = naesteTema(tema); saetTema(tema); draw(); } }, TEMA_NAVN[tema]),
+        h('button', { onclick: omDialog }, 'Om'),
+        h('button', { class: 'ajour', 'data-state': ajour.tilstand, onclick: ajourDialog }, ajour.etiket),
         h('label', { class: 'adv' }, h('input', { type: 'checkbox', checked: avanceret, onchange: (e: Event) => { avanceret = (e.target as HTMLInputElement).checked; draw(); } }), ' Avanceret'),
         h('span', { class: 'build' }, `build ${build}`)),
       store.tilstand.fejl && h('div', { class: 'fejlbanner', role: 'alert' }, store.tilstand.fejl),
