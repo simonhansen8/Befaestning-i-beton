@@ -5,6 +5,7 @@ import { parseIndstillinger } from './settings';
 import { afledStaal } from './steel';
 import { partialkoefficienter } from './partials';
 import { fordelTraek, skalerLast } from './loads';
+import { legacyKfi } from './facit-hjaelp';
 import { fckAf } from './concrete';
 import { traekOversigt } from './tension';
 import { eftervisBetonkegle } from './cone';
@@ -20,7 +21,7 @@ describe('betonkegle mod facit', () => {
     const { indstillinger } = parseIndstillinger({ ...m.indstillinger, gamma3: undefined, Ec: null }) /* gammel import: gamma3 fulgte kontrolklassen; Ec var fast */;
     const st = afledStaal({ staalklasse: m.anker.staalklasse, d: m.anker.d, gevind: m.anker.gevind, As: m.anker.As });
     const p = partialkoefficienter(indstillinger, { type: m.anker.type, fuk: st.fuk, fyk: st.fyk, gammaInstIndlimet: m.anker.gammaInst });
-    const lk = skalerLast(m.laster[c.resultat.styrendeKombination], p.kfi);
+    const lk = skalerLast(m.laster[c.resultat.styrendeKombination], legacyKfi(m));
     const f = fordelTraek(m.opstilling.anker, st.As, m.plade, lk, { Es: indstillinger.Es, Ec: 30000 /* facit: gammel kerne med fast Ec */, kanter: m.beton.kanter });
     const t = traekOversigt(m.opstilling.anker, f.F, f);
     const w = c.resultat.eftervisninger.find((e: any) => e.id === 'N_c');

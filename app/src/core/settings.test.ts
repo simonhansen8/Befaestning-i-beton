@@ -40,3 +40,12 @@ describe('Ec', () => {
     expect(ecmAfFck(32)).toBeLessThan(ecmAfFck(35));
   });
 });
+
+describe('K_FI', () => {
+  it('ganges ikke på lasterne: kfiPaaLaster findes ikke længere som indstilling', () => {
+    const { indstillinger } = parseIndstillinger({ kfiPaaLaster: true } as never);
+    expect('kfiPaaLaster' in indstillinger).toBe(false);
+    const p = partialkoefficienter(indstillinger, { type: 'indstoebt', fuk: 800, fyk: 640 });
+    expect('kfi' in p).toBe(false);
+  });
+});

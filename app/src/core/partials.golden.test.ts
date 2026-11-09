@@ -16,6 +16,7 @@ describe('partialkoefficienter mod facit', () => {
     expect(st.fuk).toBe(m.anker.fuk); expect(st.fyk).toBe(m.anker.fyk); expect(st.As).toBeCloseTo(m.anker.As, 9);
     const p = partialkoefficienter(indstillinger, { type: m.anker.type, fuk: st.fuk, fyk: st.fyk, gammaInstIndlimet: m.anker.gammaInst });
     for (const [k, v] of Object.entries(c.resultat.partialkoefficienter as Record<string, number | boolean>)) {
+      if (k === 'kfi' || k === 'kfiOenske') continue; // K_FI er fjernet fra kernen (laster er designværdier inkl. K_FI)
       const got = (p as any)[k];
       typeof v === 'number' ? expect(got).toBeCloseTo(v, 12) : expect(got).toBe(v);
     }

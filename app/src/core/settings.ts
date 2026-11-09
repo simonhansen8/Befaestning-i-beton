@@ -7,7 +7,6 @@ export interface IndstillingerInput {
   /** Manuel overstyring af γ3. Uden værdi udledes γ3 af kontrolklassen. */
   gamma3?: number | null;
   konsekvensklasse?: Konsekvensklasse;
-  kfiPaaLaster?: boolean;
   interaktion?: 'gunstigst' | 'potens' | 'lineaer';
   staalInteraktionVedLoeftestang?: 'eftervis' | 'undtag';
   pryoutEnkeltanker?: 'retning' | 'altid';
@@ -23,8 +22,8 @@ export interface Indstillinger {
   kontrolklasse: Kontrolklasse;
   /** Manuel γ3 (≥ 1,0) eller null = udledt af kontrolklassen. */
   gamma3Overstyring: number | null;
+  /** Kun til dokumentation/rapport. K_FI ganges IKKE på lasterne: laster indtastes som designværdier inkl. K_FI. */
   konsekvensklasse: Konsekvensklasse;
-  kfiPaaLaster: boolean;
   interaktion: 'gunstigst' | 'potens' | 'lineaer';
   staalInteraktionVedLoeftestang: 'eftervis' | 'undtag';
   pryoutEnkeltanker: 'retning' | 'altid';
@@ -63,7 +62,6 @@ export function parseIndstillinger(rå: IndstillingerInput = {}): { indstillinge
     kontrolklasse,
     gamma3Overstyring,
     konsekvensklasse: oneOf(rå.konsekvensklasse, ['CC1', 'CC2', 'CC3'] as const, 'CC2'),
-    kfiPaaLaster: rå.kfiPaaLaster === true,
     interaktion: oneOf(rå.interaktion, ['gunstigst', 'potens', 'lineaer'] as const, 'gunstigst'),
     staalInteraktionVedLoeftestang: oneOf(rå.staalInteraktionVedLoeftestang, ['eftervis', 'undtag'] as const, 'undtag'),
     pryoutEnkeltanker: oneOf(rå.pryoutEnkeltanker, ['retning', 'altid'] as const, 'retning'),

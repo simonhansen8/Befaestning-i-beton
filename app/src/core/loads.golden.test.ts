@@ -5,6 +5,7 @@ import { parseIndstillinger } from './settings';
 import { afledStaal } from './steel';
 import { partialkoefficienter } from './partials';
 import { fordelForskydning, fordelTraek, skalerLast, slidsStivhed } from './loads';
+import { legacyKfi } from './facit-hjaelp';
 
 const G = JSON.parse(readFileSync(new URL('../../../golden/cases.json', import.meta.url), 'utf8'));
 const cases = G.cases.filter((c: any) => c.resultat.tilstand === 'ok' && c.resultat.kombinationer);
@@ -19,7 +20,7 @@ describe('lastfordeling mod facit', () => {
     const st = afledStaal({ staalklasse: m.anker.staalklasse, d: m.anker.d, gevind: m.anker.gevind, As: m.anker.As });
     const p = partialkoefficienter(indstillinger, { type: m.anker.type, fuk: st.fuk, fyk: st.fyk, gammaInstIndlimet: m.anker.gammaInst });
     c.resultat.kombinationer.forEach((k: any, i: number) => {
-      const lk = skalerLast(m.laster[i], p.kfi);
+      const lk = skalerLast(m.laster[i], legacyKfi(m));
       const f = fordelTraek(m.opstilling.anker, st.As, m.plade, lk, { Es: indstillinger.Es, Ec: 30000 /* facit: gammel kerne med fast Ec */, kanter: m.beton.kanter });
       const { kx, ky } = slidsStivhed(m.opstilling.anker);
       const v = fordelForskydning(m.opstilling.anker, kx, ky, lk);
