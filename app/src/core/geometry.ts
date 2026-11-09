@@ -77,3 +77,27 @@ export function projiceretAreal(ankre: Pkt[], s: number, kanter: Partial<Kanter>
   const h = s / 2;
   return rectUnion(ankre.map((a) => klipRect([a.x - h, a.y - h, a.x + h, a.y + h], kanter)));
 }
+
+/** Koordinat langs en kant (y for x-kanter, x for y-kanter). */
+export const koordLangsKant = (a: Pkt, kant: KantNavn): number => (kant === 'xNeg' || kant === 'xPos' ? a.y : a.x);
+
+/** Betonens udstrækning langs en kant [min, max] (±∞ hvis ingen kant). */
+export function udstraekningLangsKant(kant: KantNavn, k: Partial<Kanter>): [number, number] {
+  return kant === 'xNeg' || kant === 'xPos'
+    ? [k.yNeg != null ? -k.yNeg : -Infinity, k.yPos != null ? k.yPos : Infinity]
+    : [k.xNeg != null ? -k.xNeg : -Infinity, k.xPos != null ? k.xPos : Infinity];
+}
+
+export interface Interval { laengde: number; segmenter: [number, number][]; fra: number; til: number }
+
+/** Union af intervaller [p−r, p+r] klippet til [lo, hi]. */
+export function intervalUnion(positioner: number[], r: number, lo = -Infinity, hi = Infinity): Interval {
+  const iv = positioner.map((a): [number, number] => [Math.max(lo, a - r), Math.min(hi, a + r)]).filter((a) => a[1] > a[0]).sort((a, b) => a[0] - b[0]);
+  const seg: [number, number][] = [];
+  for (const a of iv) {
+    const sidste = seg[seg.length - 1];
+    if (sidste && a[0] <= sidste[1]) sidste[1] = Math.max(sidste[1], a[1]);
+    else seg.push([a[0], a[1]]);
+  }
+  return { laengde: seg.reduce((s, a) => s + a[1] - a[0], 0), segmenter: seg, fra: seg.length ? seg[0]![0] : 0, til: seg.length ? seg[seg.length - 1]![1] : 0 };
+}

@@ -38,11 +38,15 @@ function makeCase(i, base) {
   const [fuk, fyk, duktil] = STEEL[stk];
   const maxx = Math.max(...L.pts.map(p => Math.abs(p[0])), 0), maxy = Math.max(...L.pts.map(p => Math.abs(p[1])), 0);
   const kanter = { xNeg: null, xPos: null, yNeg: null, yPos: null };
-  for (const k of ['xNeg', 'xPos', 'yNeg', 'yPos']) if (chance(0.3)) kanter[k] = int(Math.round((k[0] === 'x' ? maxx : maxy) + 100 + 1.5 * hef) , 900, 10);
+  const naer = chance(0.5); // halvdelen af modellerne: ankre tæt på kanter (udløser sidebrud, kantbrud m.m.)
+  for (const k of ['xNeg', 'xPos', 'yNeg', 'yPos']) if (chance(naer ? 0.5 : 0.3)) {
+    const half = k[0] === 'x' ? maxx : maxy;
+    kanter[k] = naer ? int(Math.round(half + 60), Math.round(half + Math.max(120, 0.6 * hef)), 10) : int(Math.round(half + 100 + 1.5 * hef), 900, 10);
+  }
   const h = int(Math.max(Math.round(hef + 100), 200), 600, 20);
   const nl = int(1, 3);
   const laster = Array.from({ length: nl }, (_, k) => ({
-    navn: 'LK' + (k + 1), N: int(-60, 120, 10) * 1000, Vx: int(-40, 40, 5) * 1000, Vy: int(-40, 40, 5) * 1000,
+    navn: 'LK' + (k + 1), N: int(-60, 250, 10) * 1000, Vx: int(-40, 40, 5) * 1000, Vy: int(-40, 40, 5) * 1000,
     Mx: int(-6, 6) * 1e6, My: int(-6, 6) * 1e6, T: chance(0.3) ? int(0, 3) * 1e6 : 0, alphaSus: chance(0.5) ? 0 : null,
   }));
   const ind = {};
@@ -61,6 +65,14 @@ function makeCase(i, base) {
     opstilling: { type: L.kind, sx: L.sx, sy: L.sy, anker: L.pts.map((p, k) => ({ id: k + 1, x: p[0], y: p[1], slids: null })) },
     laster, indstillinger: ind,
   };
+  patch.beton.armering = {};
+  if (chance(0.2)) patch.beton.armering.afskalning = 'aaben';
+  if (chance(0.15)) patch.beton.armering.splitArmering = true;
+  if (chance(0.15)) patch.beton.armering.kantarmering = 'boejler', patch.beton.armering.kantarmeringAfstand = 100, patch.beton.armering.kantarmeringDiameter = 12;
+  if (chance(0.15)) patch.beton.armering.ankerarmeringTraek = { aktiv: true };
+  if (chance(0.15)) patch.beton.armering.ankerarmeringForskydning = { aktiv: true };
+  if (chance(0.2)) patch.plade.hulfrigang = 'stor';
+  if (chance(0.1)) { patch.plade.afstandTilBeton = int(10, 40, 10); patch.plade.mellemlaeg = pick(['aaben', 'moertel']); }
   if (indl) { patch.anker.tauRkCr = pick([5, 7.5, 9]); patch.anker.tauRkUcr = pick([10, 13]); patch.anker.d0 = d + 4; patch.anker.dh = null; patch.anker.th = null; }
   return merge(base, patch);
 }
