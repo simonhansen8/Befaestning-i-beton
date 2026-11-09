@@ -4,6 +4,18 @@ import { byg3d } from './model3d';
 
 const m: any = structuredClone(standardModel('2026-01-01'));
 describe('3D-beskrivelse', () => {
+  it('tegner kegle for N_c og kile for V_c kun når brudlegeme er slået til', () => {
+    const k: any = { styrendeBrudform: 'N_c', traek: { traekAnkre: [{ x: 10, y: 20 }] }, kantbrud: { styrende: null } };
+    expect(byg3d(m, k, null).dele.some((x) => x.type === 'kegle')).toBe(false);
+    const kegle: any = byg3d(m, k, null, true).dele.find((x) => x.type === 'kegle');
+    expect(kegle.radius).toBe(1.5 * m.anker.hef);
+    expect([kegle.x, kegle.y]).toEqual([10, 20]);
+    const id = m.opstilling.anker[0].id;
+    const v: any = { styrendeBrudform: 'V_c', traek: { traekAnkre: [] }, kantbrud: { styrende: { kant: 'xNeg', c1: 100, ankre: [id] } } };
+    const kile: any = byg3d(m, v, null, true).dele.find((x) => x.type === 'legeme');
+    expect(kile.punkter).toHaveLength(4);
+    expect(kile.punkter[1][0]).toBeLessThan(kile.punkter[0][0]);
+  });
   it('tegner bøjler som tre stænger pr. bøjle og en hef-målelinje', () => {
     const i: any = structuredClone(m);
     const n = i.opstilling.anker.length;

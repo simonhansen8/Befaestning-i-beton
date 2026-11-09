@@ -283,6 +283,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
 
   let visning: 'plan' | '3d' = 'plan';
   let scene3d: Scene3D | null = null;
+  let visBrud = false;
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
 
   function tegning(): HTMLElement {
@@ -297,12 +298,12 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     }
     try {
       scene3d ??= opret3D();
-      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null);
+      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud);
       scene3d.opdater(b);
       sek.append(
-        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn))),
+        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
         scene3d.element,
-        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
+        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
         h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
     } catch {
       sek.append(h('p', { class: 'note' }, '3D-visning kræver WebGL, som ikke er tilgængelig i denne browser.'));

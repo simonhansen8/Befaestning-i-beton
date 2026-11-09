@@ -115,6 +115,21 @@ export function opret3D(): Scene3D {
         m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
         g.add(m);
       }
+    } else if (d.type === 'kegle') {
+      const geo = new THREE.ConeGeometry(d.radius, d.hoejde, 48, 1, true);
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
+      m.rotation.x = Math.PI; // spids nedad
+      m.position.copy(v(d.x, d.y, d.zTop - d.hoejde / 2));
+      const kant = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 80), new THREE.LineBasicMaterial({ color: 0xdc2626 }));
+      kant.rotation.copy(m.rotation); kant.position.copy(m.position);
+      g.add(m, kant);
+    } else if (d.type === 'legeme') {
+      const geo = new THREE.BufferGeometry();
+      const pos: number[] = [];
+      for (const [a, b, c] of d.flader) for (const i of [a, b, c]) { const p = v(...d.punkter[i]!); pos.push(p.x, p.y, p.z); }
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false }));
+      g.add(m, new THREE.LineSegments(new THREE.EdgesGeometry(geo, 1), new THREE.LineBasicMaterial({ color: 0xdc2626 })));
     } else if (d.type === 'maal') {
       const a = v(...d.fra), b = v(...d.til);
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), new THREE.LineBasicMaterial({ color: FARVE.akse, depthTest: false })));
