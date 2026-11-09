@@ -19,7 +19,8 @@ describe('3D-beskrivelse', () => {
     expect(indre[0].til[0]).toBeCloseTo(-130 + 30 + 90, 5);
     expect(indre[0].fra[2]).toBe(-40);
     expect(st().filter((x) => x.variant === 'forankring')).toHaveLength(2);
-    expect(st().filter((x) => x.variant === 'tilbehoer')).toHaveLength(0);
+    // kantarmering langs kanten kræves også for lige stænger (7.2.2.2 (3) f)
+    expect(st().filter((x) => x.variant === 'tilbehoer')).toHaveLength(1);
     i.beton.armering.ankerarmeringForskydning.krog = true;
     expect(st().filter((x) => x.variant === 'tilbehoer')).toHaveLength(1);
     expect(st().length).toBeGreaterThan(5);
