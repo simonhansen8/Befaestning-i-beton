@@ -44,7 +44,7 @@ export function standardModel(dato = ''): Obj {
     indstillinger: {
       kontrolklasse: 'normal', gamma3: 1, gammaC: 1.45, gammaInstIndstoebt: 1, gammaMsRe: 1.2, gammaCt: 1.7, alphaCt: 1,
       gammaMsTraekFaktor: 1.2, gammaMsTraekMin: 1.5, gammaMsForskFaktor: 1, gammaMsForskMin: 1.35, gammaMsForskHoej: 1.65,
-      konsekvensklasse: 'CC2', kfiPaaLaster: false, sigmaAdm: 0, Es: 21e4, Ec: 3e4, interaktion: 'gunstigst',
+      konsekvensklasse: 'CC2', kfiPaaLaster: false, sigmaAdm: 0, Es: 21e4, Ec: null, interaktion: 'gunstigst',
       staalInteraktionVedLoeftestang: 'undtag', forresteRaekkeTol: 0.1, pryoutEnkeltanker: 'retning',
     },
     meta: { redigeret: {} },
@@ -198,7 +198,7 @@ export function indlaesFil(raa: unknown, opt: { fraBruger?: boolean; dato?: stri
 
 /** Felter med talværdi som standard, hvor null er tilladt (valgfrie produktdata o.l.). */
 const NULLBARE = new Set<string>([
-  'beton.kanter.xNeg', 'beton.kanter.xPos', 'beton.kanter.yNeg', 'beton.kanter.yPos', 'anker.As', 'anker.hovedSide', 'anker.scrN', 'anker.scrSp',
+  'indstillinger.Ec', 'beton.kanter.xNeg', 'beton.kanter.xPos', 'beton.kanter.yNeg', 'beton.kanter.yPos', 'anker.As', 'anker.hovedSide', 'anker.scrN', 'anker.scrSp',
   'anker.NRksEta', 'anker.VRksEta', 'anker.M0RksEta', 'anker.ccrN', 'anker.ccrSp', 'anker.cmin', 'anker.dnom', 'anker.hmin', 'anker.k7', 'anker.k8', 'anker.smin',
   'beton.armering.ankerarmeringForskydning.antalBoejler', 'beton.armering.ankerarmeringForskydning.antalLoekker', 'beton.armering.ankerarmeringForskydning.cd',
   'beton.armering.ankerarmeringForskydning.es', 'beton.armering.ankerarmeringForskydning.eta1', 'beton.armering.ankerarmeringForskydning.l1',
