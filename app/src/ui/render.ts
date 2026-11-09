@@ -7,6 +7,8 @@ import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
+import { beregningsdetalje } from './brud-detaljer';
+import { IDEALISERET } from './brudlegemer';
 import { oversigtForskydning, oversigtTraek } from './arm-oversigt';
 import { anvendHilti as anvendHiltiModel, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
 import { produktFraAnker, produktOpdateringer } from '../core/produkter';
@@ -322,10 +324,24 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
         r.styrendeBrudform && h('span', { class: 'sub' }, `styrende: ${BRUDFORM[r.styrendeBrudform] ?? r.styrendeBrudform} (${r.kombinationer[r.styrendeKombination!]!.navn})`)),
       h('div', { class: 'kombi' }, ...r.kombinationer.map((c, i) => h('button', { class: i === t.valgtKombination ? 'valgt' : '', onclick: () => store.vaelgKombination(i) }, `${c.navn} · ${proc(c.maksUdnyttelse)}`))),
       h('table', { class: 'brud' }, h('thead', {}, h('tr', {}, h('th', {}, 'Brudform'), h('th', {}, 'Ed [kN]'), h('th', {}, 'Rd [kN]'), h('th', {}, 'Udnyttelse'))),
-        h('tbody', {}, ...rk.map((b) => h('tr', { class: b.id === k.styrendeBrudform ? 'styrende' : '' },
+        h('tbody', {}, ...rk.map((b) => h('tr', { class: `${b.id === k.styrendeBrudform ? 'styrende' : ''} valgbar ${b.id === valgtBrud ? 'valgt' : ''}`, tabindex: '0', title: 'Klik for at se brudformen i 3D og beregningen', 'data-brud': b.id,
+          onclick: () => { valgtBrud = valgtBrud === b.id ? null : b.id; if (valgtBrud) visning = '3d'; draw(); },
+          onkeydown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); valgtBrud = valgtBrud === b.id ? null : b.id; if (valgtBrud) visning = '3d'; draw(); } } },
           h('td', {}, h('code', {}, b.id), ' ', BRUDFORM[b.id] ?? ''),
           h('td', {}, b.Ed ? kN(b.Ed) : ''), h('td', {}, b.Rd ? kN(b.Rd) : ''),
-          h('td', {}, h('div', { class: 'bar' }, h('div', { class: `fyld ${b.udnyttelse! > 1 ? 'over' : ''}`, style: `width:${Math.min(100, b.udnyttelse! * 100)}%` }), h('span', {}, proc(b.udnyttelse)))))))));
+          h('td', {}, h('div', { class: 'bar' }, h('div', { class: `fyld ${b.udnyttelse! > 1 ? 'over' : ''}`, style: `width:${Math.min(100, b.udnyttelse! * 100)}%` }), h('span', {}, proc(b.udnyttelse)))))))), detaljePanel(k.resultat, rk));
+  }
+
+  function detaljePanel(kr: NonNullable<typeof store.tilstand.resultat>['kombinationer'][number]['resultat'], rk: Brudform[]): Node | null {
+    if (!valgtBrud || !rk.some((b) => b.id === valgtBrud)) return null;
+    const dt = beregningsdetalje(valgtBrud, store.tilstand.model, kr);
+    if (!dt) return null;
+    return h('div', { class: 'brudpanel' },
+      h('h3', {}, dt.titel), h('div', { class: 'ref' }, dt.ref),
+      h('table', { class: 'trin' }, ...dt.trin.map((x) => h('tr', {}, h('td', { html: x.s }), h('td', { class: 'formel', html: x.f ?? '' }), h('td', { class: 'vaerdi', html: x.v })))),
+      ...dt.noter.map((n) => h('p', { class: 'note', html: n })),
+      h('p', { class: 'note' }, IDEALISERET),
+      h('button', { onclick: () => { valgtBrud = null; draw(); } }, 'Fjern valg'));
   }
 
   const pct = (u: number) => proc(u);
@@ -369,6 +385,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let snitAkse: SnitAkse = 'x';
   let scene3d: Scene3D | null = null;
   let visBrud = false;
+  let valgtBrud: string | null = null;
   let visMaal = true;
   let visLast = true;
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
@@ -399,7 +416,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           return true;
         },
       });
-      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal, visLast);
+      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal, visLast, valgtBrud);
       scene3d.opdater(b);
       sek.append(
         h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visLast ? 'aktiv' : '', 'data-kraefter': '1', onclick: () => { visLast = !visLast; draw(); } }, 'Kræfter'), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
