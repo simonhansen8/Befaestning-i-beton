@@ -83,6 +83,24 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
   scene.add(new THREE.AmbientLight(0xffffff, 1.1), lys);
   const kontrol = new OrbitControls(kamera, labels.domElement);
   kontrol.enableDamping = false;
+  // Hjulet scroller siden; zoom kun med Ctrl/⌘ + hjul, efter klik i visningen, eller med knapperne (som i kortvisninger).
+  kontrol.enableZoom = false;
+  let aktiv = false, hintTimer = 0;
+  const hint = document.createElement('div'); hint.className = 'hint3d'; hint.textContent = 'Hold Ctrl (⌘) nede og scroll for at zoome – eller klik i visningen';
+  const zoomKnapper = document.createElement('div'); zoomKnapper.className = 'zoom3d';
+  const zoom = (f: number) => { kamera.position.sub(kontrol.target).multiplyScalar(f).add(kontrol.target); kontrol.update(); bed(); };
+  for (const [txt, f, navn] of [['+', 0.8, 'Zoom ind'], ['−', 1.25, 'Zoom ud']] as const) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.title = navn; b.setAttribute('aria-label', navn);
+    b.addEventListener('click', () => zoom(f)); zoomKnapper.append(b);
+  }
+  element.append(hint, zoomKnapper);
+  element.addEventListener('wheel', (e) => {
+    const ok = e.ctrlKey || e.metaKey || aktiv;
+    kontrol.enableZoom = ok;
+    if (!ok) { hint.classList.add('synlig'); clearTimeout(hintTimer); hintTimer = window.setTimeout(() => hint.classList.remove('synlig'), 1500); }
+  }, { capture: true, passive: true });
+  element.addEventListener('pointerdown', () => { aktiv = true; });
+  element.addEventListener('pointerleave', () => { aktiv = false; });
   let indhold = new THREE.Group(); scene.add(indhold);
   let beskrivelse: Scene3DBeskrivelse | null = null;
   let planlagt = 0;
