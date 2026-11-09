@@ -79,3 +79,59 @@ describe('V_c mod facit', () => {
     sammenlign('V_c', got, eftervis(c, 'V_c'));
   });
 });
+
+import { hovedareal, udtraekning } from './tension';
+import { spaltning } from './splitting';
+import { sideblowout } from './sideblowout';
+import { eftervisBetonkegle } from './cone';
+import { minKantafstand } from './geometry';
+import { interaktionBeton, interaktionStaal } from './interaction';
+
+describe('NV_s og NV_c mod facit (uden ankerarmering, kun indstøbte)', () => {
+  const nv = cases.filter((c: any) => c.model.anker.type === 'indstoebt' && !c.model.beton.armering.ankerarmeringForskydning.aktiv && !c.model.beton.armering.ankerarmeringTraek.aktiv);
+  it.each(nv as any[])('model #$id', (c: any) => {
+    const { m, indstillinger, st, p, f, t, v } = opsaet(c);
+    const lk = skalerLast(m.laster[c.resultat.styrendeKombination], legacyKfi(m));
+    const fck = Math.min(fckAf(m.beton), 60);
+    const ar = m.beton.armering;
+    const N_s = staalbrudTraek({ As: st.As, fuk: st.fuk, NRksEta: m.anker.NRksEta, gammaMs: p.gammaMs }, t);
+    const lof = harLoeftestang(m.plade, m.anker.d);
+    const Vs = staalbrudForskydning({
+      ankre: m.opstilling.anker, V: v.V, mulig: v.mulig, F: f.F, NRd_s: N_s.NRd, stor: m.plade.hulfrigang === 'stor',
+      fuk: st.fuk, As: st.As, duktil: st.duktil, d: m.anker.d, dnom: m.anker.dnom ?? m.anker.d, hef: m.anker.hef, fckRaw: fckAf(m.beton),
+      k7: m.anker.k7, VRksEta: m.anker.VRksEta, M0RksEta: m.anker.M0RksEta, gammaMsV: p.gammaMsV,
+      loeftestang: lof.medLoeftestang, afstandTilBeton: m.plade.afstandTilBeton || 0, pladeT: m.plade.t, indspaending: m.plade.indspaending,
+    });
+    const Np = udtraekning({ fck, revnet: m.beton.revnet, ah: hovedareal(m.anker), gammaMp: p.gammaMp }, t);
+    const Nc = eftervisBetonkegle({
+      ankre: t.traekAnkre, e1: t.eN1, e2: t.eN2, hef: m.anker.hef, fck, revnet: m.beton.revnet, indlimet: false, kanter: m.beton.kanter, afskalning: ar.afskalning,
+      momentfaktor: { C: f.C, NEd_g: t.NEd_g, z: t.z, cMinAlle: minKantafstand(m.opstilling.anker, m.beton.kanter) },
+    }, p.gammaMc, t);
+    const lastRaa = m.laster[c.resultat.styrendeKombination];
+    const Nsp = spaltning({
+      produkt: { indlimet: false, ccrSp: m.anker.ccrSp, scrSp: m.anker.scrSp, hmin: m.anker.hmin, d: m.anker.d, d0: m.anker.d0, th: m.anker.th },
+      hef: m.anker.hef, h: m.beton.h, cnom: m.beton.cnom, fck, revnet: m.beton.revnet, kanter: m.beton.kanter, afskalning: ar.afskalning, splitArmering: ar.splitArmering,
+      kcrN: m.anker.kcrN, kucrN: m.anker.kucrN, tauRkCr: m.anker.tauRkCr, tauRkUcr: m.anker.tauRkUcr, psiC: m.anker.psiC, psi0Sus: m.anker.psi0Sus,
+      alphaSus: lastRaa.alphaSus ?? m.anker.alphaSus, NRkp: Np.NRk, gammaMsp: p.gammaMsp, gammaMsRe: p.gammaMsRe,
+    }, t);
+    const Ncb = sideblowout({ fck, revnet: m.beton.revnet, ah: hovedareal(m.anker), hef: m.anker.hef, h: m.beton.h, kanter: m.beton.kanter, gammaMc: p.gammaMc }, t);
+    const Vcp = pryout({
+      ankre: m.opstilling.anker, V: v.V, Vx: v.Vx, Vy: v.Vy, mulig: v.mulig, k8: m.anker.k8, hef: m.anker.hef, indlimet: false,
+      kegle: { hef: m.anker.hef, fck, revnet: m.beton.revnet, indlimet: false, kanter: m.beton.kanter, afskalning: ar.afskalning },
+      gammaMcV: p.gammaMcV, pryoutEnkeltanker: indstillinger.pryoutEnkeltanker,
+    });
+    const Vc = kantbrud({
+      ankre: m.opstilling.anker, kanter: m.beton.kanter, fck, revnet: m.beton.revnet, hef: m.anker.hef, dnom: m.anker.dnom ?? m.anker.d, h: m.beton.h, last: lk, fordeling: v,
+      stor: m.plade.hulfrigang === 'stor', forresteRaekkeTol: indstillinger.forresteRaekkeTol, gammaMcV: p.gammaMcV, cnom: m.beton.cnom,
+      kantarmering: ar.kantarmering, kantarmeringAfstand: ar.kantarmeringAfstand, kantarmeringDiameter: ar.kantarmeringDiameter,
+    });
+    const poster = [Np, Nc, Nsp, Ncb, Vcp, { id: 'V_c', relevant: Vc.relevant, udnyttelse: Vc.udnyttelse }];
+    const bet = interaktionBeton(poster, 'ingen', indstillinger.interaktion, m.anker.k11);
+    sammenlign('NV_c', { relevant: bet.relevant, VEd: 0, VRd: 0, VRk: 0, udnyttelse: bet.udnyttelse }, { ...eftervis(c, 'NV_c'), VEd: 0, VRd: 0, VRk: 0 });
+    const s = interaktionStaal({ ankreIds: m.opstilling.anker.map((a: any) => a.id), F: f.F, Veff: Vs.Veff, VRd_i: Vs.VRd_i, NRd_s: N_s.NRd });
+    const undtag = indstillinger.staalInteraktionVedLoeftestang === 'undtag' && lof.medLoeftestang;
+    const wS = eftervis(c, 'NV_s');
+    expect(undtag ? false : s.relevant, 'NV_s relevant').toBe(wS.relevant);
+    if (wS.relevant) expect(naer(s.udnyttelse, wS.udnyttelse), `NV_s ${s.udnyttelse} vs ${wS.udnyttelse}`).toBe(true);
+  });
+});
