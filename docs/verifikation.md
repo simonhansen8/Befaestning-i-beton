@@ -25,8 +25,12 @@ Hilti stiller PROFIS Engineering-rapporter frit til rådighed på nettet. Rappor
 
 Resten af de offentligt tilgængelige PROFIS-rapporter, jeg fandt, gælder efterbehandlede (post-installed) anker og er ikke relevante for denne kerne.
 
+## Hilti PROFIS-rapporter for indlimede anker
+
+Fire PROFIS-rapporter med grupper, moment og vridning er gennemregnet og sammenlignet i detaljer; se [verifikation-profis.md](verifikation-profis.md).
+
 ## Hvad dette endnu ikke dækker
 
-- Momentbelastede grupper, trykzone, slidshuller, løftestang, armering, indlimede anker og interaktion er kun verificeret mod den gamle kerne (facit-sættet), ikke mod en uafhængig kilde.
+- Slidshuller, løftestang og armering er kun verificeret mod den gamle kerne (facit-sættet). Momentbelastede grupper, trykzone, indlimede anker og interaktion er nu også kontrolleret mod PROFIS (se ovenfor).
 - Nationale γ-værdier (fund #6) og estimater for c_cr,sp og h_min (fund #11) kræver kontrol mod DK NA og produktdata.
-- Den kommercielle tredje kilde dækker kun N⁰Rk,c og V⁰Rk,c for en enkelt bolt (se ovenfor). Grupper, momenter, spaltning og armering mangler stadig en uafhængig kilde.
+- Spaltning og armering mangler stadig en uafhængig kilde.

@@ -96,6 +96,6 @@ export function anvendHilti(m: Parameters<typeof saetSti>[0], d: Stoerrelse, t: 
   saetSti(m, 'anker.type', 'indlimet');
   saetSti(m, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
   saetSti(m, 'anker.gevind', true);
-  saetSti(m, 'anker.psiC', Math.max(1, Math.floor((fckAf((m as any).beton) / 20) ** 0.1 * 100) / 100));
+  saetSti(m, 'anker.psiC', (fckAf((m as any).beton) / 20) ** 0.1);
   return p;
 }
