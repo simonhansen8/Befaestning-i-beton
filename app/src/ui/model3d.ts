@@ -8,7 +8,7 @@ export interface Udstraekning { x0: number; x1: number; y0: number; y1: number; 
 export type Del =
   | { type: 'boks'; rolle: 'beton' | 'plade'; x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; afbrudt?: boolean }
   | { type: 'cyl'; rolle: 'skaft' | 'hoved' | 'moerik' | 'moertel'; x: number; y: number; z0: number; z1: number; r: number; sider: number; ankerId: number }
-  | { type: 'stang'; rolle: 'armering'; fra: [number, number, number]; til: [number, number, number]; r: number }
+  | { type: 'stang'; rolle: 'armering'; fra: [number, number, number]; til: [number, number, number]; r: number; inaktiv?: boolean }
   | { type: 'kegle'; rolle: 'brud'; x: number; y: number; zTop: number; hoejde: number; radius: number }
   | { type: 'legeme'; rolle: 'brud'; punkter: [number, number, number][]; flader: [number, number, number][] }
   | { type: 'maal'; fra: [number, number, number]; til: [number, number, number]; tekst: string }
@@ -53,6 +53,22 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         const ben = (fortegn: number): [number, number, number][] => [[q.x + fortegn * o * ax, q.y + fortegn * o * ay, top], [q.x + fortegn * o * ax, q.y + fortegn * o * ay, bund]];
         const [a1, a2] = ben(1) as [[number, number, number], [number, number, number]], [b1, b2] = ben(-1) as [[number, number, number], [number, number, number]];
         dele.push({ type: 'stang', rolle: 'armering', fra: a1, til: a2, r }, { type: 'stang', rolle: 'armering', fra: b1, til: b2, r }, { type: 'stang', rolle: 'armering', fra: a2, til: b2, r });
+      }
+    }
+  }
+  // ankerarmering for forskydning: stænger fra bolten mod armeringskanten (grå hvis de ikke regnes virksomme)
+  const av = m.beton.armering?.ankerarmeringForskydning;
+  if (av?.aktiv && k?.armKant) {
+    const kant = k.armKant.kant, fr = k.kantbrud.forreste[kant];
+    if (fr) {
+      const dir = { xNeg: [-1, 0], xPos: [1, 0], yNeg: [0, -1], yPos: [0, 1] }[kant as 'xNeg'] as [number, number], per: [number, number] = [-dir[1], dir[0]];
+      const r = (av.diameter || 10) / 2, z = -(av.daekToAkse ?? 40), cnom = be.cnom ?? 30;
+      const lateral: { v: number; l: number; ok: boolean }[] = k.armV.staenger?.length
+        ? k.armV.staenger.map((q) => ({ v: q.v, l: Math.max(0, q.l1), ok: q.virksom }))
+        : [d / 2 + r + 2, -(d / 2 + r + 2)].map((v) => ({ v, l: Math.max(0, k.armV.l1 ?? fr.c1 - cnom), ok: k.armV.virksom }));
+      for (const id of fr.ankre) {
+        const q = ankre.find((a2) => a2.id === id); if (!q) continue;
+        for (const b of lateral) dele.push({ type: 'stang', rolle: 'armering', fra: [q.x + per[0] * b.v, q.y + per[1] * b.v, z], til: [q.x + per[0] * b.v + dir[0] * b.l, q.y + per[1] * b.v + dir[1] * b.l, z], r, inaktiv: !b.ok });
       }
     }
   }
