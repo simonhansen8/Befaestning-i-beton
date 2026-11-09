@@ -24,3 +24,10 @@ export function vedhaeftning(p: { fck: number; eta1?: number; ds: number; alphaC
   const eta2 = p.ds <= 32 ? 1 : (132 - p.ds) / 100;
   return { fbd: 2.25 * (p.eta1 ?? 1) * eta2 * fctd, fctd, fctk, eta2, fckB };
 }
+
+/** Sekantmodul Ecm [MPa] efter EN 1992-1-1 Tabel 3.1 (fck → Ecm i GPa); ukendt fck → 22·((fck+8)/10)^0,3. */
+const ECM_GPA: Record<number, number> = { 12: 27, 16: 29, 20: 30, 25: 31, 30: 33, 35: 34, 40: 35, 45: 36, 50: 37, 55: 38, 60: 39, 70: 41, 80: 42, 90: 44 };
+export function ecmAfFck(fck: number): number {
+  const t = ECM_GPA[fck];
+  return (t ?? 22 * ((fck + 8) / 10) ** 0.3) * 1000;
+}
