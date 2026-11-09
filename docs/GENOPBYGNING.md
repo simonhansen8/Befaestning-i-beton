@@ -12,8 +12,8 @@ Beslutning (Simon): bevar normlogikken, genopbyg strukturen som TypeScript + Vit
 | 6 | Sporbarhedstabel felt → formel → norm → test, kontrolleret i CI | **Færdig for brudformer**: `app/src/core/sporbarhed.ts` → `docs/sporbarhed.md` (genereres med `npm run sporbarhed`); testen fejler hvis et brudform-id i facit/kerne mangler, en fil/test mangler, eller dokumentet er forældet. "Uafhængig" afledes af `verifikation/expected.json`. Ikke dækket endnu: sporbarhed på feltniveau (felt → formelled). |
 | 7 | Uafhængig verifikation (Python-reference, håndregnede eksempler, evt. PROFIS) | **I gang**: Python-reference + håndregnet eksempel for 10 rene tilfælde matcher kernen (se `verifikation.md`). Mangler: momenter, armering, indlimede anker, PROFIS |
 | 8 | Migrér 2D/3D/rapport | **I gang**: plantegning (SVG) og rapport (selvstændigt HTML-dokument til udskrift/PDF, inddata afledt af felt-skemaet, escapet brugertekst, test) er færdige i ny kodebase. Mangler: 3D-visning og eventuelle ekstra rapportafsnit (beregningsgrundlag med formler pr. brudform – afhænger af traceability-tabellen, trin 6). |
-| 9 | Udfas gammel fil når facit er grønt | |
+| 9 | Udfas gammel fil når facit er grønt | **Gennemført**: rod-`index.html` er nu det byggede program (`npm run publicer -- ÅÅÅÅ-MM-DD.N`; CI kontrollerer med `--tjek`, at roden er ajour med `app/`). Den gamle fil ligger i `arkiv/gammel-index.html` (kun til at genskabe facit med `golden/generate*.mjs`). De gamle browsertests er fjernet; de uafhængige normtests kører mod den nye kerne (`uafhaengig.test.ts`), facit mod `*.golden.test.ts` |
 
-Ny kodebase: `npm run typecheck`, `npm run unit`, `npm run build` (output `dist/index.html`; den gamle rod-`index.html` urørt indtil trin 9).
+Ny kodebase: `npm run typecheck`, `npm run unit`, `npm run build` (output `dist/index.html`; rod-`index.html` bygges med `npm run publicer`).
 
-Værktøjer: `npm run golden:generate` (generér facit af den *aktuelle* index.html – kun ved bevidst facit-ændring), `npm run golden:full`, `tools/probe-settings.mjs` (hvilke felter påvirker resultatet).
+Værktøjer: `npm run golden:generate` (generér facit af den arkiverede gamle fil – kun ved bevidst facit-ændring), `tools/probe-settings.mjs` (hvilke felter påvirker resultatet).

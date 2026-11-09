@@ -1,4 +1,4 @@
-// Røgtest af den nye brugerflade (dist/index.html bygget af app/): indlæses uden fejl, regner, og feltændring giver nyt resultat.
+// Røgtest af den nye brugerflade (rod-index.html bygget af app/): indlæses uden fejl, regner, og feltændring giver nyt resultat.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -9,9 +9,9 @@ import { ROOT } from './lib/engine.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = (() => { try { return require('playwright'); } catch { return require('playwright-core'); } })();
-const DIST = path.join(ROOT, 'dist', 'index.html');
+const DIST = path.join(ROOT, 'index.html');
 
-test('ny UI: indlæses, regner og reagerer på feltændring', { skip: !fs.existsSync(DIST) && 'kør npm run build først' }, async () => {
+test('ny UI: indlæses, regner og reagerer på feltændring', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();

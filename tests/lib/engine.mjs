@@ -16,7 +16,7 @@ function loadPlaywright() {
 }
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const HTML_URL = pathToFileURL(path.join(ROOT, 'index.html')).href;
+export const HTML_URL = pathToFileURL(path.join(ROOT, 'arkiv', 'gammel-index.html')).href;
 
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 export function merge(base, patch) {            // dyb merge; arrays erstattes

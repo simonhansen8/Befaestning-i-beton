@@ -1,26 +1,10 @@
-# Test af beregningskernen
+# Tests
 
-Kør: `npm install && npx playwright install chromium && npm test`
+* `npm run typecheck` / `npm run unit` – typer og alle enhedstests i `app/src` (kerne mod frosset facit i `golden/`, uafhængige normtests i `uafhaengig.test.ts`, Python-reference i `verifikation/`).
+* `npm test` – Playwright-røgtest af den byggede rod-`index.html` (`ny-ui.test.mjs`).
+* `npm run publicer -- ÅÅÅÅ-MM-DD.N` – bygger og lægger programmet som rod-`index.html` (versionen gemmes i `app/VERSION`). Skal køres, når `app/` ændres; CI fejler ellers.
 
-Programmet er én HTML-fil. Testene åbner den i headless Chromium, indlæser modeller som en bruger
-(Projekt → Indsæt JSON) og læser resultatet fra `window.__anker`. `index.html` ændres ikke.
-
-## Hvad testes
-* `engine.test.mjs` – kernen mod en **uafhængig** referenceimplementation (`lib/ref.mjs`, skrevet fra
-  normens ligninger): stålbrud, betonkegle (enkelt, gruppe, kanter, hjørne, excentricitet), udtrækning,
-  pry-out, betonkantbrud (vinkelret/væk/parallelt, tynd plade, urevnet), interaktion (7.54–7.56),
-  indlimet basisværdi, samt egenskabstests: statisk ligevægt, lineær skalering, spejlingssymmetri,
-  ingen NaN/∞, afvisning af ugyldigt input.
-* `ui.test.mjs` – røgtest: ingen JS-fejl, 2D/3D tegner, kameravinkler, rapport, JSON-rundtur, fejlvisning.
+`lib/ref.mjs` er de håndskrevne normformler, som `uafhaengig.test.ts` bruger. `lib/engine.mjs` åbner den arkiverede gamle fil og bruges kun af facit-generatorerne.
 
 ## Hvad testene IKKE kan bevise
-* At referenceformlerne selv er rigtige: de er skrevet fra den samme norm af den samme (AI-)forfatter.
-  Fælles misforståelser af normteksten opdages ikke.
-* DK NA-værdier (γ-faktorer m.m.) er kun låst som "forventet værdi" – de skal kontrolleres mod NA'en.
-* Ikke dækket: de fleste indlimede-anker-formler (gruppe, ψg,Np, τRk,c), armeret forankring/kantarmering,
-  løftestang/slidser, store hulfrigange, pladeeftervisning og andet uden for programmets omfang.
-* Test = regression + intern konsistens, ikke certificering.
-
-## Anbefalet supplement
-Uafhængig ingeniørgennemgang og sammenligning med et kommercielt værktøj (fx Hilti PROFIS Engineering)
-på 5–10 repræsentative opstillinger, før programmet bruges til projekter.
+Referenceformlerne er skrevet ud fra samme normlæsning som kernen: oversættelsesfejl opdages, en fælles fejllæsning af normen gør ikke. DK NA-værdier er kun låst som forventet værdi (se `docs/kritiske-fund.md`). Anbefalet supplement: gennemgang af en ingeniør og sammenligning med publicerede regneeksempler.
