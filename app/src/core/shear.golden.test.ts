@@ -14,6 +14,9 @@ const G = JSON.parse(readFileSync(new URL('../../../golden/cases.json', import.m
 const cases = G.cases.filter((c: any) => c.resultat.tilstand === 'ok');
 const naer = (a: number | null, b: number | null) => { const f = (x: number | null) => (x != null && !Number.isFinite(x) ? null : x); a = f(a); b = f(b); return a == null || b == null ? a === b : Math.abs(a - b) <= 1e-7 * Math.max(1, Math.abs(b)); };
 
+const bondFelter = (m: any) => ({ indlimet: m.anker.type === 'indlimet', kcrN: m.anker.kcrN, kucrN: m.anker.kucrN, ccrN: m.anker.ccrN, scrN: m.anker.scrN });
+const bondProdukt = (m: any) => (m.anker.type === 'indlimet' ? { produkt: { d: m.anker.d, tauRkCr: m.anker.tauRkCr, tauRkUcr: m.anker.tauRkUcr, psiC: m.anker.psiC, kcrN: m.anker.kcrN, kucrN: m.anker.kucrN } } : undefined);
+
 function opsaet(c: any) {
   const m = c.model;
   const { indstillinger } = parseIndstillinger({ ...m.indstillinger, gamma3: undefined, Ec: null });
@@ -50,12 +53,12 @@ describe('V_s mod facit', () => {
 });
 
 describe('V_cp mod facit', () => {
-  const cp = cases.filter((c: any) => c.model.anker.type === 'indstoebt' && !c.model.beton.armering.ankerarmeringForskydning.aktiv && !c.model.beton.armering.ankerarmeringTraek.aktiv);
+  const cp = cases.filter((c: any) => !c.model.beton.armering.ankerarmeringForskydning.aktiv && !c.model.beton.armering.ankerarmeringTraek.aktiv);
   it.each(cp as any[])('model #$id', (c: any) => {
     const { m, indstillinger, p, v } = opsaet(c);
     const got = pryout({
-      ankre: m.opstilling.anker, V: v.V, Vx: v.Vx, Vy: v.Vy, mulig: v.mulig, k8: m.anker.k8, hef: m.anker.hef, indlimet: false,
-      kegle: { hef: m.anker.hef, fck: Math.min(fckAf(m.beton), 60), revnet: m.beton.revnet, indlimet: false, kanter: m.beton.kanter, afskalning: m.beton.armering.afskalning },
+      ankre: m.opstilling.anker, V: v.V, Vx: v.Vx, Vy: v.Vy, mulig: v.mulig, k8: m.anker.k8, hef: m.anker.hef, indlimet: m.anker.type === 'indlimet', bond: bondProdukt(m),
+      kegle: { hef: m.anker.hef, fck: Math.min(fckAf(m.beton), 60), revnet: m.beton.revnet, ...bondFelter(m), kanter: m.beton.kanter, afskalning: m.beton.armering.afskalning },
       gammaMcV: p.gammaMcV, pryoutEnkeltanker: indstillinger.pryoutEnkeltanker,
     });
     sammenlign('V_cp', got, eftervis(c, 'V_cp'));
@@ -82,13 +85,14 @@ describe('V_c mod facit', () => {
 
 import { hovedareal, udtraekning } from './tension';
 import { spaltning } from './splitting';
+import { eftervisBond } from './bond';
 import { sideblowout } from './sideblowout';
 import { eftervisBetonkegle } from './cone';
 import { minKantafstand } from './geometry';
 import { interaktionBeton, interaktionStaal } from './interaction';
 
-describe('NV_s og NV_c mod facit (uden ankerarmering, kun indstøbte)', () => {
-  const nv = cases.filter((c: any) => c.model.anker.type === 'indstoebt' && !c.model.beton.armering.ankerarmeringForskydning.aktiv && !c.model.beton.armering.ankerarmeringTraek.aktiv);
+describe('NV_s og NV_c mod facit (uden ankerarmering)', () => {
+  const nv = cases.filter((c: any) => !c.model.beton.armering.ankerarmeringForskydning.aktiv && !c.model.beton.armering.ankerarmeringTraek.aktiv);
   it.each(nv as any[])('model #$id', (c: any) => {
     const { m, indstillinger, st, p, f, t, v } = opsaet(c);
     const lk = skalerLast(m.laster[c.resultat.styrendeKombination], legacyKfi(m));
@@ -102,22 +106,29 @@ describe('NV_s og NV_c mod facit (uden ankerarmering, kun indstøbte)', () => {
       k7: m.anker.k7, VRksEta: m.anker.VRksEta, M0RksEta: m.anker.M0RksEta, gammaMsV: p.gammaMsV,
       loeftestang: lof.medLoeftestang, afstandTilBeton: m.plade.afstandTilBeton || 0, pladeT: m.plade.t, indspaending: m.plade.indspaending,
     });
-    const Np = udtraekning({ fck, revnet: m.beton.revnet, ah: hovedareal(m.anker), gammaMp: p.gammaMp }, t);
+    const indl = m.anker.type === 'indlimet';
+    const lastRaa0 = m.laster[c.resultat.styrendeKombination];
+    const Np = indl
+      ? eftervisBond({ produkt: bondProdukt(m)!.produkt, hef: m.anker.hef, fck, revnet: m.beton.revnet, kanter: m.beton.kanter, afskalning: ar.afskalning, alphaSus: lastRaa0.alphaSus ?? m.anker.alphaSus, psi0Sus: m.anker.psi0Sus, gammaMp: p.gammaMp }, t)
+      : udtraekning({ fck, revnet: m.beton.revnet, ah: hovedareal(m.anker), gammaMp: p.gammaMp }, t);
     const Nc = eftervisBetonkegle({
-      ankre: t.traekAnkre, e1: t.eN1, e2: t.eN2, hef: m.anker.hef, fck, revnet: m.beton.revnet, indlimet: false, kanter: m.beton.kanter, afskalning: ar.afskalning,
+      ankre: t.traekAnkre, e1: t.eN1, e2: t.eN2, hef: m.anker.hef, fck, revnet: m.beton.revnet, ...bondFelter(m), kanter: m.beton.kanter, afskalning: ar.afskalning,
       momentfaktor: { C: f.C, NEd_g: t.NEd_g, z: t.z, cMinAlle: minKantafstand(m.opstilling.anker, m.beton.kanter) },
     }, p.gammaMc, t);
     const lastRaa = m.laster[c.resultat.styrendeKombination];
     const Nsp = spaltning({
-      produkt: { indlimet: false, ccrSp: m.anker.ccrSp, scrSp: m.anker.scrSp, hmin: m.anker.hmin, d: m.anker.d, d0: m.anker.d0, th: m.anker.th },
+      produkt: { indlimet: indl, ccrSp: m.anker.ccrSp, scrSp: m.anker.scrSp, hmin: m.anker.hmin, d: m.anker.d, d0: m.anker.d0, th: m.anker.th },
       hef: m.anker.hef, h: m.beton.h, cnom: m.beton.cnom, fck, revnet: m.beton.revnet, kanter: m.beton.kanter, afskalning: ar.afskalning, splitArmering: ar.splitArmering,
       kcrN: m.anker.kcrN, kucrN: m.anker.kucrN, tauRkCr: m.anker.tauRkCr, tauRkUcr: m.anker.tauRkUcr, psiC: m.anker.psiC, psi0Sus: m.anker.psi0Sus,
       alphaSus: lastRaa.alphaSus ?? m.anker.alphaSus, NRkp: Np.NRk, gammaMsp: p.gammaMsp, gammaMsRe: p.gammaMsRe,
     }, t);
-    const Ncb = sideblowout({ fck, revnet: m.beton.revnet, ah: hovedareal(m.anker), hef: m.anker.hef, h: m.beton.h, kanter: m.beton.kanter, gammaMc: p.gammaMc }, t);
+    const wNp = eftervis(c, 'N_p');
+    expect(Np.relevant, 'N_p relevant').toBe(wNp.relevant);
+    if (wNp.relevant) for (const k of ['NEd', 'NRd', 'NRk'] as const) expect(naer((Np as any)[k], wNp[k]), `N_p.${k}: ${(Np as any)[k]} vs ${wNp[k]}`).toBe(true);
+    const Ncb = indl ? { id: 'N_cb', relevant: false, udnyttelse: null as number | null } : sideblowout({ fck, revnet: m.beton.revnet, ah: hovedareal(m.anker), hef: m.anker.hef, h: m.beton.h, kanter: m.beton.kanter, gammaMc: p.gammaMc }, t);
     const Vcp = pryout({
-      ankre: m.opstilling.anker, V: v.V, Vx: v.Vx, Vy: v.Vy, mulig: v.mulig, k8: m.anker.k8, hef: m.anker.hef, indlimet: false,
-      kegle: { hef: m.anker.hef, fck, revnet: m.beton.revnet, indlimet: false, kanter: m.beton.kanter, afskalning: ar.afskalning },
+      ankre: m.opstilling.anker, V: v.V, Vx: v.Vx, Vy: v.Vy, mulig: v.mulig, k8: m.anker.k8, hef: m.anker.hef, indlimet: m.anker.type === 'indlimet', bond: bondProdukt(m),
+      kegle: { hef: m.anker.hef, fck, revnet: m.beton.revnet, ...bondFelter(m), kanter: m.beton.kanter, afskalning: ar.afskalning },
       gammaMcV: p.gammaMcV, pryoutEnkeltanker: indstillinger.pryoutEnkeltanker,
     });
     const Vc = kantbrud({

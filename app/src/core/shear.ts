@@ -1,5 +1,6 @@
 // Forskydningsbrudformer (EN 1992-4, 7.2.2). Rene tal; ingen tekst.
 import { betonkegle, psiS, type KegleInput, type KegleResultat } from './cone';
+import { bondKapacitet, type BondProdukt } from './bond';
 import { klipRect, minKantafstand, type Kanter, type Rect } from './geometry';
 import type { Anker } from './loads';
 import { udnyttelse } from './tension';
@@ -91,6 +92,8 @@ export interface PryoutInput {
   kegle: Omit<KegleInput, 'ankre' | 'e1' | 'e2' | 'momentfaktor'>;
   k8?: number | null; hef: number; indlimet: boolean;
   gammaMcV: number; pryoutEnkeltanker: 'retning' | 'altid';
+  /** Kun indlimede anker: kombineret udtræk/betonbrud (ψsus = 1) begrænser også pry-out. */
+  bond?: { produkt: BondProdukt };
   /** 0,75 når ankerarmering er virksom. */
   armeringsFaktor?: number;
 }
@@ -110,7 +113,8 @@ export function pryout(p: PryoutInput): PryoutResultat {
   const m = Math.abs(xV - xG), b = Math.abs(yV - yG);
   const k8 = p.k8 ?? (p.indlimet ? 2 : p.hef < 60 ? 1 : 2);
   const y = betonkegle({ ...p.kegle, ankre: a, e1: m, e2: b, momentfaktor: null });
-  const NRk = y.NRk; // indlimet (kombineret udtræk/betonbrud) tilføjes sammen med indlimede anker
+  const bond = p.bond ? bondKapacitet({ produkt: p.bond.produkt, hef: p.hef, fck: p.kegle.fck, revnet: p.kegle.revnet, kanter: p.kegle.kanter, afskalning: p.kegle.afskalning }, a, m, b, 1) : null;
+  const NRk = bond ? Math.min(y.NRk, bond.NRk) : y.NRk;
   const kA = p.armeringsFaktor ?? 1;
   const VRk = k8 * NRk * kA;
   const VRd = VRk / p.gammaMcV;
@@ -139,9 +143,11 @@ export function pryout(p: PryoutInput): PryoutResultat {
       return s > max * (1 + 1e-9) ? ar.map((v) => (v * max) / s) : ar;
     };
     const Ai = skaler(y.scr, y.U.areal);
+    const Ab = bond ? skaler(bond.scr, bond.U.areal) : null;
     a.forEach((an, z) => {
       const ci = minKantafstand([an], kanter);
-      const Nri = ((y.N0 * Ai[z]!) / y.A0) * psiS(ci, y.ccr) * y.pRe;
+      let Nri = ((y.N0 * Ai[z]!) / y.A0) * psiS(ci, y.ccr) * y.pRe;
+      if (bond) Nri = Math.min(Nri, ((bond.N0 * Ab![z]!) / bond.A0) * psiS(ci, bond.ccr) * bond.pRe);
       const VRdi = (k8 * Nri * kA) / p.gammaMcV;
       const eta = VRdi > 0 ? l[z]! / VRdi : Infinity;
       if (!G || eta > G.eta) G = { an, VRdi, eta, V: l[z]! };
