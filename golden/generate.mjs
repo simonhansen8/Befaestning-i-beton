@@ -74,6 +74,7 @@ const compact = (o) => {
     partialkoefficienter: r?.partialkoefficienter,
     eftervisninger: r?.eftervisninger?.map(e => ({ id: e.id, relevant: e.relevant, NEd: e.NEd, NRd: e.NRd, NRk: e.NRk, VEd: e.VEd, VRd: e.VRd, VRk: e.VRk, udnyttelse: e.udnyttelse, styrendeAnker: e.styrendeAnker })),
     advarsler: r?.advarsler?.length,
+    kombinationer: r?.kombinationer?.map(k => ({ navn: k.navn, ankerkraefter: k.ankerkraefter, trykzone: k.trykzone && { C: k.trykzone.C, xC: k.trykzone.xC, yC: k.trykzone.yC, Cmax: k.trykzone.Cmax, hjoerner: k.trykzone.polygon?.length }, fordeling: k.fordeling })),
   };
 };
 
