@@ -1,16 +1,20 @@
 // Ren beskrivelse af 3D-scenen (ingen three.js, ingen DOM): koordinater i mm med x, y i plan og z op.
 // Betonoverfladen er z = 0; indstøbte bolte går ned i negativ z. Scenen tegnes af scene3d.ts.
 import type { KombinationsResultat } from '../core/kombination';
+import { brudlegemer } from './brudlegemer';
 
 type Model = Record<string, any>;
 
 export interface Udstraekning { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }
 export type Del =
-  | { type: 'boks'; rolle: 'beton' | 'plade'; x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; afbrudt?: boolean }
+  | { type: 'boks'; rolle: 'beton' | 'plade' | 'brud'; x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; afbrudt?: boolean }
   | { type: 'cyl'; rolle: 'skaft' | 'hoved' | 'moerik' | 'moertel'; x: number; y: number; z0: number; z1: number; r: number; sider: number; ankerId: number }
   | { type: 'stang'; rolle: 'armering'; fra: [number, number, number]; til: [number, number, number]; r: number; inaktiv?: boolean; variant?: 'forankring' | 'tilbehoer' }
   | { type: 'cirkel'; x: number; y: number; z: number; radius: number }
   | { type: 'kegle'; rolle: 'brud'; x: number; y: number; zTop: number; hoejde: number; radius: number }
+  | { type: 'linjer'; segmenter: [[number, number, number], [number, number, number]][] }
+  | { type: 'tekst'; pos: [number, number, number]; tekst: string }
+  | { type: 'markering'; x: number; y: number; z0: number; z1: number; r: number }
   | { type: 'legeme'; rolle: 'brud'; punkter: [number, number, number][]; flader: [number, number, number][] }
   | { type: 'maal'; fra: [number, number, number]; til: [number, number, number]; tekst: string; felt?: string; vaerdi?: number }
   | { type: 'pil'; rolle: 'last'; fra: [number, number, number]; til: [number, number, number]; tekst: string; felt?: string; vaerdi?: number }
@@ -20,7 +24,7 @@ export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; s
 
 const dk = (v: number, d = 1) => v.toFixed(d).replace('.', ',').replace('-', '−');
 
-export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true): Scene3DBeskrivelse {
+export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<string, number> | null, visBrud = false, visMaal = true, visLast = true, valgtBrud: string | null = null): Scene3DBeskrivelse {
   const a = m.anker, be = m.beton, pl = m.plade, ankre: { id: number; x: number; y: number }[] = m.opstilling.anker ?? [];
   const hef = a.hef, d = a.d, e = pl.afstandTilBeton ?? 0, t = pl.t;
   const indstoebt = a.type !== 'indlimet';
@@ -189,10 +193,12 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   // idealiserede brudlegemer for den styrende brudform (EN 1992-4, 35°-model); kun vejledende
   const styr = k?.styrendeBrudform ?? null;
   const kombi = styr === 'NV_c';
-  if (visBrud && k && (styr === 'N_c' || kombi)) {
+  if (valgtBrud && k) {
+    dele.push(...brudlegemer(valgtBrud, { m, k, ankre, x0, x1, y0, y1, dybde, hef, d }));
+  } else if (visBrud && k && (styr === 'N_c' || kombi)) {
     for (const q of k.traek.traekAnkre) dele.push({ type: 'kegle', rolle: 'brud', x: q.x, y: q.y, zTop: 0, hoejde: hef, radius: 1.5 * hef });
   }
-  if (visBrud && k && (styr === 'V_c' || kombi) && k.kantbrud.styrende) {
+  if (!valgtBrud && visBrud && k && (styr === 'V_c' || kombi) && k.kantbrud.styrende) {
     const { kant, c1, ankre: ids } = k.kantbrud.styrende;
     const dir = { xNeg: [-1, 0], xPos: [1, 0], yNeg: [0, -1], yPos: [0, 1] }[kant as 'xNeg'] as [number, number];
     const per: [number, number] = [-dir[1], dir[0]];
@@ -205,7 +211,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   const forklaring = [
     { farve: 'beton', tekst: be.revnet ? 'Beton (revnet)' : 'Beton (urevnet)' },
     { farve: 'staal', tekst: indstoebt ? 'Bolt med hoved' : 'Indlimet gevindstang' },
-    ...(dele.some((x) => x.type === 'kegle' || x.type === 'legeme') ? [{ farve: 'brud', tekst: 'Brudlegeme (idealiseret)' }] : []),
+    ...(dele.some((x) => x.type === 'kegle' || x.type === 'legeme' || x.type === 'markering' || x.type === 'linjer' || (x.type === 'boks' && x.rolle === 'brud')) ? [{ farve: 'brud', tekst: 'Brudlegeme (idealiseret)' }] : []),
     ...(dele.some((x) => x.type === 'stang' && !x.inaktiv && !x.variant) ? [{ farve: 'armering', tekst: 'Armering' }] : []),
     ...(dele.some((x) => x.type === 'stang' && x.inaktiv) ? [{ farve: 'inaktiv', tekst: 'Armering der ikke regnes virksom' }] : []),
     ...(dele.some((x) => x.type === 'stang' && x.variant === 'forankring') ? [{ farve: 'forankring', tekst: 'Forankring uden for brudlegemet (skematisk, ikke eftervist)' }] : []),

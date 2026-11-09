@@ -51,3 +51,13 @@ dialog menu { display: flex; gap: .5rem; justify-content: flex-end; padding: 0; 
 .etiket3d.laast { pointer-events:auto; cursor:not-allowed; }
 .etiket3d input.maalinput { font:inherit; width:5.5em; padding:0 2px; }
 .etiket3d input.maalinput.ugyldig { outline:2px solid #b42318; }
+
+table.brud tr.valgbar { cursor:pointer; } table.brud tr.valgbar:hover td { background:rgba(124,58,237,.06); } table.brud tr.valgt td { background:rgba(220,38,38,.10); }
+.brudpanel { border:1px solid var(--line); border-radius:6px; padding:8px 12px; margin-top:10px; }
+.brudpanel h3 { margin:0 0 2px; font-size:15px; } .brudpanel table.trin { width:100%; border-collapse:collapse; font-size:13px; margin:6px 0; }
+.brudpanel table.trin td { padding:3px 6px; border-top:1px solid var(--line); vertical-align:top; } .brudpanel td.formel { color:var(--muted,#667085); } .brudpanel td.vaerdi { text-align:right; font-variant-numeric:tabular-nums; }
+.etiket3d.brud { background:#fff; color:#b91c1c; border:1px solid #dc2626; border-radius:4px; padding:1px 5px; font-size:11px; }
+.hint3d { position:absolute; left:50%; bottom:10px; transform:translateX(-50%); background:rgba(17,24,39,.82); color:#fff; font-size:12px; padding:4px 10px; border-radius:12px; pointer-events:none; opacity:0; transition:opacity .2s; white-space:nowrap; }
+.hint3d.synlig { opacity:1; }
+.zoom3d { position:absolute; right:8px; top:8px; display:flex; flex-direction:column; gap:4px; }
+.zoom3d button { width:28px; height:28px; border-radius:6px; border:1px solid var(--line); background:var(--card); font-size:16px; line-height:1; cursor:pointer; }
