@@ -39,3 +39,20 @@ describe('mønstre mod facit (gamle app genererer samme koordinater)', () => {
     expect(antal).toBeGreaterThan(20);
   });
 });
+
+import { drejOpstilling90, tilpasPlade } from './opstilling';
+describe('drejning og pladetilpasning', () => {
+  it('90° drejning flytter bolte, bytter x/y-slids og mønsterparametre; fire drejninger giver udgangspunktet', () => {
+    const o = { type: '4', sx: 200, sy: 100, anker: genererAnkre({ type: '4', sx: 200, sy: 100, anker: [] }) };
+    const d = drejOpstilling90(o);
+    expect(d.sx).toBe(100); expect(d.sy).toBe(200);
+    expect(Math.max(...d.anker.map((a) => Math.abs(a.x)))).toBe(50);
+    expect(drejOpstilling90(drejOpstilling90(drejOpstilling90(d))).anker.map((a) => [a.x, a.y])).toEqual(o.anker.map((a) => [a.x, a.y]));
+    expect(drejOpstilling90({ type: 'fri', anker: [{ id: 1, x: 10, y: 0, slids: 'x' }] }).anker[0]).toMatchObject({ x: 0, y: 10, slids: 'y' });
+    expect(drejOpstilling90({ type: '6', sx: 1, sy: 1, anker: [] }).type).toBe('fri');
+  });
+  it('tilpasPlade forstørrer kun, til 1,2·df uden for hulkant', () => {
+    expect(tilpasPlade([{ x: 100, y: 50 }], 14, 300, 300)).toEqual({ bx: 300, by: 300 });
+    expect(tilpasPlade([{ x: 200, y: 0 }], 14, 300, 300)).toEqual({ bx: 450, by: 300 });
+  });
+});

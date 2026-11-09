@@ -45,3 +45,26 @@ export function genererAnkre(o: OpstillingInput): { id: number; x: number; y: nu
   }
   return p.map(([x, y], k) => ({ id: k + 1, x: rund(x), y: rund(y), slids: null }));
 }
+
+/** Drejer opstillingen 90° mod uret om referencepunktet: (x,y) → (−y,x). Pladen følger med (bx/by byttes); lasterne er globale og røres ikke. */
+export function drejOpstilling90<T extends OpstillingInput>(o: T): T {
+  const anker = o.anker.map((a) => ({ ...a, x: rund(-a.y), y: rund(a.x), slids: a.slids === 'x' ? 'y' : a.slids === 'y' ? 'x' : (a.slids ?? null) }));
+  const ud: T = { ...o, anker };
+  switch (o.type) {
+    case '2x': ud.type = '2y'; ud.sy = o.sx; break;
+    case '2y': ud.type = '2x'; ud.sx = o.sy; break;
+    case '4': case '8': case '9': ud.sx = o.sy; ud.sy = o.sx; break;
+    case 'cirk': ud.vinkel = (+(o.vinkel ?? 0) || 0) + 90; break;
+    case '1': break;
+    default: ud.type = 'fri'; // fx 3×2: det drejede mønster findes ikke som standard
+  }
+  return ud;
+}
+
+/** Mindste fodplade (hele 10 mm, kun forstørrelse), så alle bolte har kantafstand ≥ 1,2·df til pladekanten (EN 1993-1-8, Tabel 3.3). */
+export function tilpasPlade(ankre: { x: number; y: number }[], df: number, bx: number, by: number): { bx: number; by: number } {
+  const maks = (v: number[]) => v.reduce((s, x) => Math.max(s, x), 0);
+  const kant = 1.2 * df + df / 2; // fra boltens akse til pladekant: hulradius + 1,2·df (som i forslag.ts)
+  const ny = (c: number, aktuel: number) => Math.max(aktuel, Math.ceil((2 * (c + kant)) / 10) * 10);
+  return { bx: ny(maks(ankre.map((a) => Math.abs(a.x))), bx), by: ny(maks(ankre.map((a) => Math.abs(a.y))), by) };
+}

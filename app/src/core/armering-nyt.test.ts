@@ -29,3 +29,15 @@ describe('forudsætninger a/e/f og bøjleafstand', () => {
     expect(med.antalVirksomme).toBeLessThan(alle);
   });
 });
+
+describe('forskydningslastens højde over beton', () => {
+  it('større højde giver større løftestangsarm og dermed lavere VRd,s; tomt felt er uændret', () => {
+    const m = kopi(); m.plade.afstandTilBeton = 20; m.laster[0].Vx = 5e3; m.laster[0].N = 0;
+    const vrd = (mm: any) => beregnTilstand(mm).resultat!.kombinationer[0]!.resultat.brudformer.find((b: any) => b.id === 'V_s')!.Rd;
+    const a = vrd(m);
+    m.plade.lasthoejde = m.plade.afstandTilBeton + m.plade.t / 2; // samme som standard
+    expect(vrd(m)).toBeCloseTo(a, 6);
+    m.plade.lasthoejde = 120;
+    expect(vrd(m)).toBeLessThan(a);
+  });
+});

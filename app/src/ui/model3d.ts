@@ -191,8 +191,9 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
     const op = (l.N ?? 0) >= 0;
     dele.push({ type: 'pil', rolle: 'last', fra: op ? p0 : [0, 0, lastZ + L], til: op ? [0, 0, lastZ + L] : p0, tekst: `N = ${dk((l.N ?? 0) / 1e3)} kN`, felt: 'last:N', vaerdi: (l.N ?? 0) / 1e3 });
   }
-  if (aktiv('Vx')) dele.push({ type: 'pil', rolle: 'last', fra: p0, til: [Math.sign(l.Vx!) * L, 0, lastZ], tekst: `Vx = ${dk(l.Vx! / 1e3)} kN`, felt: 'last:Vx', vaerdi: l.Vx! / 1e3 });
-  if (aktiv('Vy')) dele.push({ type: 'pil', rolle: 'last', fra: p0, til: [0, Math.sign(l.Vy!) * L, lastZ], tekst: `Vy = ${dk(l.Vy! / 1e3)} kN`, felt: 'last:Vy', vaerdi: l.Vy! / 1e3 });
+  const vZ = pl.lasthoejde ?? lastZ, v0: [number, number, number] = [0, 0, vZ];
+  if (aktiv('Vx')) dele.push({ type: 'pil', rolle: 'last', fra: v0, til: [Math.sign(l.Vx!) * L, 0, vZ], tekst: `Vx = ${dk(l.Vx! / 1e3)} kN`, felt: 'last:Vx', vaerdi: l.Vx! / 1e3 });
+  if (aktiv('Vy')) dele.push({ type: 'pil', rolle: 'last', fra: v0, til: [0, Math.sign(l.Vy!) * L, vZ], tekst: `Vy = ${dk(l.Vy! / 1e3)} kN`, felt: 'last:Vy', vaerdi: l.Vy! / 1e3 });
   const c: [number, number, number] = [0, 0, lastZ + L * 0.35];
   if (aktiv('Mx')) dele.push({ type: 'bue', rolle: 'last', centrum: c, akse: 'x', radius: L * 0.32, fortegn: l.Mx! > 0 ? 1 : -1, tekst: `Mx = ${dk(l.Mx! / 1e6)} kNm`, felt: 'last:Mx', vaerdi: l.Mx! / 1e6, vinkel: 270 });
   if (aktiv('My')) dele.push({ type: 'bue', rolle: 'last', centrum: c, akse: 'y', radius: L * 0.32, fortegn: l.My! > 0 ? 1 : -1, tekst: `My = ${dk(l.My! / 1e6)} kNm`, felt: 'last:My', vaerdi: l.My! / 1e6, vinkel: 270 });

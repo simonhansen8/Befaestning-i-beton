@@ -31,6 +31,7 @@ describe('indlaesFil mod facit', () => {
     delete gl.indstillinger.Ec; delete ny.indstillinger.Ec;
     delete gl.meta.importNoter; // noter om afviste værdier tilføjes af brugerfladen, ikke af modellen
     // Bevidste tilføjelser siden facit: bekræftelser, drejning af bøjlepar og bøjleafstand for forskydningsarmering.
+    delete ny.plade?.lasthoejde; // ny valgfri indtastning (højde af forskydningslast)
     const ar = ny.beton?.armering;
     if (ar?.ankerarmeringTraek) { delete ar.ankerarmeringTraek.bekraeft; delete ar.ankerarmeringTraek.drejet; }
     if (ar?.ankerarmeringForskydning) delete ar.ankerarmeringForskydning.afstandBoejler;

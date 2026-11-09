@@ -18,7 +18,8 @@ import { snitSvg, type SnitAkse } from './snit';
 import { anvendMaal, maalRedigerbarhed } from './maal-redigering';
 import { opret3D, type Kamera, type Scene3D } from './scene3d';
 import { rapportHtml, rapportTekst } from './rapport';
-import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
+import { hulfrigangsDiameter } from '../core/validering';
+import { drejOpstilling90, genererAnkre, tilpasPlade, MOENSTRE, type MoensterParam } from '../core/opstilling';
 import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
 import { beregnForslag, type ForslagResultat, type SpecResultat } from '../core/forslag';
 import { saetSti } from '../core/sti';
@@ -92,7 +93,15 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     try { await navigator.clipboard.writeText(t); dialog('Rapport kopieret', [h('p', {}, 'Tekstrapporten er kopieret til udklipsholderen.')], []); }
     catch { dialog('Kopiér rapport', [h('p', {}, 'Kopiering blev afvist af browseren. Markér og kopiér teksten her:'), h('textarea', { readonly: true, rows: 14, style: 'width:100%' }, t)], []); }
   };
+  // Anker for rulleposition: det betjente element (fokus eller sidste tryk). Efter gentegning rulles siden, så netop det element står samme sted på skærmen – også når indhold over det skifter højde.
+  const ANKER = 'input, select, textarea, button, summary';
+  let sidsteTryk: HTMLElement | null = null;
+  document.addEventListener('pointerdown', (e) => { sidsteTryk = (e.target as HTMLElement | null)?.closest?.(ANKER) as HTMLElement | null; }, true);
+  const ankerNoegle = (n: HTMLElement): string | null => n.dataset.felt ? 'f:' + n.dataset.felt : n.dataset.armvis ? 'a:' + n.dataset.armvis : null;
   const draw = () => {
+    let ankerN = (document.activeElement as HTMLElement | null);
+    if (!ankerN || !rod.contains(ankerN) || !ankerN.matches?.(ANKER)) ankerN = sidsteTryk && rod.contains(sidsteTryk) ? sidsteTryk : null;
+    const ankerKey = ankerN ? ankerNoegle(ankerN) : null, ankerTop = ankerN && ankerKey ? ankerN.getBoundingClientRect().top : null;
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
     const faelles = 'input, select, textarea, button, summary';
@@ -105,6 +114,11 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     const nyOutput = rod.querySelector('.output');
     if (nyOutput) nyOutput.scrollTop = outputTop;
     window.scrollTo(sideX, sideY);
+    if (ankerKey && ankerTop != null) {
+      const [t, k] = [ankerKey[0], ankerKey.slice(2)];
+      const ny = rod.querySelector<HTMLElement>(t === 'f' ? `[data-felt="${CSS.escape(k)}"]` : `[data-armvis="${CSS.escape(k)}"]`);
+      if (ny) { const d = ny.getBoundingClientRect().top - ankerTop; if (Math.abs(d) > 0.5) window.scrollBy(0, d); }
+    }
     if (fokusIdx >= 0) Array.from(rod.querySelectorAll<HTMLElement>(faelles))[fokusIdx]?.focus({ preventScroll: true });
     if (fokus) {
       const n = rod.querySelector<HTMLElement>(`[data-felt="${CSS.escape(fokus)}"]`);
@@ -211,12 +225,16 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       if ('k' in f) { const n = felt(f, m); if (n) ud.push(n); }
       else if ('custom' in f) {
         if (f.show && !f.show(m)) continue;
-        if (f.custom === 'edges') ud.push(h('div', { class: 'gruppe' }, ...KANTFELTER.map((k) => felt(k, m))));
+        if (f.custom === 'edges') ud.push(h('div', { class: 'gruppe' }, ...KANTFELTER.map((k) => felt(k, m))), betonBlok(m));
         else if (f.custom === 'layout') ud.push(opstilling(m));
         else if (f.custom === 'armsum') {
           const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;
           const lin = f.which === 'T' ? oversigtTraek(m, kr?.armT ?? null) : oversigtForskydning(m, kr?.armV ?? null);
           if (lin.length) mal.push(h('div', { class: 'note armsum' }, ...lin.map((x) => h('div', {}, x))));
+        }
+        else if (f.custom === 'pladeTilpas') {
+          const t = tilpasPlade(m.opstilling.anker, hulfrigangsDiameter(m.anker.d), m.plade.bx, m.plade.by);
+          ud.push(h('div', { class: 'note' }, 'Boltene har for lidt kant til fodpladen. ', h('button', { type: 'button', title: 'Forstørrer pladen, så alle bolte har mindst 1,2·d0 fra hulkant til pladekant', onclick: () => store.aendr((mm) => { const n = tilpasPlade(mm.opstilling.anker, hulfrigangsDiameter(mm.anker.d), mm.plade.bx, mm.plade.by); mm.plade.bx = n.bx; mm.plade.by = n.by; }) }, `Tilpas plade til boltene (${t.bx} × ${t.by} mm)`)));
         }
         else if (f.custom === 'naReset') ud.push(h('button', { onclick: () => store.aendr((mm) => { mm.indstillinger = standardModel().indstillinger; }) }, 'Nulstil til DK NA-standard'));
       } else if ('sub' in f || 'note' in f) {
@@ -227,6 +245,29 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     }
     luk();
     return ud;
+  }
+
+  /** Samme kantafstande set som ren geometri: blokkens mål og referencepunktets forskydning fra midten. Begge visninger læser og skriver de samme fire kantafstande, så de kan ikke modsige hinanden. */
+  function betonBlok(m: Model): HTMLElement {
+    const kt = m.beton.kanter as Record<string, number | null>;
+    const tal = (t: string) => { const x = Number(t.replace(',', '.')); return t.trim() !== '' && Number.isFinite(x) ? x : null; };
+    const vis = (v: number | null) => (v == null ? '' : String(Math.round(v * 10) / 10).replace('.', ','));
+    const akse = (a: 'x' | 'y') => {
+      const n = kt[a + 'Neg'] ?? null, p = kt[a + 'Pos'] ?? null, begge = n != null && p != null;
+      const B = begge ? n! + p! : null, sh = begge ? (n! - p!) / 2 : 0;
+      const saet = (nyB: number | null, nyS: number) => store.aendr((mm) => {
+        const k = mm.beton.kanter as Record<string, number | null>;
+        if (nyB == null || nyB <= 0) { k[a + 'Neg'] = null; k[a + 'Pos'] = null; return; }
+        k[a + 'Neg'] = Math.round((nyB / 2 + nyS) * 10) / 10; k[a + 'Pos'] = Math.round((nyB / 2 - nyS) * 10) / 10;
+      });
+      return [
+        h('label', { class: 'felt' }, h('span', {}, `Betonens udstrækning i ${a}`), h('input', { type: 'text', inputmode: 'decimal', placeholder: begge ? '' : 'ubegrænset', value: vis(B), onchange: (e: Event) => saet(tal((e.target as HTMLInputElement).value), sh) }), h('span', { class: 'enhed' }, 'mm')),
+        h('label', { class: 'felt' }, h('span', {}, `Referencepunkt fra midten, ${a}`), h('input', { type: 'text', inputmode: 'decimal', disabled: !begge, value: vis(sh), onchange: (e: Event) => { const v = tal((e.target as HTMLInputElement).value); if (v != null && B != null) saet(B, v); } }), h('span', { class: 'enhed' }, 'mm')),
+      ];
+    };
+    return h('div', { class: 'gruppe' }, h('h4', {}, 'Eller angiv betonens geometri'),
+      h('p', { class: 'note' }, 'Samme oplysninger som kantafstandene ovenfor, blot som blokkens mål. Ændres det ene, opdateres det andet. Positiv forskydning: referencepunktet ligger tættere på +kanten. Tom udstrækning = ingen kant (fri).'),
+      ...akse('x'), ...akse('y'));
   }
 
   function opstilling(m: Model): HTMLElement {
@@ -255,6 +296,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           h('td', {}, h('select', { onchange: (e: Event) => store.aendr((mm) => { mm.opstilling.anker[i].slids = (e.target as HTMLSelectElement).value || null; }) },
             ...[['', 'ingen'], ['x', 'i x'], ['y', 'i y']].map(([v, t]) => h('option', { value: v, selected: (a.slids ?? '') === v }, t)))),
           h('td', {}, m.opstilling.anker.length > 1 && h('button', { title: 'Fjern bolt', onclick: () => store.aendr((mm) => { mm.opstilling.anker.splice(i, 1); mm.opstilling.anker.forEach((q: any, j: number) => { q.id = j + 1; }); mm.opstilling.type = 'fri'; }) }, '×')))))),
+      h('button', { type: 'button', title: 'Drejer bolte og fodplade 90° mod uret om referencepunktet (lasterne er globale og drejes ikke)', onclick: () => store.aendr((mm) => { mm.opstilling = drejOpstilling90(mm.opstilling); const bx = mm.plade.bx; mm.plade.bx = mm.plade.by; mm.plade.by = bx; }) }, '⟲ Drej opstilling 90°'),
       h('button', { onclick: () => store.aendr((mm) => { const n = mm.opstilling.anker.length; mm.opstilling.anker.push({ id: n + 1, x: 0, y: 0, slids: null }); mm.opstilling.type = 'fri'; }) }, '+ Tilføj bolt'));
   }
 

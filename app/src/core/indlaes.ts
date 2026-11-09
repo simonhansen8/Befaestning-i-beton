@@ -31,7 +31,7 @@ export function standardModel(dato = ''): Obj {
       psiC: 1, psi0Sus: 0.74, alphaSus: 0.6, kcrN: 7.7, kucrN: 11, ccrN: null, scrN: null, ccrSp: null, scrSp: null, hmin: null, cmin: null, smin: null,
       k7: null, k8: null, k11: 0.6667, gammaInst: 1.2, NRksEta: null, VRksEta: null, M0RksEta: null, betonMin: 'C20/25', betonMax: 'C50/60',
     },
-    plade: { bx: 340, by: 340, t: 25, hulfrigang: 'normal', afstandTilBeton: 0, mellemlaeg: 'ingen', indspaending: 'fri' },
+    plade: { bx: 340, by: 340, t: 25, hulfrigang: 'normal', afstandTilBeton: 0, lasthoejde: null, mellemlaeg: 'ingen', indspaending: 'fri' },
     opstilling: {
       type: '4', sx: 240, sy: 240, n: 6, r: 150, vinkel: 0,
       anker: [{ id: 1, x: -120, y: -120, slids: null }, { id: 2, x: 120, y: -120, slids: null }, { id: 3, x: -120, y: 120, slids: null }, { id: 4, x: 120, y: 120, slids: null }],
