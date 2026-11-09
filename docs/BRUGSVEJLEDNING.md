@@ -14,7 +14,7 @@ Vælg ankertype *Indlimet*. Blokken **Udfyld fra Hilti HIT-HY 200 V3** sætter d
 ## Visninger
 - **Plan**: fodplade, bolte med kraft, trykzone og kanter.
 - **Snit**: lodret snit langs x eller y med hef, c og h.
-- **3D**: drejes med musen. Knapper: kamera (Iso, Oppefra, Forfra, Fra siden), **Mål** (til/fra), **Brudlegeme** (idealiseret kegle/kantbrudskile for den styrende brudform). Armering vises, når den er slået til i modellen.
+- **3D**: drejes med musen. Knapper: kamera (Iso, Oppefra, Forfra, Fra siden), **Mål** (til/fra), **Brudlegeme** (idealiseret kegle/kantbrudskile for den styrende brudform). Armering vises, når den er slået til i modellen: trækbøjler som lukkede bøjler med dornbøjede hjørner (4⌀ for ⌀ ≤ 16 mm, ellers 7⌀) omsluttende overfladearmeringen, som tegnes som stænger med den angivne diameter og afstand (knappen **Overfladearm.** slår dem til/fra). Armeringens tegning følger inddata, men overfladearmeringens egne forudsætninger kontrolleres ikke af programmet.
 
 ## Gem, åbn og rapport
 - **Gem** henter projektet som JSON, **Åbn …** og **Indsæt JSON** indlæser det igen. Programmet gemmer også automatisk i browseren.
