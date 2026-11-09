@@ -4,6 +4,25 @@ import { byg3d } from './model3d';
 
 const m: any = structuredClone(standardModel('2026-01-01'));
 describe('3D-beskrivelse', () => {
+  it('tegner forskydningsarmering mod armeringskanten med inaktive stænger markeret', () => {
+    const i: any = structuredClone(m);
+    i.beton.armering.ankerarmeringForskydning = { ...i.beton.armering.ankerarmeringForskydning, aktiv: true, diameter: 10, daekToAkse: 40 };
+    const id = i.opstilling.anker[0].id;
+    const k: any = { styrendeBrudform: null, traek: { traekAnkre: [] }, kantbrud: { styrende: null, forreste: { xNeg: { c1: 130, ankre: [id] } } }, armKant: { kant: 'xNeg' },
+      armV: { staenger: [{ v: 50, l1: 90, virksom: true }, { v: -50, l1: 90, virksom: false }], l1: null, virksom: true } };
+    const st: any[] = byg3d(i, k, null).dele.filter((x) => x.type === 'stang');
+    expect(st).toHaveLength(2);
+    expect(st.map((x) => !!x.inaktiv).sort()).toEqual([false, true]);
+    expect(st[0].til[0]).toBeCloseTo(st[0].fra[0] - 90);
+    expect(st[0].fra[2]).toBe(-40);
+  });
+  it('har mål for hef, h, plade, boltafstand og kantafstand, og kan slå dem fra', () => {
+    const i: any = structuredClone(m); i.beton.kanter.xNeg = 200;
+    const tekster = byg3d(i, null, null, false, true).dele.filter((x) => x.type === 'maal').map((x: any) => x.tekst as string);
+    for (const pre of ['hef = ', 'h = ', 'bx = ', 'by = ', 't = ', 'sx = ', 'sy = ', 'c = ']) expect(tekster.some((t) => t.startsWith(pre))).toBe(true);
+    expect(byg3d(i, null, null, false, false).dele.filter((x) => x.type === 'maal')).toHaveLength(0);
+    expect(tekster.every((t) => !t.includes('NaN'))).toBe(true);
+  });
   it('tegner kegle for N_c og kile for V_c kun når brudlegeme er slået til', () => {
     const k: any = { styrendeBrudform: 'N_c', traek: { traekAnkre: [{ x: 10, y: 20 }] }, kantbrud: { styrende: null } };
     expect(byg3d(m, k, null).dele.some((x) => x.type === 'kegle')).toBe(false);
