@@ -179,6 +179,11 @@ test('ny UI: mål kan rettes ved klik i 3D, og kræfter kan skjules', { skip: !f
     await page.fill('input.maalinput', 'abc');
     await page.press('input.maalinput', 'Enter');
     assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 220);
+    // last rettes direkte i 3D (kN) på den valgte kombination
+    await page.locator('.etiket3d.last.redigerbar', { hasText: 'N =' }).click();
+    await page.fill('input.maalinput', '90,5');
+    await page.press('input.maalinput', 'Enter');
+    await page.waitForFunction(() => window.__ny.store.tilstand.model.laster[0].N === 90500);
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });

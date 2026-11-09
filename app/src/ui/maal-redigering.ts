@@ -4,11 +4,12 @@ import { saetSti } from '../core/sti';
 import type { Model } from './skema-typer';
 
 const DIREKTE: Record<string, string> = { hef: 'anker.hef', h: 'beton.h', bx: 'plade.bx', by: 'plade.by', t: 'plade.t', e: 'plade.afstandTilBeton' };
+const LAST: Record<string, [string, number]> = { 'last:N': ['N', 1e3], 'last:Vx': ['Vx', 1e3], 'last:Vy': ['Vy', 1e3], 'last:Mx': ['Mx', 1e6], 'last:My': ['My', 1e6], 'last:T': ['T', 1e6] };
 const KANTER = ['xNeg', 'xPos', 'yNeg', 'yPos'] as const;
 
 /** Kan målet rettes, og hvorfor ikke (til tooltip). */
 export function maalRedigerbarhed(m: Model, felt: string): { ok: true } | { ok: false; hvorfor: string } {
-  if (felt in DIREKTE || felt.startsWith('c:')) return { ok: true };
+  if (felt in DIREKTE || felt.startsWith('c:') || felt in LAST) return { ok: true };
   if (felt === 'sx' || felt === 'sy') {
     const mo = m.opstilling.type as string;
     const bruger = (mo === '2x' && felt === 'sx') || (mo === '2y' && felt === 'sy') || ['4', '6', '8', '9'].includes(mo);
@@ -17,8 +18,15 @@ export function maalRedigerbarhed(m: Model, felt: string): { ok: true } | { ok: 
   return { ok: false, hvorfor: 'Dette mål kan ikke rettes her.' };
 }
 
-/** Anvender ny værdi [mm] på modellen (muterer). Returnerer false, hvis værdien er ugyldig eller målet ikke kan rettes. */
-export function anvendMaal(m: Model, felt: string, ny: number): boolean {
+/** Anvender ny værdi [mm; laster i kN/kNm] på modellen (muterer). Returnerer false, hvis værdien er ugyldig eller målet ikke kan rettes. */
+export function anvendMaal(m: Model, felt: string, ny: number, kombination = 0): boolean {
+  if (felt in LAST) {
+    const l = (m.laster as Record<string, number>[])[kombination];
+    if (!Number.isFinite(ny) || !l) return false;
+    const [felt2, faktor] = LAST[felt]!;
+    l[felt2] = Math.round(ny * faktor * 1e3) / 1e3;
+    return true;
+  }
   if (!Number.isFinite(ny) || ny < 0 || (ny === 0 && felt !== 'e')) return false;
   if (!maalRedigerbarhed(m, felt).ok) return false;
   if (felt in DIREKTE) { saetSti(m, DIREKTE[felt]!, ny); return true; }

@@ -41,4 +41,15 @@ describe('ret mål i 3D', () => {
     expect(byg3d(m, null, l, false, true, true).dele.some((x) => x.type === 'pil')).toBe(true);
     expect(byg3d(m, null, l, false, true, false).dele.some((x) => x.type === 'pil' || x.type === 'bue')).toBe(false);
   });
+  it('laster rettes i kN/kNm på den valgte kombination, også negative', () => {
+    const m = lav();
+    const n = m.laster.length;
+    expect(anvendMaal(m, 'last:N', 120.5, 0)).toBe(true); expect(m.laster[0].N).toBe(120500);
+    expect(anvendMaal(m, 'last:Vx', -20, 1 % n)).toBe(true); expect(m.laster[1 % n].Vx).toBe(-20000);
+    expect(anvendMaal(m, 'last:My', -8.25, 0)).toBe(true); expect(m.laster[0].My).toBe(-8.25e6);
+    expect(anvendMaal(m, 'last:N', NaN, 0)).toBe(false);
+    expect(anvendMaal(m, 'last:N', 5, 99)).toBe(false);
+    const d: any = byg3d(m, null, m.laster[0]).dele.find((x: any) => x.type === 'pil' && x.felt === 'last:N');
+    expect(d.vaerdi).toBeCloseTo(120.5);
+  });
 });

@@ -102,16 +102,17 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
   function goerRedigerbar(el: HTMLElement, tekst: string, felt: string, vaerdi: number) {
     const hvorfor = valg.kanRettes?.(felt) ?? null;
     el.classList.add(hvorfor ? 'laast' : 'redigerbar');
-    el.title = hvorfor ?? 'Klik for at rette målet';
+    el.title = hvorfor ?? (felt.startsWith('last:') ? 'Klik for at rette lasten' : 'Klik for at rette målet');
     if (hvorfor) return;
     for (const ev of ['pointerdown', 'mousedown', 'touchstart']) el.addEventListener(ev, (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       if (el.querySelector('input')) return;
-      const navn = tekst.split(' = ')[0]!;
+      const [navn, rest = ''] = tekst.split(' = ');
+      const enhed = rest.split(' ').pop() || 'mm';
       const inp = document.createElement('input');
-      inp.type = 'text'; inp.inputMode = 'decimal'; inp.value = String(Math.round(vaerdi * 10) / 10).replace('.', ',');
-      inp.size = 6; inp.className = 'maalinput'; inp.setAttribute('aria-label', `Ret ${navn} i mm`);
+      inp.type = 'text'; inp.inputMode = 'decimal'; inp.value = String(Math.round(vaerdi * 100) / 100).replace('.', ',');
+      inp.size = 6; inp.className = 'maalinput'; inp.setAttribute('aria-label', `Ret ${navn} i ${enhed}`);
       const gendan = () => { el.textContent = tekst; };
       inp.addEventListener('keydown', (k) => {
         k.stopPropagation();
@@ -122,7 +123,7 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
         }
       });
       inp.addEventListener('blur', gendan);
-      el.textContent = `${navn} = `; el.append(inp, ' mm'); inp.focus(); inp.select();
+      el.textContent = `${navn} = `; el.append(inp, ` ${enhed}`); inp.focus(); inp.select();
     });
   }
 
@@ -179,9 +180,11 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
     } else if (d.type === 'pil') {
       g.add(pil(v(...d.fra), v(...d.til), FARVE.last, s * 0.004));
       const e = etiket(d.tekst, 'etiket3d last'); e.position.copy(v(...d.til)); g.add(e);
+      if (d.felt && d.vaerdi != null && valg.ret) goerRedigerbar(e.element, d.tekst, d.felt, d.vaerdi);
     } else {
       g.add(bue(v(...d.centrum), d.akse, d.radius, d.fortegn, d.vinkel, FARVE.last, s * 0.004));
       const e = etiket(d.tekst, 'etiket3d last'); e.position.copy(v(d.centrum[0], d.centrum[1], d.centrum[2] + d.radius)); g.add(e);
+      if (d.felt && d.vaerdi != null && valg.ret) goerRedigerbar(e.element, d.tekst, d.felt, d.vaerdi);
     }
   }
 
