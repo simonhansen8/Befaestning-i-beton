@@ -5,7 +5,7 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 import type { Del, Scene3DBeskrivelse } from './model3d';
 
 export type Kamera = 'iso' | 'top' | 'front' | 'side';
-const FARVE = { beton: 0xaab0ba, plade: 0x6e7684, staal: 0x2c323b, last: 0x7c3aed, arm: 0xb45309, akse: 0x667085 };
+const FARVE = { beton: 0xaab0ba, plade: 0x6e7684, staal: 0x2c323b, last: 0x7c3aed, arm: 0xb45309, forankring: 0xf59e0b, tilbehoer: 0x0f766e, inaktiv: 0x9ca3af, zone: 0xb45309, akse: 0x667085 };
 
 // model (x, y, z op) → three (x, y op, z mod dig)
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, z, -y);
@@ -146,11 +146,14 @@ export function opret3D(valg: Scene3DValg = {}): Scene3D {
     } else if (d.type === 'stang') {
       const a = v(...d.fra), b = v(...d.til), len = a.distanceTo(b);
       if (len > 1e-6) {
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(d.r, d.r, len, 10), new THREE.MeshStandardMaterial({ color: d.inaktiv ? 0x9ca3af : FARVE.arm, roughness: 0.5 }));
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(d.r, d.r, len, 10), new THREE.MeshStandardMaterial({ color: d.inaktiv ? FARVE.inaktiv : d.variant === 'forankring' ? FARVE.forankring : d.variant === 'tilbehoer' ? FARVE.tilbehoer : FARVE.arm, roughness: 0.5 }));
         m.position.copy(a.clone().add(b).multiplyScalar(0.5));
         m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
         g.add(m);
       }
+    } else if (d.type === 'cirkel') {
+      const pts = Array.from({ length: 97 }, (_, i) => v(d.x + d.radius * Math.cos((i / 96) * 2 * Math.PI), d.y + d.radius * Math.sin((i / 96) * 2 * Math.PI), d.z));
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: FARVE.zone })));
     } else if (d.type === 'kegle') {
       const geo = new THREE.ConeGeometry(d.radius, d.hoejde, 48, 1, true);
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
