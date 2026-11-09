@@ -36,7 +36,7 @@ export interface StaalForskydningInput {
   k7?: number | null; VRksEta?: number | null; M0RksEta?: number | null;
   gammaMsV: number;
   loeftestang: boolean;
-  afstandTilBeton: number; pladeT: number; indspaending: string;
+  afstandTilBeton: number; pladeT: number; lastHoejde?: number | null; indspaending: string;
 }
 
 export interface StaalForskydningResultat extends ForskydningsEftervisning {
@@ -67,7 +67,8 @@ export function staalbrudForskydning(p: StaalForskydningInput): StaalForskydning
     const VRd = VRk / p.gammaMsV;
     return { ...base, relevant: true, VEd: u, VRd, VRk, udnyttelse: udnyttelse(u, VRd), VRd_i: p.ankre.map(() => VRd), aarsag: null };
   }
-  const l = 0.5 * p.d + p.afstandTilBeton + p.pladeT / 2;
+  // e1: afstand fra betonoverflade til forskydningskraftens linje; standard: midt i pladen (e + t/2)
+  const l = 0.5 * p.d + (p.lastHoejde ?? p.afstandTilBeton + p.pladeT / 2);
   const alphaM = p.indspaending === 'fuld' ? 2 : 1;
   const ds = Math.sqrt((4 * p.As) / Math.PI);
   const Wel = (Math.PI * ds ** 3) / 32;

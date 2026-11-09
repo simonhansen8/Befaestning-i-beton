@@ -201,7 +201,7 @@ export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
 
 export interface ForskydningsArmeringInput {
   ar: ForskydningsArmering; virkning: ArmeringV; armKant: ForresteRaekke; kantKandidat: KantKandidat | undefined;
-  pladeAfstandTilBeton: number; pladeT: number; h: number; cnom: number; hef: number; fck: number;
+  pladeAfstandTilBeton: number; pladeT: number; lastHoejde?: number | null; h: number; cnom: number; hef: number; fck: number;
   gammaMsRe: number; gammaCt: number; alphaCt: number;
   /** Basisfordeling (alle ankre) af forskydning. */
   fordeling: ForskydningsFordeling; ankre: Anker[];
@@ -212,7 +212,7 @@ export interface ForskydningsArmeringResultat { V_re: Eftervisning; V_a: Eftervi
 export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): ForskydningsArmeringResultat {
   const { ar, virkning: e } = p;
   const d = ar.diameter;
-  const es = ar.es ?? p.pladeAfstandTilBeton + p.pladeT + (ar.daekToAkse ?? 40);
+  const es = ar.es ?? (p.lastHoejde ?? p.pladeAfstandTilBeton + p.pladeT) + (ar.daekToAkse ?? 40);
   const z = 0.85 * Math.min(p.h - p.cnom, 2 * p.hef, 2 * p.armKant.R.c1);
   const dists = [p.kantKandidat?.dist, p.armKant.dist].filter((x): x is ForskydningsFordeling => !!x && x.mulig !== false);
   let y = -1, g = 0;

@@ -35,7 +35,7 @@ export interface KernemodelBeton {
 }
 export interface Kernemodel {
   beton: KernemodelBeton; anker: KernemodelAnker;
-  plade: { bx: number; by: number; t: number; hulfrigang: string; afstandTilBeton?: number; mellemlaeg: string; indspaending: string };
+  plade: { bx: number; by: number; t: number; hulfrigang: string; afstandTilBeton?: number; lasthoejde?: number | null; mellemlaeg: string; indspaending: string };
   opstilling: { anker: Anker[] };
 }
 
@@ -124,7 +124,7 @@ export function beregnKombination(
   const V_s = staalbrudForskydning({
     ankre, V: v.V, mulig: v.mulig, F: f.F, NRd_s: N_s.NRd, stor, fuk: st.fuk, As: st.As, duktil: st.duktil, d: m.anker.d, dnom: m.anker.dnom ?? m.anker.d,
     hef: m.anker.hef, fckRaw: fckRaa, k7: m.anker.k7, VRksEta: m.anker.VRksEta, M0RksEta: m.anker.M0RksEta, gammaMsV: p.gammaMsV,
-    loeftestang: lof.medLoeftestang, afstandTilBeton: m.plade.afstandTilBeton || 0, pladeT: m.plade.t, indspaending: m.plade.indspaending,
+    loeftestang: lof.medLoeftestang, afstandTilBeton: m.plade.afstandTilBeton || 0, pladeT: m.plade.t, lastHoejde: m.plade.lasthoejde ?? null, indspaending: m.plade.indspaending,
   });
   out.push(trad(V_s, V_s.VEd, V_s.VRd, V_s.VRk));
 
@@ -150,7 +150,7 @@ export function beregnKombination(
   if (armV.aktiv) {
     if (armV.virksom && armKant) {
       const r = eftervisForskydningsArmering({
-        ar: ar.ankerarmeringForskydning, virkning: armV, armKant, kantKandidat: forste.kanterPr[armKant.kant], pladeAfstandTilBeton: m.plade.afstandTilBeton || 0, pladeT: m.plade.t,
+        ar: ar.ankerarmeringForskydning, virkning: armV, armKant, kantKandidat: forste.kanterPr[armKant.kant], pladeAfstandTilBeton: m.plade.afstandTilBeton || 0, pladeT: m.plade.t, lastHoejde: m.plade.lasthoejde ?? null,
         h: m.beton.h, cnom: m.beton.cnom, hef: m.anker.hef, fck, gammaMsRe: p.gammaMsRe, gammaCt: p.gammaCt, alphaCt: p.alphaCt, fordeling: v, ankre,
       });
       out.push(fraTraek(r.V_re), fraTraek(r.V_a));

@@ -1,7 +1,11 @@
 // Felt-skema for brugerfladen (port af den gamle brugerflades felttabel). Én kilde til etiketter, enheder, grænser, vejledning og
 // normhenvisninger. HTML i etiketter (<sub>) er præsentationsdata; kernen bruger ingen tekst.
+import { tilpasPlade } from '../core/opstilling';
+import { hulfrigangsDiameter } from '../core/validering';
 import type { FeltDef, Model, Sektion } from './skema-typer';
 import { erIndstoebt, erIndlimet, traekArmeringAktiv, forskArmeringAktiv, forskArmeringOverflade, stdTekst } from './skema-hjaelp';
+
+const pladePasserIkke = (m: Model): boolean => { const t = tilpasPlade(m.opstilling.anker, hulfrigangsDiameter(m.anker.d), m.plade.bx, m.plade.by); return t.bx !== m.plade.bx || t.by !== m.plade.by; };
 
 export const SEKTIONER: Sektion[] = [
   {
@@ -540,6 +544,10 @@ export const SEKTIONER: Sektion[] = [
         ref: "",
       },
       {
+        custom: "pladeTilpas",
+        show: (m: Model) => pladePasserIkke(m),
+      },
+      {
         k: "plade.t",
         hl: "plade.t",
         sym: "t",
@@ -572,6 +580,19 @@ export const SEKTIONER: Sektion[] = [
         max: 500,
         tip: "Afstand fra betonoverflade til pladens underside.",
         ref: "EN 1992-4, 6.2.2.3 (1)",
+      },
+      {
+        k: "plade.lasthoejde",
+        hl: "plade.stand",
+        sym: "e<sub>1</sub>",
+        lbl: "Forskydningslastens højde over beton",
+        unit: "mm",
+        type: "num",
+        min: 0,
+        nullable: true,
+        std: () => "e + t/2",
+        tip: "Afstand fra betonoverfladen til forskydningskraftens virkelinje. Giver løftestangsarmen l = a<sub>3</sub> + e<sub>1</sub> (7.2.2.3.2, Fig. 6.8 e.l.) og e<sub>s</sub> for forskydningsarmering. Tomt: midt i pladen (e + t/2). Rører ikke ved, om der er løftestang (afgøres af pladens placering).",
+        ref: "EN 1992-4, 6.2.2.3 / 7.2.2.3.2",
       },
       {
         k: "plade.indspaending",

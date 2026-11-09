@@ -213,6 +213,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
     bx: r('plade.bx', c.bx, 300, { gt: 0 }), by: r('plade.by', c.by, 300, { gt: 0 }), t: r('plade.t', c.t, 20, { gt: 0 }),
     hulfrigang: vaelg(hul, ['normal', 'stor'] as const, 'normal'),
     afstandTilBeton: r('plade.afstandTilBeton', c.afstandTilBeton, 0, { min: 0 }),
+    lasthoejde: r('plade.lasthoejde', c.lasthoejde, null, { nullable: true, min: 0 }),
     mellemlaeg: vaelg(c.mellemlaeg, ['ingen', 'moertel', 'aaben'] as const, 'ingen'),
     indspaending: vaelg(c.indspaending, ['fri', 'fuld'] as const, 'fri'),
   };
