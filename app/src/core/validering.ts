@@ -89,7 +89,11 @@ export function validerModel(m: ValideringsModel, ind: Indstillinger, fck: numbe
     if (ar.kantarmeringAfstand == null || ar.kantarmeringDiameter == null || ar.kantarmeringAfstand > 100 || ar.kantarmeringDiameter < 12) e.push(diag('advarsel', 'psi-re-v-krav-ikke-opfyldt', EN('7.2.2.5'), 'beton.armering.kantarmeringAfstand'));
     else e.push(diag('info', 'psi-re-v-krav-pr-kant', EN('7.2.2.5'), 'beton.armering.kantarmeringAfstand'));
   }
-  if (ar.ankerarmeringTraek.aktiv) e.push(diag('advarsel', 'ankerarmering-traek-forbehold', EN('7.2.1.2(2)a, e, f'), 'beton.armering.ankerarmeringTraek.aktiv', { stoed: ar.ankerarmeringTraek.foering === 'stoed' }));
+  if (ar.ankerarmeringTraek.aktiv) {
+    const at = ar.ankerarmeringTraek, b = at.bekraeft ?? { a: false, e: false, f: false }, stoed = at.foering === 'stoed';
+    const mangler = [!b.a ? 'a' : '', stoed && !b.e ? 'e' : '', !b.f ? 'f' : ''].filter(Boolean).join(', ');
+    e.push(diag(mangler ? 'advarsel' : 'info', mangler ? 'ankerarmering-traek-forbehold' : 'ankerarmering-traek-bekraeftet', EN('7.2.1.2(2)a, e, f'), 'beton.armering.ankerarmeringTraek.aktiv', { stoed, mangler }));
+  }
   if (ar.ankerarmeringForskydning.aktiv) e.push(diag('advarsel', 'ankerarmering-forskydning-forbehold', EN('7.2.2.2(2)'), 'beton.armering.ankerarmeringForskydning.aktiv', { type: ar.ankerarmeringForskydning.type }));
   return e;
 }

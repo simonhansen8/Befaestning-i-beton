@@ -30,6 +30,10 @@ describe('indlaesFil mod facit', () => {
     // Bevidst afvigelse: Ec udledes af betonklassen medmindre den er angivet (gammel standard 30000 gemmes ikke længere).
     delete gl.indstillinger.Ec; delete ny.indstillinger.Ec;
     delete gl.meta.importNoter; // noter om afviste værdier tilføjes af brugerfladen, ikke af modellen
+    // Bevidste tilføjelser siden facit: bekræftelser, drejning af bøjlepar og bøjleafstand for forskydningsarmering.
+    const ar = ny.beton?.armering;
+    if (ar?.ankerarmeringTraek) { delete ar.ankerarmeringTraek.bekraeft; delete ar.ankerarmeringTraek.drejet; }
+    if (ar?.ankerarmeringForskydning) delete ar.ankerarmeringForskydning.afstandBoejler;
     expect(ny).toEqual(gl);
   });
   it('filer som appen blokerer på er også fatale i ny parser eller får afviste værdier', () => {

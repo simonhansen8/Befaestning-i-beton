@@ -9,11 +9,17 @@ import { udnyttelse, type Eftervisning, type TraekOversigt } from './tension';
 export interface TraekArmering {
   aktiv: boolean; diameter: number; antalBoejler: number; fyk: number; afstand: number; daeklagTop: number;
   krog: boolean; eta1: number; cd: number | null; foering: 'stoed' | 'ingen'; forankringsdybde: number | null;
+  /** Brugerens bekræftelse af forudsætningerne a, e og f i 7.2.1.2(2), som programmet ikke selv kan kontrollere. */
+  bekraeft?: { a: boolean; e: boolean; f: boolean };
+  /** Bøjleparrene drejet 90° om ankeret (kun tegning; beregningen er uafhængig af retningen). */
+  drejet?: boolean;
 }
 export interface ForskydningsArmering {
   aktiv: boolean; type: 'boejle' | 'overflade' | 'loekke'; kant: KantNavn | null; diameter: number;
   benPrAnker: number | null; antalBenIAlt: number | null; antalLoekker: number | null; antalBoejler: number | null;
   fyk: number; afstand: number | null; daekToAkse: number | null; l1: number | null; krog: boolean; eta1: number | null; es: number | null; cd: number | null;
+  /** Afstand mellem bøjler/løkker (c/c, ind i elementet fra ankeret); null = alle regnes med og lægges ⌀+1 under hinanden. */
+  afstandBoejler?: number | null;
 }
 
 /** Reduktion af forankringslængde ved stor dæklagstykkelse for bøjede stænger (cd > 3Ø). */
@@ -115,6 +121,8 @@ export type ManglerV = 'fyk-over-600' | 'dia-over-16' | 'ingen-virksomme-ben' | 
 export interface ArmeringV {
   aktiv: boolean; virksom: boolean; mangler: ManglerV[]; form: 'boejle' | 'overflade' | 'loekke' | null;
   ben: number; l1min: number | null; l1: number | null; eta1: number; staenger: Staenger[] | null; antalVirksomme: number;
+  /** Bøjler/løkker med afstand fra første (mm) og om de ligger inden for 0,5·c1; null uden angivet bøjleafstand. */
+  boejler: { pos: number; virksom: boolean }[] | null; zone: number | null;
 }
 
 export interface VirkningVInput {
@@ -149,7 +157,7 @@ function overfladeStaenger(p: VirkningVInput, kant: KantNavn, c1e: number | null
 /** Virkning af ankerarmering for forskydning (xd). */
 export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
   const t = p.ar;
-  const tom: ArmeringV = { aktiv: false, virksom: false, mangler: [], form: null, ben: 0, l1min: null, l1: null, eta1: 1, staenger: null, antalVirksomme: 0 };
+  const tom: ArmeringV = { aktiv: false, virksom: false, mangler: [], form: null, ben: 0, l1min: null, l1: null, eta1: 1, staenger: null, antalVirksomme: 0, boejler: null, zone: null };
   if (!t.aktiv) return tom;
   const dia = t.diameter, form = t.type;
   const mangler: ManglerV[] = [];
@@ -158,6 +166,7 @@ export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
   const a = e ? e.ankre.length : 1;
   const l = t.benPrAnker ?? Math.floor((t.antalBenIAlt ?? 0) / a);
   let c = l, u: number | null = null, h: number | null = null, stg: Staenger[] | null = null;
+  let boejler: ArmeringV['boejler'] = null, zone: number | null = null;
   if (form === 'overflade') {
     if (dia > 16) mangler.push('dia-over-16');
     h = (t.krog ? 4 : 10) * dia;
@@ -174,11 +183,20 @@ export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
       u = stg.length ? Math.min(...stg.filter((b) => b.virksom).map((b) => b.l1)) : null;
       if (c === 0) mangler.push('ingen-virksomme-ben');
     }
-  } else if (form === 'boejle') c = (2 * (t.antalBoejler ?? Math.max(1, Math.ceil((l * a) / 2)))) / a;
-  else c = 2 * (t.antalLoekker ?? Math.max(1, Math.ceil(l / 2)));
+  } else {
+    const n = form === 'boejle' ? (t.antalBoejler ?? Math.max(1, Math.ceil((l * a) / 2))) : (t.antalLoekker ?? Math.max(1, Math.ceil(l / 2)));
+    let ne = n;
+    if (t.afstandBoejler != null && t.afstandBoejler > 0) {
+      // bøjler/løkker følger efter hinanden ind i elementet med afstanden s; kun dem inden for 0,5·c1 regnes med (fortolkning, skal verificeres)
+      zone = 0.5 * (e ? e.R.c1 : Infinity);
+      boejler = Array.from({ length: n }, (_v, j) => ({ pos: j * t.afstandBoejler!, virksom: j * t.afstandBoejler! <= zone! + 1e-9 }));
+      ne = boejler.filter((b) => b.virksom).length;
+    }
+    c = form === 'boejle' ? (2 * ne) / a : 2 * ne;
+  }
   if (form !== 'boejle' && !(c >= 1)) mangler.push('intet-virksomt-ben-forreste');
   const eta1 = t.eta1 ?? (p.h <= 250 ? 1 : 0.7);
-  return { aktiv: true, virksom: mangler.length === 0, mangler, form, ben: c, l1min: h, l1: u, eta1, staenger: stg, antalVirksomme: c };
+  return { aktiv: true, virksom: mangler.length === 0, mangler, form, ben: c, l1min: h, l1: u, eta1, staenger: stg, antalVirksomme: c, boejler, zone };
 }
 
 export interface ForskydningsArmeringInput {

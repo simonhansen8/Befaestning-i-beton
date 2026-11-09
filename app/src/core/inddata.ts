@@ -140,6 +140,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
 
   const nAnker = Math.max(1, ankre.length);
   const W = erObj(h.ankerarmeringTraek) ? h.ankerarmeringTraek : {}, G = erObj(h.ankerarmeringForskydning) ? h.ankerarmeringForskydning : {};
+  const Wb = erObj(W.bekraeft) ? W.bekraeft : {};
   const Z = boolsk(W.aktiv, false), O = boolsk(G.aktiv, false);
   let afskalning = vaelgEllerNull(h.afskalning, ['taet', 'aaben'] as const);
   if (!afskalning) afskalning = h.taetArmering === true ? 'taet' : h.taetArmering === false ? 'aaben' : 'taet';
@@ -173,6 +174,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
     krog: boolsk(G.krog ?? G.boejet, true),
     eta1: r(`${fv}.eta1`, G.eta1, null, { gt: 0, max: 1, nullable: true, krit: O }),
     cd: r(`${fv}.cd`, G.cd, null, { min: 0, nullable: true, krit: false }),
+    afstandBoejler: r(`${fv}.afstandBoejler`, G.afstandBoejler, null, { gt: 0, nullable: true, krit: false }),
   };
   if (forsk.benPrAnker == null && forsk.antalBenIAlt == null) forsk.benPrAnker = 2;
   const tv = 'beton.armering.ankerarmeringTraek';
@@ -191,6 +193,8 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
       cd: r(`${tv}.cd`, W.cd, null, { min: 0, nullable: true, krit: false }),
       foering: vaelg(W.foering, ['stoed', 'ingen'] as const, 'ingen'),
       forankringsdybde: r(`${tv}.forankringsdybde`, W.forankringsdybde, null, { gt: 0, nullable: true, krit: Z }),
+      drejet: boolsk(W.drejet, false),
+      bekraeft: { a: boolsk(Wb.a, false), e: boolsk(Wb.e, false), f: boolsk(Wb.f, false) },
     },
     ankerarmeringForskydning: forsk,
   };

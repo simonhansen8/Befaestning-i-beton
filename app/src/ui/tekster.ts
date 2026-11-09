@@ -88,7 +88,8 @@ export const TEKSTER: Record<string, (d: D) => string> = {
   'psi-re-v-hef-for-lille': (d) => `ψre,V = 1,4 kræver hef ≥ 2,5·cnom; her hef = ${t0(d.hef)} mm < ${t0(d['grænse'])} mm.`,
   'psi-re-v-krav-ikke-opfyldt': () => 'Kravene til kantarmering (bøjleafstand ≤ 100 mm, ⌀ ≥ 12 mm) er ikke opfyldt – ψre,V = 1,0.',
   'psi-re-v-krav-pr-kant': () => 'Kantarmering er forudsat opfyldt for hver belastet kant.',
-  'ankerarmering-traek-forbehold': (d) => `Ankerarmering i træk er medregnet efter EN 1992-4, 7.2.1.2(2)${d.stoed ? ' (med støbefuge)' : ''}; forudsætningerne a, e og f skal kontrolleres.`,
+  'ankerarmering-traek-forbehold': (d) => `Ankerarmering i træk er medregnet efter EN 1992-4, 7.2.1.2(2)${d.stoed ? ' (med støbefuge)' : ''}, men forudsætning ${d.mangler} er ikke bekræftet. Programmet kontrollerer selv ⌀ ≤ 16 mm, fyk ≤ 600 MPa, afstand ≤ 0,75·hef og l1; resten bekræftes med afkrydsningsfelterne under "Ankerarmering for træk".`,
+  'ankerarmering-traek-bekraeftet': (d) => `Forudsætningerne a${d.stoed ? ', e' : ''} og f i EN 1992-4, 7.2.1.2(2) er bekræftet af brugeren.`,
   'ankerarmering-forskydning-forbehold': (d) => `Ankerarmering i forskydning (${d.type}) er medregnet efter EN 1992-4, 7.2.2.2(2); forudsætningerne skal kontrolleres.`,
   'national-parameter-aendret': (d) => d.dkNa == null ? `${d.parameter} er overstyret manuelt til ${t(d['vaerdi'], 0)} (uden angivelse udledes værdien af betonklassen).` : `National parameter ${d.parameter} er ændret til ${t(d['vaerdi'], 3)} (DK NA: ${t(d.dkNa, 3)}).`,
   // Kombination
