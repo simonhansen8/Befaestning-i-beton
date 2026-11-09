@@ -1,8 +1,10 @@
 import { ecmAfFck } from './concrete';
-import { DK_NA, GAMMA3_AF_KONTROLKLASSE, type Konsekvensklasse, type Kontrolklasse } from './constants';
+import { DK_NA, DK_NA_ULYKKE, GAMMA3_AF_KONTROLKLASSE, type Dimensioneringstilfaelde, type Konsekvensklasse, type Kontrolklasse } from './constants';
 
 /** Indstillinger som brugeren kan sætte. Kun RÅ valg gemmes: γ3 er IKKE et input – den udledes af kontrolklassen. */
 export interface IndstillingerInput {
+  /** Dimensioneringstilfælde: 'varig' (vedvarende og midlertidige, standard) eller 'ulykke' (DK NA Tabel 4.1, højre kolonne). */
+  situation?: Dimensioneringstilfaelde;
   kontrolklasse?: Kontrolklasse | 'skaerpet';
   /** Manuel overstyring af γ3. Uden værdi udledes γ3 af kontrolklassen. */
   gamma3?: number | null;
@@ -19,6 +21,7 @@ export interface IndstillingerInput {
 }
 
 export interface Indstillinger {
+  situation: Dimensioneringstilfaelde;
   kontrolklasse: Kontrolklasse;
   /** Manuel γ3 (≥ 1,0) eller null = udledt af kontrolklassen. */
   gamma3Overstyring: number | null;
@@ -58,7 +61,10 @@ export function parseIndstillinger(rå: IndstillingerInput = {}): { indstillinge
       gamma3Overstyring = 1;
     } else gamma3Overstyring = rå.gamma3;
   }
+  const situation = oneOf(rå.situation, ['varig', 'ulykke'] as const, 'varig');
+  const NA = situation === 'ulykke' ? DK_NA_ULYKKE : DK_NA;
   const indstillinger: Indstillinger = {
+    situation,
     kontrolklasse,
     gamma3Overstyring,
     konsekvensklasse: oneOf(rå.konsekvensklasse, ['CC1', 'CC2', 'CC3'] as const, 'CC2'),
@@ -66,24 +72,25 @@ export function parseIndstillinger(rå: IndstillingerInput = {}): { indstillinge
     staalInteraktionVedLoeftestang: oneOf(rå.staalInteraktionVedLoeftestang, ['eftervis', 'undtag'] as const, 'undtag'),
     pryoutEnkeltanker: oneOf(rå.pryoutEnkeltanker, ['retning', 'altid'] as const, 'retning'),
     forresteRaekkeTol: typeof rå.forresteRaekkeTol === 'number' && rå.forresteRaekkeTol >= 0 && rå.forresteRaekkeTol <= 1 ? rå.forresteRaekkeTol : 0.1,
-    gammaC: positivt(rå.gammaC, DK_NA.gammaC),
-    gammaInstIndstoebt: positivt(rå.gammaInstIndstoebt, DK_NA.gammaInstIndstoebt),
-    gammaMsTraekFaktor: positivt(rå.gammaMsTraekFaktor, DK_NA.gammaMsTraekFaktor),
-    gammaMsTraekMin: positivt(rå.gammaMsTraekMin, DK_NA.gammaMsTraekMin),
-    gammaMsForskFaktor: positivt(rå.gammaMsForskFaktor, DK_NA.gammaMsForskFaktor),
-    gammaMsForskMin: positivt(rå.gammaMsForskMin, DK_NA.gammaMsForskMin),
-    gammaMsForskHoej: positivt(rå.gammaMsForskHoej, DK_NA.gammaMsForskHoej),
-    gammaMsRe: positivt(rå.gammaMsRe, DK_NA.gammaMsRe),
-    gammaCt: positivt(rå.gammaCt, DK_NA.gammaCt),
-    alphaCt: positivt(rå.alphaCt, DK_NA.alphaCt),
-    Es: positivt(rå.Es, DK_NA.Es),
+    gammaC: positivt(rå.gammaC, NA.gammaC),
+    gammaInstIndstoebt: positivt(rå.gammaInstIndstoebt, NA.gammaInstIndstoebt),
+    gammaMsTraekFaktor: positivt(rå.gammaMsTraekFaktor, NA.gammaMsTraekFaktor),
+    gammaMsTraekMin: positivt(rå.gammaMsTraekMin, NA.gammaMsTraekMin),
+    gammaMsForskFaktor: positivt(rå.gammaMsForskFaktor, NA.gammaMsForskFaktor),
+    gammaMsForskMin: positivt(rå.gammaMsForskMin, NA.gammaMsForskMin),
+    gammaMsForskHoej: positivt(rå.gammaMsForskHoej, NA.gammaMsForskHoej),
+    gammaMsRe: positivt(rå.gammaMsRe, NA.gammaMsRe),
+    gammaCt: positivt(rå.gammaCt, NA.gammaCt),
+    alphaCt: positivt(rå.alphaCt, NA.alphaCt),
+    Es: positivt(rå.Es, NA.Es),
     EcOverstyring: typeof rå.Ec === 'number' && Number.isFinite(rå.Ec) && rå.Ec > 0 ? rå.Ec : null,
   };
   return { indstillinger, bemaerkninger };
 }
 
 /** γ3: manuel overstyring hvis angivet, ellers udledt af kontrolklassen. */
-export const gamma3 = (i: Indstillinger): number => i.gamma3Overstyring ?? GAMMA3_AF_KONTROLKLASSE[i.kontrolklasse];
+/** I ulykkestilfælde indgår γ3 ikke (γc = 1,00 er angivet direkte i DK NA Tabel 4.1). */
+export const gamma3 = (i: Indstillinger): number => (i.situation === 'ulykke' ? 1 : i.gamma3Overstyring ?? GAMMA3_AF_KONTROLKLASSE[i.kontrolklasse]);
 
 /** Ec [MPa]: manuel overstyring hvis angivet, ellers Ecm af betonens fck. */
 export const youngBeton = (i: Indstillinger, fck: number): number => i.EcOverstyring ?? ecmAfFck(fck);

@@ -27,4 +27,24 @@ describe('DK NA:2024 Tabel 4.1', () => {
     expect(k.gammaMp).toBe(k.gammaMc);
     expect(k.gammaMsRe).toBe(1.2);
   });
+
+  describe('ulykke og seismik (højre kolonne)', () => {
+    const { indstillinger: ul } = parseIndstillinger({ situation: 'ulykke', kontrolklasse: 'lempet' });
+    const q = (fuk: number, fyk: number) => partialkoefficienter(ul, { type: 'indstoebt', fuk, fyk });
+    it('γMs i træk = 1,05·fuk/fyk, mindst 1,35', () => {
+      expect(q(400, 240).gammaMs).toBeCloseTo(1.05 * (400 / 240), 12);
+      expect(q(800, 640).gammaMs).toBe(1.35);                      // 1,05·1,25 = 1,3125 → mindst 1,35
+    });
+    it('γMs i forskydning = 1,00·fuk/fyk ≥ 1,35, ellers 1,45', () => {
+      expect(q(400, 240).gammaMsV).toBeCloseTo(400 / 240, 12);
+      expect(q(1000, 900).gammaMsV).toBe(1.45);
+    });
+    it('γc = 1,00 (γ3 indgår ikke, heller ikke ved lempet kontrol), γMs,re = 1,00', () => {
+      const k = q(800, 640);
+      expect(k.gamma3).toBe(1);
+      expect(k.gammaMc).toBe(1);
+      expect(k.gammaMsRe).toBe(1);
+    });
+    it('standard er vedvarende/midlertidig', () => { expect(parseIndstillinger({}).indstillinger.situation).toBe('varig'); });
+  });
 });

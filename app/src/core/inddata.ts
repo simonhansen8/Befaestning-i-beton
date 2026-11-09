@@ -1,7 +1,7 @@
 // Indlæsning af projektfiler (JSON): tolerant parser med standardværdier og kodede diagnoser (ingen tekst).
 // Port af den gamle normalisering; resultatet er en typet Projektmodel som kernen kan regne på.
 import type { Projektmodel } from './beregn';
-import { STAALKLASSER, GEVINDAREAL, GAMMA3_AF_KONTROLKLASSE } from './constants';
+import { STAALKLASSER, GEVINDAREAL, GAMMA3_AF_KONTROLKLASSE, DK_NA } from './constants';
 import { fckAfKlasse } from './concrete';
 import { diag, EN, type Diagnostik } from './diagnostik';
 import type { IndstillingerInput } from './settings';
@@ -217,13 +217,16 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
   const ind: IndstillingerInput & { sigmaAdm?: number } = {};
   const kk = vaelg(di.kontrolklasse, ['lempet', 'normal', 'skaerpet'] as const, 'normal');
   ind.kontrolklasse = kk;
+  // Dimensioneringstilfælde gemmes kun, når det afviger fra standarden (vedvarende/midlertidig).
+  if (vaelg(di.situation, ['varig', 'ulykke'] as const, 'varig') === 'ulykke') ind.situation = 'ulykke';
   const g3 = r('indstillinger.gamma3', di.gamma3, null as unknown as number, { gt: 0, nullable: true });
   // γ3 er kun en overstyring hvis den afviger fra kontrolklassens værdi (gamle filer gemmer altid begge).
   if (g3 != null && g3 !== GAMMA3_AF_KONTROLKLASSE[kk === 'lempet' ? 'lempet' : 'normal']) ind.gamma3 = g3;
   const numNøgler = ['gammaC', 'gammaInstIndstoebt', 'gammaMsRe', 'gammaCt', 'alphaCt', 'gammaMsTraekFaktor', 'gammaMsTraekMin', 'gammaMsForskFaktor', 'gammaMsForskMin', 'gammaMsForskHoej', 'Es', 'Ec'] as const;
   for (const k of numNøgler) {
     const v = r(`indstillinger.${k}`, di[k], null as unknown as number, { gt: 0, nullable: true });
-    if (v != null) (ind as Record<string, unknown>)[k] = v;
+    // I ulykkestilfælde er en værdi lig vedvarende-standarden en gammel standardværdi (ikke et valg) og droppes.
+    if (v != null && !(ind.situation === 'ulykke' && k !== 'Ec' && v === (DK_NA as Record<string, number>)[k])) (ind as Record<string, unknown>)[k] = v;
   }
   ind.konsekvensklasse = vaelg(di.konsekvensklasse, ['CC1', 'CC2', 'CC3'] as const, 'CC2');
   ind.sigmaAdm = r('indstillinger.sigmaAdm', di.sigmaAdm, 0, { krit: false });
