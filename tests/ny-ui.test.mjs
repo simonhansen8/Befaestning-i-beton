@@ -207,3 +207,28 @@ test('ny UI: rulleposition og 3D-kamera bevares ved rettelser', { skip: !fs.exis
     }
   } finally { await browser.close(); }
 });
+
+test('ny UI: Ctrl+Z / Ctrl+Y og knapperne fortryder og gentager ændringer', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    const hef0 = await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef);
+    assert.ok(await page.locator('[data-fortryd="1"]').isDisabled());
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.anker.hef = 260; }));
+    assert.ok(await page.locator('[data-fortryd="1"]').isEnabled());
+    await page.locator('h1').click();
+    await page.keyboard.press('Control+z');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), hef0);
+    await page.keyboard.press('Control+y');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 260);
+    await page.click('[data-fortryd="1"]');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), hef0);
+    await page.click('[data-gentag="1"]');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 260);
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});

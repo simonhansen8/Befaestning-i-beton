@@ -107,6 +107,15 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     }
   };
 
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.tagName === 'TEXTAREA' || t?.classList?.contains('maalinput')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { if (store.fortryd()) e.preventDefault(); }
+    else if (k === 'y' || (k === 'z' && e.shiftKey)) { if (store.gentag()) e.preventDefault(); }
+  });
+
   setTimeout(() => { void tjekVersion(); }, 0);
   setInterval(() => { void tjekVersion(); }, 600000);
 
@@ -120,6 +129,8 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       h('div', { class: 'knapper' },
         h('button', { onclick: () => store.indlaesTekst(JSON.stringify(standardModel(new Date().toISOString().slice(0, 10)))) }, 'Eksempel'),
         h('button', { onclick: () => fil.click() }, 'Åbn …'), fil,
+        h('button', { title: 'Fortryd (Ctrl+Z)', 'data-fortryd': '1', disabled: !store.kanFortryde, onclick: () => { store.fortryd(); } }, '↶ Fortryd'),
+        h('button', { title: 'Gentag (Ctrl+Y)', 'data-gentag': '1', disabled: !store.kanGentage, onclick: () => { store.gentag(); } }, '↷ Gentag'),
         h('button', { onclick: () => {
           const a = h('a', { href: URL.createObjectURL(new Blob([store.tilJson()], { type: 'application/json' })), download: 'anker-projekt.json' });
           a.click(); URL.revokeObjectURL(a.href);
