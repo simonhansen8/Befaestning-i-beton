@@ -27,6 +27,9 @@ export function oversigtForskydning(m: Model, a: ArmeringV | null): string[] {
   if (a.form === 'overflade' && a.staenger) {
     l.push(`Stænger pr. anker: ${a.staenger.map((s) => `v = ${f0(s.v)} mm: l₁ = ${f0(s.l1)} mm ${s.virksom ? '✓' : '✗ (ikke virksom)'}`).join('; ')}.`);
     l.push(`l₁ beregnes: c₁ − √(v² + z_s²)/1,5 − c_nom (kan begrænses ved at indtaste l₁). Krav l₁ ≥ ${f0(a.l1min ?? 0)} mm og |v| ≤ 0,75·c₁.`);
-  } else l.push(`Virksomme ben pr. anker: ${f0(a.antalVirksomme)}.`);
+  } else {
+    l.push(`Virksomme ben pr. anker: ${f0(a.antalVirksomme)}.`);
+    if (a.boejler) l.push(`Bøjler med afstand ${f0(a.boejler[1]?.pos ?? 0)} mm: ${a.boejler.map((b) => `${f0(b.pos)} mm ${b.virksom ? '✓' : '✗'}`).join(', ')} – kun dem inden for 0,5·c₁ = ${f0(a.zone ?? 0)} mm regnes med.`);
+  }
   return l;
 }

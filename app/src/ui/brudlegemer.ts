@@ -1,6 +1,6 @@
 // Brudlegemer og berørte dele for én valgt brudform, tegnet ud fra kernens faktiske mellemresultater
 // (ccr, scr, A_c,N, A_c,V, c1 …). Alle legemer er IDEALISEREDE (35°-kegle, retvinklet kil); de viser geometrien bag tallene.
-import type { RectUnion } from '../core/geometry';
+import { kantafstand, KANTER, type RectUnion } from '../core/geometry';
 import type { KombinationsResultat } from '../core/kombination';
 import type { Del } from './model3d';
 
@@ -63,7 +63,25 @@ export function brudlegemer(id: string, c: BrudKontekst, set = new Set<string>()
       break;
     }
     case 'N_c': if (d.N_c) ud.push(...kegler(traek, d.N_c.ccr, d.N_c.hefE), ...areal(d.N_c.U, 'Ac,N')); break;
-    case 'N_sp': if (d.N_sp) ud.push(...areal(d.N_sp.U, 'Ac,N (spaltning)')); break;
+    case 'N_sp': {
+      const s = d.N_sp; if (!s) break;
+      // Spaltebrud: sprækkeplan gennem ankeraksen, lodret gennem hele elementhøjden, fra den nærmeste frie kant og ind til c_cr,sp
+      // bag ankeret (ligger ingen frie kanter nær, vælges x-retningen). Selve sprækkens retning er en idealisering.
+      const kanter = m.beton.kanter ?? {}, dyb = Math.min(m.beton.h, c.dybde);
+      for (const q of traek) {
+        let bedst: { k: string; a: number } | null = null;
+        for (const k2 of KANTER) { if (kanter[k2] == null) continue; const a = kantafstand(q as never, kanter, k2); if (!bedst || a < bedst.a) bedst = { k: k2, a }; }
+        const dir = bedst && bedst.a < s.ccrSp ? DIR[bedst.k]! : ([1, 0] as [number, number]);
+        const fremad = bedst && bedst.a < s.ccrSp ? bedst.a : s.ccrSp, bagud = s.ccrSp;
+        const t = 1.5; // tykkelse af planen i tegningen
+        const a0 = dir[0] ? [q.x - dir[0] * bagud, q.x + dir[0] * fremad].sort((x, y) => x - y) : [q.x - t, q.x + t];
+        const b0 = dir[1] ? [q.y - dir[1] * bagud, q.y + dir[1] * fremad].sort((x, y) => x - y) : [q.y - t, q.y + t];
+        ud.push({ type: 'boks', rolle: 'brud', x0: a0[0]!, x1: a0[1]!, y0: b0[0]!, y1: b0[1]!, z0: -dyb, z1: 0 });
+      }
+      ud.push(...areal(s.U, 'Ac,N (spaltning)'));
+      if (traek[0]) ud.push({ type: 'tekst', pos: [traek[0].x, traek[0].y, -dyb / 2], tekst: `Sprækkeplan (idealiseret), c_cr,sp = ${dk(s.ccrSp)} mm` });
+      break;
+    }
     case 'N_cb': {
       const s = d.N_cb; if (!s) break;
       const dir = DIR[s.kant]!, per: [number, number] = [-dir[1], dir[0]];

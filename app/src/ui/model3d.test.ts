@@ -62,7 +62,7 @@ describe('3D-beskrivelse', () => {
     // pr. bøjle: to ben, bøjning og overfladestang
     expect(st).toHaveLength(n * 2 * 4);
     expect(st.filter((x) => x.variant === 'tilbehoer')).toHaveLength(n * 2);
-    expect(s.dele.filter((x) => x.type === 'cirkel')).toHaveLength(n);
+    expect(s.dele.some((x) => x.type === 'cirkel')).toBe(false); // zonen 0,75·hef tegnes ikke
     // benene er lodrette og går ned til hef; bøjningen ligger øverst, ikke nederst
     const lodret = st.filter((x) => x.fra[0] === x.til[0] && x.fra[1] === x.til[1] && !x.variant);
     expect(lodret).toHaveLength(n * 4);
@@ -119,5 +119,20 @@ describe('3D-beskrivelse', () => {
   it('trykkraft vender pilen nedad', () => {
     const p: any = byg3d(m, null, { N: -5e3 }).dele.find((x) => x.type === 'pil');
     expect(p.til[2]).toBeLessThan(p.fra[2]);
+  });
+  it('drejer trækbøjleparrene 90° og viser bøjleafstanden for kantarmeringen', () => {
+    const i: any = structuredClone(m);
+    i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 1, diameter: 12, afstand: 50, daeklagTop: 40, krog: false, foering: 'stoed', drejet: false };
+    const q = i.opstilling.anker[0];
+    const ben = (): any[] => byg3d(i, null, null, false, false).dele.filter((x) => x.type === 'stang') as any[];
+    const a = ben()[0], b0 = ben();
+    expect(Math.abs(a.fra[0] - q.x)).toBeCloseTo(50, 5); // parret ligger langs x: benet ±x fra ankeret
+    i.beton.armering.ankerarmeringTraek.drejet = true;
+    const c = ben()[0];
+    expect(Math.abs(c.fra[1] - q.y)).toBeCloseTo(50, 5); // drejet: nu langs y
+    expect(b0.length).toBe(ben().length);
+    const k: any = structuredClone(m); k.beton.kanter.xNeg = 300; k.beton.armering.kantarmering = 'boejler'; k.beton.armering.kantarmeringDiameter = 12;
+    const antal = (afst: number) => { k.beton.armering.kantarmeringAfstand = afst; return byg3d(k, null, null, false, false).dele.filter((x) => x.type === 'stang').length; };
+    expect(antal(100)).toBeGreaterThan(antal(200));
   });
 });

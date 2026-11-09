@@ -58,9 +58,8 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
     const bundZ = -(at.foering === 'ingen' ? (at.forankringsdybde ?? hef) : hef);
     const alleInaktive = !!k && !k.armT.virksom, ikkeVirk = k?.armT.ikkeVirksomme ?? 0;
     for (const q of ankre) {
-      dele.push({ type: 'cirkel', x: q.x, y: q.y, z: 0.5, radius: 0.75 * hef });
       for (let j = 0; j < n; j++) {
-        const th = (j * Math.PI) / n, u: [number, number] = [Math.cos(th), Math.sin(th)], w: [number, number] = [-Math.sin(th), Math.cos(th)];
+        const th = (j * Math.PI) / n + (at.drejet ? Math.PI / 2 : 0), u: [number, number] = [Math.cos(th), Math.sin(th)], w: [number, number] = [-Math.sin(th), Math.cos(th)];
         const zt = -(at.daeklagTop ?? 40) - j * (p + 1), zb = Math.min(bundZ, zt - 10), inaktiv = alleInaktive || j >= n - ikkeVirk;
         const pt = (s: number, z: number): Pkt3 => [q.x + u[0] * s * x + w[0] * M, q.y + u[1] * s * x + w[1] * M, z];
         stang(pt(1, zt), pt(1, zb), r, { inaktiv });
@@ -74,9 +73,11 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       }
     }
     if (visMaal) {
-      const q = ankre[0]!, zt = -(at.daeklagTop ?? 40);
-      dele.push({ type: 'maal', fra: [q.x, q.y + M, zt], til: [q.x + x, q.y + M, zt], tekst: `x = ${dk(x, 0)} mm` });
-      dele.push({ type: 'maal', fra: [q.x + x, q.y + M, 0], til: [q.x + x, q.y + M, zt], tekst: `ctop = ${dk(-zt, 0)} mm` });
+      const q = ankre[0]!, zt = -(at.daeklagTop ?? 40), th0 = at.drejet ? Math.PI / 2 : 0;
+      const u0: [number, number] = [Math.cos(th0), Math.sin(th0)], w0: [number, number] = [-Math.sin(th0), Math.cos(th0)];
+      const b0: Pkt3 = [q.x + w0[0] * M, q.y + w0[1] * M, zt];
+      dele.push({ type: 'maal', fra: b0, til: [b0[0] + u0[0] * x, b0[1] + u0[1] * x, zt], tekst: `x = ${dk(x, 0)} mm` });
+      dele.push({ type: 'maal', fra: [b0[0] + u0[0] * x, b0[1] + u0[1] * x, 0], til: [b0[0] + u0[0] * x, b0[1] + u0[1] * x, zt], tekst: `ctop = ${dk(-zt, 0)} mm` });
     }
   }
   // ankerarmering for forskydning (7.2.2.6, Fig. 7.10) vender mod armeringskanten; grå = regnes ikke virksom
@@ -117,32 +118,39 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         // benene føres uden om befæstelsen ind i elementet; flere lægges under hinanden
         const grupper = av.type === 'boejle' ? [række] : række.map((q: { id: number; x: number; y: number }) => [q]);
         const ben = k.armV.ben || 2;
-        const antal = Math.max(1, Math.round(av.type === 'boejle' ? (ben * række.length) / 2 : ben / 2));
+        const bj = k.armV.boejler;
+        const antal = bj ? bj.length : Math.max(1, Math.round(av.type === 'boejle' ? (ben * række.length) / 2 : ben / 2));
         const o = d / 2 + r + 2;
         for (const gr of grupper) {
           const fore = Math.max(...gr.map(langs)) + d / 2 + r, bag = Math.min(...gr.map(langs)) - d / 2 - r;
           const lo = Math.min(...gr.map(tvaers)) - o, hi = Math.max(...gr.map(tvaers)) + o;
           for (let j = 0; j < antal; j++) {
-            const z = zs - j * (p + 1);
-            for (const vv of [lo, hi]) { stang(G(fore, vv, z), G(bag, vv, z), r, { inaktiv: alle }); stang(G(bag, vv, z), G(bag - hale, vv, z), r, { inaktiv: alle, variant: 'forankring' }); }
-            stang(G(fore, lo, z), G(fore, hi, z), r, { inaktiv: alle });
+            // med bøjleafstand ligger bøjlerne efter hinanden ind i elementet (grå uden for 0,5·c1); ellers ⌀+1 under hinanden
+            const z = bj ? zs : zs - j * (p + 1), sk = bj ? -bj[j]!.pos : 0, ia = alle || (bj ? !bj[j]!.virksom : false);
+            for (const vv of [lo, hi]) { stang(G(fore + sk, vv, z), G(bag + sk, vv, z), r, { inaktiv: ia }); stang(G(bag + sk, vv, z), G(bag + sk - hale, vv, z), r, { inaktiv: ia, variant: 'forankring' }); }
+            stang(G(fore + sk, lo, z), G(fore + sk, hi, z), r, { inaktiv: ia });
           }
         }
       }
     }
   }
-  // kantarmering (bøjler langs frie kanter), vist som stænger med valgt afstand
+  // kantarmering (bøjler langs frie kanter): længdestænger foroven/forneden og bøjleben med afstanden a (7.2.2.5)
   if (be.armering?.kantarmering === 'boejler' && be.armering.kantarmeringDiameter) {
-    const dk2 = be.armering.kantarmeringDiameter / 2, c = be.cnom ?? 30;
-    for (const [kant, k] of [['xNeg', 'x0'], ['xPos', 'x1']] as const) {
-      if (!fri(kant)) continue;
-      const x = k === 'x0' ? x0 + c : x1 - c;
-      dele.push({ type: 'stang', rolle: 'armering', fra: [x, y0 + c, -dybde + c], til: [x, y1 - c, -dybde + c], r: dk2 }, { type: 'stang', rolle: 'armering', fra: [x, y0 + c, -c], til: [x, y1 - c, -c], r: dk2 });
-    }
-    for (const [kant, k] of [['yNeg', 'y0'], ['yPos', 'y1']] as const) {
-      if (!fri(kant)) continue;
-      const y = k === 'y0' ? y0 + c : y1 - c;
-      dele.push({ type: 'stang', rolle: 'armering', fra: [x0 + c, y, -dybde + c], til: [x1 - c, y, -dybde + c], r: dk2 }, { type: 'stang', rolle: 'armering', fra: [x0 + c, y, -c], til: [x1 - c, y, -c], r: dk2 });
+    const dk2 = be.armering.kantarmeringDiameter / 2, c = be.cnom ?? 30, a = be.armering.kantarmeringAfstand;
+    const kanter2: { fri: boolean; langs: boolean; fast: number; lo: number; hi: number }[] = [
+      { fri: fri('xNeg'), langs: true, fast: x0 + c, lo: y0 + c, hi: y1 - c }, { fri: fri('xPos'), langs: true, fast: x1 - c, lo: y0 + c, hi: y1 - c },
+      { fri: fri('yNeg'), langs: false, fast: y0 + c, lo: x0 + c, hi: x1 - c }, { fri: fri('yPos'), langs: false, fast: y1 - c, lo: x0 + c, hi: x1 - c },
+    ];
+    let markeret = false;
+    for (const e2 of kanter2) {
+      if (!e2.fri) continue;
+      const P = (t: number, z: number): Pkt3 => (e2.langs ? [e2.fast, t, z] : [t, e2.fast, z]);
+      stang(P(e2.lo, -dybde + c), P(e2.hi, -dybde + c), dk2); stang(P(e2.lo, -c), P(e2.hi, -c), dk2);
+      if (a != null && a > 0) {
+        const n = Math.min(200, Math.floor((e2.hi - e2.lo) / a));
+        for (let i = 0; i <= n; i++) stang(P(e2.lo + i * a, -c), P(e2.lo + i * a, -dybde + c), dk2);
+        if (visMaal && !markeret && n >= 1) { markeret = true; dele.push({ type: 'maal', fra: P(e2.lo, -c), til: P(e2.lo + a, -c), tekst: `a = ${dk(a, 0)} mm` }); }
+      }
     }
   }
   // mål (kan slås fra): hef, h, fodplade, stand-off, boltafstande og kantafstande

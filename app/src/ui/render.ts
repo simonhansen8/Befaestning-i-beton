@@ -7,6 +7,7 @@ import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
+import { armUdvid, saetArmUdvid } from './skema-hjaelp';
 import { beregningsdetalje } from './brud-detaljer';
 import { IDEALISERET } from './brudlegemer';
 import { oversigtForskydning, oversigtTraek } from './arm-oversigt';
@@ -94,6 +95,8 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   const draw = () => {
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
+    const faelles = 'input, select, textarea, button, summary';
+    const fokusIdx = !fokus && aktivt && rod.contains(aktivt) ? Array.from(rod.querySelectorAll(faelles)).indexOf(aktivt) : -1;
     const sel = aktivt instanceof HTMLInputElement ? [aktivt.selectionStart, aktivt.selectionEnd] : null;
     // Bevar rulleposition (side og resultatpanel), så en rettelse ikke hopper til toppen
     const sideX = window.scrollX, sideY = window.scrollY;
@@ -102,6 +105,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     const nyOutput = rod.querySelector('.output');
     if (nyOutput) nyOutput.scrollTop = outputTop;
     window.scrollTo(sideX, sideY);
+    if (fokusIdx >= 0) Array.from(rod.querySelectorAll<HTMLElement>(faelles))[fokusIdx]?.focus({ preventScroll: true });
     if (fokus) {
       const n = rod.querySelector<HTMLElement>(`[data-felt="${CSS.escape(fokus)}"]`);
       n?.focus({ preventScroll: true });
@@ -187,7 +191,23 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
 
   function fraSkema(s: Sektion, m: Model): Node[] {
     const ud: Node[] = [];
+    // ankerarmeringens indstillinger ligger i en gruppe, der kan foldes ud/ind uden at armeringen slås til eller fra
+    let grp: 'T' | 'V' | null = null, grpNoder: Node[] = [];
+    const luk = () => {
+      if (grp && grpNoder.length) ud.push(h('div', { class: `armgruppe ${m.beton.armering[grp === 'T' ? 'ankerarmeringTraek' : 'ankerarmeringForskydning'].aktiv ? '' : 'dimmet'}` }, ...grpNoder));
+      grp = null; grpNoder = [];
+    };
     for (const f of s.fields ?? ([] as Felt[])) {
+      if ('sub' in f && (f.sub === 'Ankerarmering for forskydning' || f.sub === 'Ankerarmering for træk')) { luk(); }
+      if ('k' in f && (f.k === 'beton.armering.ankerarmeringTraek.aktiv' || f.k === 'beton.armering.ankerarmeringForskydning.aktiv')) {
+        const g = f.k.includes('Traek') ? 'T' : 'V';
+        const n = felt(f, m); if (n) ud.push(n);
+        ud.push(h('button', { type: 'button', class: 'armvis', 'data-armvis': g, 'aria-expanded': String(armUdvid[g]), onclick: () => { saetArmUdvid(g, !armUdvid[g]); draw(); } }, armUdvid[g] ? '▾ Skjul indstillinger' : '▸ Vis indstillinger'));
+        grp = g; continue;
+      }
+      if (grp && !('k' in f) && 'sub' in f && f.sub && !f.sub.startsWith('Forudsætninger')) luk();
+      const mal: Node[] = grp ? grpNoder : ud;
+      if ('k' in f && grp) { const n = felt(f, m); if (n) mal.push(n); continue; }
       if ('k' in f) { const n = felt(f, m); if (n) ud.push(n); }
       else if ('custom' in f) {
         if (f.show && !f.show(m)) continue;
@@ -196,15 +216,16 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
         else if (f.custom === 'armsum') {
           const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;
           const lin = f.which === 'T' ? oversigtTraek(m, kr?.armT ?? null) : oversigtForskydning(m, kr?.armV ?? null);
-          if (lin.length) ud.push(h('div', { class: 'note armsum' }, ...lin.map((x) => h('div', {}, x))));
+          if (lin.length) mal.push(h('div', { class: 'note armsum' }, ...lin.map((x) => h('div', {}, x))));
         }
         else if (f.custom === 'naReset') ud.push(h('button', { onclick: () => store.aendr((mm) => { mm.indstillinger = standardModel().indstillinger; }) }, 'Nulstil til DK NA-standard'));
       } else if ('sub' in f || 'note' in f) {
         if (f.show && !f.show(m)) continue;
         if (f.adv && !avanceret) continue;
-        ud.push(f.sub ? h('h4', {}, f.sub) : h('p', { class: 'note' }, f.note));
+        mal.push(f.sub ? h('h4', {}, f.sub) : h('p', { class: 'note' }, f.note));
       }
     }
+    luk();
     return ud;
   }
 
@@ -438,7 +459,9 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
         h('b', {}, d.niveau === 'fejl' ? 'Fejl' : d.niveau === 'advarsel' ? 'Advarsel' : 'Info'), ' ', tekst(d), d.paragraf && h('span', { class: 'ref' }, ` ${d.paragraf}`)))));
   }
 
-  store.subscribe(draw);
+  // Tegn efter at fokus er flyttet (Tab): en synkron gentegning midt i blur/change ville smide fokus tilbage på det forrige felt
+  let tegnTimer = 0;
+  store.subscribe(() => { if (tegnTimer) return; tegnTimer = window.setTimeout(() => { tegnTimer = 0; draw(); }, 0); });
   draw();
 }
 
