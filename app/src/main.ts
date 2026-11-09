@@ -1,4 +1,10 @@
 import { APP_BUILD } from './version';
+import { opsaet } from './ui/render';
+import { Store } from './ui/state';
+import './ui/style.css';
 
-const el = document.getElementById('app')!;
-el.textContent = `Ankerberegning EN 1992-4 – ny kodebase under opbygning (build ${APP_BUILD}). Den gamle fil index.html i roden er stadig det gældende program.`;
+const rod = document.getElementById('app')!;
+const store = new Store();
+opsaet(rod, store, APP_BUILD);
+// Til test og fejlsøgning
+(window as unknown as { __ny: unknown }).__ny = { store };

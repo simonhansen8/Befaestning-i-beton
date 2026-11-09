@@ -27,6 +27,8 @@ describe('indlaesFil mod facit', () => {
     // Bevidst afvigelse: en angivet γ3 overskrives ikke af kontrolklassen (manuel overstyring).
     const ny = j(r.model);
     delete ny.indstillinger.gamma3; delete gl.indstillinger.gamma3;
+    // Bevidst afvigelse: Ec udledes af betonklassen medmindre den er angivet (gammel standard 30000 gemmes ikke længere).
+    delete gl.indstillinger.Ec; delete ny.indstillinger.Ec;
     delete gl.meta.importNoter; // noter om afviste værdier tilføjes af brugerfladen, ikke af modellen
     expect(ny).toEqual(gl);
   });
