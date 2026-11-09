@@ -1,5 +1,5 @@
 // Spaltning (udsplitning) ved træk (EN 1992-4, 7.2.1.7). Rene tal; ingen tekst.
-import { minKantafstand, projiceretAreal, type Kanter, type Pkt } from './geometry';
+import { minKantafstand, projiceretAreal, type Kanter, type Pkt, type RectUnion } from './geometry';
 import { psiEc, psiRe, psiS, K1_INDSTOEBT } from './cone';
 import { udnyttelse, type Eftervisning, type TraekOversigt } from './tension';
 
@@ -44,7 +44,12 @@ export interface SpaltningInput {
 
 export type SpaltningAarsag = 'ingen-traek' | 'ikke-noedvendig' | 'revnebegraensende-armering' | null;
 
-export function spaltning(p: SpaltningInput, t: TraekOversigt): Eftervisning & { aarsag: SpaltningAarsag; kravAs?: number } {
+export interface SpaltningMellem {
+  k1: number; N0c: number; N0p: number; N0: number; U: RectUnion; A0: number; ccrSp: number; scrSp: number; hmin: number; c: number;
+  pS: number; pRe: number; pEc1: number; pEc2: number; psiH: number; kildeC: string; kildeH: string;
+}
+
+export function spaltning(p: SpaltningInput, t: TraekOversigt): Eftervisning & { aarsag: SpaltningAarsag; kravAs?: number; mellem?: SpaltningMellem } {
   const base = { id: 'N_sp', NEd: 0, NRd: 0, NRk: 0, udnyttelse: null as number | null, styrendeAnker: null as number | null };
   if (!(t.NEd_g > 0)) return { ...base, relevant: false, aarsag: 'ingen-traek' };
   const a = spaltningsparametre(p.produkt, p.hef, p.h, p.cnom);
@@ -65,7 +70,9 @@ export function spaltning(p: SpaltningInput, t: TraekOversigt): Eftervisning & {
   const pH1 = (p.h / a.hmin) ** (2 / 3);
   const pH2 = Number.isFinite(c) ? Math.max(1, ((p.hef + 1.5 * c) / a.hmin) ** (2 / 3)) : Infinity;
   const psiH = Math.min(pH1, pH2, 2);
-  const NRk = ((N0 * U.areal) / A0) * psiS(c, a.ccrSp) * psiRe(p.hef, p.afskalning) * psiEc(t.eN1, a.scrSp) * psiEc(t.eN2, a.scrSp) * psiH;
+  const pS = psiS(c, a.ccrSp), pRe = psiRe(p.hef, p.afskalning), pEc1 = psiEc(t.eN1, a.scrSp), pEc2 = psiEc(t.eN2, a.scrSp);
+  const NRk = ((N0 * U.areal) / A0) * pS * pRe * pEc1 * pEc2 * psiH;
   const NRd = NRk / p.gammaMsp;
-  return { id: 'N_sp', relevant: true, NEd: t.NEd_g, NRd, NRk, udnyttelse: udnyttelse(t.NEd_g, NRd), styrendeAnker: t.idMaxN, aarsag: null };
+  const mellem: SpaltningMellem = { k1, N0c, N0p, N0, U, A0, ccrSp: a.ccrSp, scrSp: a.scrSp, hmin: a.hmin, c, pS, pRe, pEc1, pEc2, psiH, kildeC: a.kildeC, kildeH: a.kildeH };
+  return { id: 'N_sp', relevant: true, NEd: t.NEd_g, NRd, NRk, udnyttelse: udnyttelse(t.NEd_g, NRd), styrendeAnker: t.idMaxN, aarsag: null, mellem };
 }
