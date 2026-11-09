@@ -6,7 +6,7 @@ Beslutning (Simon): bevar normlogikken, genopbyg strukturen som TypeScript + Vit
 |---|---|---|
 | 1 | Facit-sæt (`golden/`): 400 deterministiske modeller, 345 beregnet, gammel kernes tal gemt; test i CI | **Færdig** |
 | 2 | Ny kodebase (`app/`): TypeScript + Vite → én fil i `dist/index.html`, APP_BUILD automatisk, typecheck/vitest/build i CI | **Færdig** (skelet) |
-| 3 | Ren kerne med typet datamodel | **I gang**: indstillinger, stål, partialkoefficienter og lastfordeling (ankerkræfter, trykzone, forskydning/torsion) matcher facit på alle 345 modeller. Næste: brudformerne (stålbrud, betonkegle m.fl.). |
+| 3 | Ren kerne med typet datamodel | **I gang**: indstillinger, stål, partialkoefficienter, lastfordeling, stålbrud (træk) og udtrækning (indstøbt) matcher facit. Næste: betonkegle, udsplitning, sidebrud, forskydningsbrud, interaktion, indlimede anker, armering. |
 | 4 | Struktureret resultat; tekst/HTML kun i præsentationslag | |
 | 5 | UI/state: ét state, én vej felt → model → beregning | |
 | 6 | Sporbarhedstabel felt → formel → norm → test, kontrolleret i CI | |
