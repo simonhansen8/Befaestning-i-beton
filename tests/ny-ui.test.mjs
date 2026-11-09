@@ -95,6 +95,8 @@ test('ny UI: 3D-visning tegner scenen og kameraknapper virker', { skip: !fs.exis
     await page.waitForSelector('.scene3d canvas');
     await page.waitForSelector('.etiket3d');
     for (const k of ['top', 'front', 'side', 'iso']) await page.click(`[data-kamera="${k}"]`);
+    await page.click('[data-brud="1"]');
+    await page.waitForSelector('.scene3d canvas');
     // canvas er tegnet (ikke helt tom)
     const ok = await page.evaluate(() => { const c = document.querySelector('.scene3d canvas'); return c.width > 0 && c.height > 0; });
     assert.ok(ok);
