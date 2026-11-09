@@ -7,6 +7,7 @@ import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
+import { oversigtForskydning, oversigtTraek } from './arm-oversigt';
 import { hiltiHY200V3, tilOpdateringer, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
 import { GEVINDAREAL } from '../core/constants';
 import { fckAf } from '../core/concrete';
@@ -188,6 +189,11 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
         if (f.show && !f.show(m)) continue;
         if (f.custom === 'edges') ud.push(h('div', { class: 'gruppe' }, ...KANTFELTER.map((k) => felt(k, m))));
         else if (f.custom === 'layout') ud.push(opstilling(m));
+        else if (f.custom === 'armsum') {
+          const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;
+          const lin = f.which === 'T' ? oversigtTraek(m, kr?.armT ?? null) : oversigtForskydning(m, kr?.armV ?? null);
+          if (lin.length) ud.push(h('div', { class: 'note armsum' }, ...lin.map((x) => h('div', {}, x))));
+        }
         else if (f.custom === 'naReset') ud.push(h('button', { onclick: () => store.aendr((mm) => { mm.indstillinger = standardModel().indstillinger; }) }, 'Nulstil til DK NA-standard'));
       } else if ('sub' in f || 'note' in f) {
         if (f.show && !f.show(m)) continue;
@@ -403,7 +409,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       sek.append(
         h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visLast ? 'aktiv' : '', 'data-kraefter': '1', onclick: () => { visLast = !visLast; draw(); } }, 'Kræfter'), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
         scene3d.element,
-        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
+        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', inaktiv: '#9ca3af', forankring: '#f59e0b', tilbehoer: '#0f766e', zone: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
         h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Klik på et mål eller en last for at rette den (Enter anvender, Esc fortryder). Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
     } catch {
       sek.append(h('p', { class: 'note' }, '3D-visning kræver WebGL, som ikke er tilgængelig i denne browser.'));
