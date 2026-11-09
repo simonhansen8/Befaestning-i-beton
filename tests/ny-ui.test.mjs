@@ -35,3 +35,23 @@ test('ny UI: indlæses, regner og reagerer på feltændring', { skip: !fs.exists
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
+
+test('ny UI: justeringsforslag kan beregnes og anvendes', async () => {
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    // gør modellen overbelastet
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.laster[0].N = 900000; }));
+    await page.waitForFunction(() => window.__ny.store.tilstand.resultat.ok === false);
+    await page.click('text=Foreslå justeringer');
+    await page.waitForSelector('.forslagsliste li', { timeout: 60000 });
+    const foer = await page.evaluate(() => window.__ny.store.tilstand.resultat.maksUdnyttelse);
+    await page.click('.forslagsliste li >> nth=0 >> text=Anvend');
+    await page.waitForFunction((x) => window.__ny.store.tilstand.resultat.maksUdnyttelse < x, foer);
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});

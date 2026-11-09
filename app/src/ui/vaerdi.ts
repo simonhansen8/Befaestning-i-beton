@@ -44,14 +44,4 @@ export const FEJLTEKST: Record<string, (g?: number) => string> = {
   'ugyldigt-valg': () => 'Ugyldigt valg.',
 };
 
-/** Sætter en værdi på en sti som "beton.armering.afskalning" i en model (muterer). */
-export function saetSti(model: Record<string, any>, sti: string, v: unknown): void {
-  const dele = sti.split('.');
-  let o: any = model;
-  for (let i = 0; i < dele.length - 1; i++) {
-    if (o[dele[i]!] == null || typeof o[dele[i]!] !== 'object') o[dele[i]!] = {};
-    o = o[dele[i]!];
-  }
-  o[dele[dele.length - 1]!] = v;
-}
-export const laesSti = (model: Record<string, any>, sti: string): unknown => sti.split('.').reduce<any>((o, k) => o?.[k], model);
+export { saetSti, laesSti } from '../core/sti';

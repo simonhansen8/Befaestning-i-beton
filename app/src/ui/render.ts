@@ -9,6 +9,9 @@ import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { rapportHtml } from './rapport';
 import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
 import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
+import { beregnForslag, type ForslagResultat, type SpecResultat } from '../core/forslag';
+import { saetSti } from '../core/sti';
+import { aendringTekst, etiket, forudsaetning, hvorforTekst } from './forslag-tekster';
 import { tekst } from './tekster';
 import { FEJLTEKST, laesSti, visFelt } from './vaerdi';
 
@@ -32,11 +35,14 @@ const kN = (n: number) => (Number.isFinite(n) ? (n / 1000).toFixed(1).replace('.
 
 export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let avanceret = false;
+  // Justeringsforslag beregnes først, når brugeren beder om det, og gælder kun for den model, de blev beregnet for.
+  let forslag: { sig: string; res: ForslagResultat } | null = null;
+  let forslagBeregner = false;
   const draw = () => {
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
     const sel = aktivt instanceof HTMLInputElement ? [aktivt.selectionStart, aktivt.selectionEnd] : null;
-    rod.replaceChildren(topbar(), h('main', { class: 'layout' }, h('div', { class: 'input' }, ...sektioner()), h('div', { class: 'output' }, resultat(), tegning(), diagnostik())));
+    rod.replaceChildren(topbar(), h('main', { class: 'layout' }, h('div', { class: 'input' }, ...sektioner()), h('div', { class: 'output' }, resultat(), ...(store.tilstand.resultat && !store.tilstand.resultat.ok && store.tilstand.resultat.kombinationer.length ? [forslagSektion()] : []), tegning(), diagnostik())));
     if (fokus) {
       const n = rod.querySelector<HTMLElement>(`[data-felt="${CSS.escape(fokus)}"]`);
       n?.focus();
@@ -190,6 +196,43 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           h('td', {}, h('code', {}, b.id), ' ', BRUDFORM[b.id] ?? ''),
           h('td', {}, b.Ed ? kN(b.Ed) : ''), h('td', {}, b.Rd ? kN(b.Rd) : ''),
           h('td', {}, h('div', { class: 'bar' }, h('div', { class: `fyld ${b.udnyttelse! > 1 ? 'over' : ''}`, style: `width:${Math.min(100, b.udnyttelse! * 100)}%` }), h('span', {}, proc(b.udnyttelse)))))))));
+  }
+
+  const pct = (u: number) => proc(u);
+  function forslagSektion(): HTMLElement {
+    const sig = JSON.stringify(store.tilstand.model);
+    const sek = h('section', { class: 'res forslag' }, h('h2', {}, 'Justeringer for tilstrækkelig bæreevne'));
+    if (!forslag || forslag.sig !== sig) {
+      sek.append(h('p', { class: 'note' }, 'Programmet kan prøve hver parameter alene og vise den mindste ændring, der giver udnyttelse ≤ 100 %.'),
+        h('button', { disabled: forslagBeregner, onclick: () => {
+          forslagBeregner = true; draw();
+          setTimeout(() => { forslag = { sig, res: beregnForslag(store.tilstand.model) }; forslagBeregner = false; draw(); }, 30);
+        } }, forslagBeregner ? 'Beregner …' : 'Foreslå justeringer'));
+      return sek;
+    }
+    const f = forslag.res;
+    if (f.fejl) { sek.append(h('p', { class: 'note' }, 'Forslag kan ikke beregnes, før fejl i input er rettet.')); return sek; }
+    const hits = f.forslag.filter((r) => r.hit), dele = f.forslag.filter((r) => !r.hit);
+    const g = f.styrende;
+    sek.append(h('small', {}, 'hver parameter ændret alene, øvrige uændrede'),
+      h('p', {}, 'Styrende brudform', g ? [': ', BRUDFORM[g.id] ?? g.id, ` (${pct(g.u)})`].join('') : '', '. Laveste ændring, der giver maksimal udnyttelse ≤ 100 % for alle lastkombinationer:'));
+    if (!hits.length) sek.append(h('p', { class: 'note' }, 'Ingen enkeltparameter kan alene bringe udnyttelsen ned på 100 % inden for rimelige grænser. Kombinér ændringer – de mest virkningsfulde er vist nedenfor.'));
+    const raekke = (r: SpecResultat) => {
+      const x = (r.hit ?? r.best)!;
+      const g2 = x.r.kombinationer[x.r.styrendeKombination ?? 0];
+      const nb = g2?.resultat.styrendeBrudform ? ` · styrende derefter: ${BRUDFORM[g2.resultat.styrendeBrudform] ?? g2.resultat.styrendeBrudform}` : '';
+      const note = r.hit ? `udnyttelse ${pct(x.u)}${nb}` : `kan højst sænke udnyttelsen til ${pct(x.u)} – ikke nok alene${nb}`;
+      const erstat = r.spec.art === 'valg' && !r.spec.premis && /ankerarmering/.test(r.spec.noegle) && r.spec.fra != null ? `Erstatter den indtastede ankerarmering.` : '';
+      const prem = r.spec.art === 'valg' && r.spec.premis ? `Forudsætning: ${forudsaetning(r.spec.liste[0]!.beskrivelse)} – programmet kan ikke kontrollere den.` : erstat;
+      return h('li', { class: r.hit ? '' : 'delvis' },
+        h('div', {}, aendringTekst(r.spec, x), h('small', {}, note), prem && h('small', {}, prem)),
+        h('button', { onclick: () => store.aendr((mm) => { for (const [p, v] of x.ops) saetSti(mm, p, v); }) }, 'Anvend'));
+    };
+    if (hits.length) sek.append(h('ul', { class: 'forslagsliste' }, ...hits.map(raekke)));
+    if (dele.length) sek.append(h('h4', {}, 'Hjælper, men er ikke nok alene'), h('ul', { class: 'forslagsliste' }, ...dele.map(raekke)));
+    if (f.hvorfor.length) sek.append(h('p', { class: 'note' }, 'Bemærk om indtastet armering: ' + f.hvorfor.map(hvorforTekst).join(' ')));
+    if (f.uden.length) sek.append(h('p', { class: 'note' }, 'Uden nævneværdig effekt: ' + f.uden.map((u) => etiket(u.noegle)).join(', ') + '.'));
+    return sek;
   }
 
   function tegning(): HTMLElement {

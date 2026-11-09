@@ -19,3 +19,8 @@ button,select,input[type=text] { font:inherit; color:inherit; background:var(--c
 
 .planbox { max-width:420px; margin:0 auto; } svg.plan { width:100%; height:auto; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; }
 button.primaer { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+.forslag ul.forslagsliste { list-style: none; margin: .4rem 0; padding: 0; }
+.forslag li { display: flex; justify-content: space-between; gap: .75rem; align-items: center; padding: .45rem 0; border-top: 1px solid var(--linje, #8884); }
+.forslag li.delvis { opacity: .75; }
+.forslag li small { display: block; opacity: .8; }
