@@ -408,5 +408,123 @@
    "V_cp": 163519.92441459707,
    "V_c": 28653.22902643321
   }
+ },
+ {
+  "navn": "B1 sidebrud, enkeltbolt",
+  "beskrivelse": "c1 = 70 <= 0,5·hef = 100: N0 = 8,7·c1·√Ah·√fck, Ac = 4c1·(2c1 + 2c1).",
+  "d": 16,
+  "hef": 200,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": 70,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 50000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 65469.168683179916,
+   "V_s": 37680.0,
+   "V_cp": 130938.33736635983,
+   "N_cb": 71499.1359877489
+  }
+ },
+ {
+  "navn": "B2 sidebrud, to bolte s=100",
+  "beskrivelse": "Gruppe: s2 = 100 < 4c1 = 240 → ψg,N = √2 + (1-√2)·100/240.",
+  "d": 16,
+  "hef": 200,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": 60,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    -50
+   ],
+   [
+    0,
+    50
+   ]
+  ],
+  "last": {
+   "N": 80000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 103378.03325718913,
+   "N_c": 73351.2061904915,
+   "V_s": 37680.0,
+   "V_cp": 146702.412380983,
+   "N_cb": 107798.31695575449
+  }
+ },
+ {
+  "navn": "B3 sidebrud, tynd plade, urevnet",
+  "beskrivelse": "h - hef = 50 < 2c1 → Hb = 2c1 + 50. k5 = 12,2.",
+  "d": 16,
+  "hef": 200,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": false,
+  "h": 250,
+  "kanter": {
+   "xNeg": 80,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 50000
+  },
+  "forventet": {
+   "N_s": 62800,
+   "N_p": 144729.24656006478,
+   "N_c": 97193.29166974434,
+   "V_s": 37680.0,
+   "V_cp": 194386.5833394887,
+   "N_cb": 75197.367159529
+  }
  }
 ]

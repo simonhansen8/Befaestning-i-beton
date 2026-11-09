@@ -116,6 +116,23 @@ def v_rk_c(anchors, d, hef, fck, cracked, h, c1, edge_axis_coords, alpha_deg=0.0
     return V0 * Ac / A0 * psi_s * psi_h * psi_a
 
 
+def n_rk_cb(anchors, d, dh, fck, cracked, h, hef, edges):
+    """(7.2.1.8) udsprængning, kun hvis c1 <= 0,5·hef. Returnerer None hvis ikke relevant.
+    N0 = k5·c1·√Ah·√fck (k5 = 8,7 revnet / 12,2 urevnet); A0 = (4c1)²; ψs = 0,7+0,3·c2/(2c1); ψg = max(1, √n + (1-√n)·s2/(4c1)).
+    Reference dækker kun bolte parallelt med én fri kant (xNeg) og uden ekscentricitet."""
+    Ah = math.pi / 4 * (dh ** 2 - d ** 2)
+    c1 = min(a[0] + edges['xNeg'] for a in anchors)
+    if c1 > 0.5 * hef: return None
+    k5 = 8.7 if cracked else 12.2
+    N0 = k5 * c1 * math.sqrt(Ah) * math.sqrt(fck)
+    ys = sorted(a[1] for a in anchors)
+    n, s2 = len(ys), max([b - a for a, b in zip(ys, ys[1:])] or [0])
+    L = union_len(ys, 2 * c1)
+    Hb = 2 * c1 + min(2 * c1, max(0, h - hef))
+    psi_g = max(1.0, math.sqrt(n) + (1 - math.sqrt(n)) * s2 / (4 * c1))
+    return N0 * (L * Hb) / (4 * c1) ** 2 * 1.0 * psi_g
+
+
 def case(name, d, hef, dh, th, As, fuk, fyk, ductile, klasse, cracked, h, edges, anchors, loads, beskrivelse):
     fck = FCK[klasse]
     e = {}
@@ -125,6 +142,9 @@ def case(name, d, hef, dh, th, As, fuk, fyk, ductile, klasse, cracked, h, edges,
     e['N_c'] = n_rk_c(ts, hef, fck, cracked, edges)
     e['V_s'] = v_rk_s(As, fuk, ductile, len(anchors))
     e['V_cp'] = v_rk_cp(ts, hef, fck, cracked, edges)
+    if edges.get('xNeg') is not None and not any(edges.get(k) is not None for k in ('xPos','yNeg','yPos')):
+        v = n_rk_cb(anchors, d, dh, fck, cracked, h, hef, edges)
+        if v is not None: e['N_cb'] = v
     free = [k for k in ('xNeg', 'xPos', 'yNeg', 'yPos') if edges.get(k) is not None]
     if free and loads.get('Vedge'):
         k = loads['Vedge']
@@ -163,6 +183,12 @@ CASES = [
          {'N': 40000, 'Vx': 30000}, 'Ikke-duktil (6.8): k7 = 0,8 for gruppe; fuk = 600 > 500 → k6 = 0,5.'),
     case('A10 tynd plade, ψh > 1', 16, 150, 29, 13, 157, 400, 240, True, 'C30/37', True, 120, edge(xNeg=200), [(0, 0)],
          {'N': 0, 'Vx': -10000, 'Vedge': 'xNeg'}, 'h = 120 < 1,5·c1 = 300 → Ac,V = 3c1·h og ψh = √(300/120).'),
+    case('B1 sidebrud, enkeltbolt', 16, 200, 29, 13, 157, 400, 240, True, 'C30/37', True, 400, edge(xNeg=70), [(0, 0)],
+         {'N': 50000}, 'c1 = 70 <= 0,5·hef = 100: N0 = 8,7·c1·√Ah·√fck, Ac = 4c1·(2c1 + 2c1).'),
+    case('B2 sidebrud, to bolte s=100', 16, 200, 29, 13, 157, 400, 240, True, 'C30/37', True, 400, edge(xNeg=60), [(0, -50), (0, 50)],
+         {'N': 80000}, 'Gruppe: s2 = 100 < 4c1 = 240 → ψg,N = √2 + (1-√2)·100/240.'),
+    case('B3 sidebrud, tynd plade, urevnet', 16, 200, 29, 13, 157, 400, 240, True, 'C30/37', False, 250, edge(xNeg=80), [(0, 0)],
+         {'N': 50000}, 'h - hef = 50 < 2c1 → Hb = 2c1 + 50. k5 = 12,2.'),
 ]
 
 if __name__ == '__main__':
