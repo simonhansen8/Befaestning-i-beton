@@ -179,6 +179,56 @@ test('ny UI: mål kan rettes ved klik i 3D, og kræfter kan skjules', { skip: !f
     await page.fill('input.maalinput', 'abc');
     await page.press('input.maalinput', 'Enter');
     assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 220);
+    // last rettes direkte i 3D (kN) på den valgte kombination
+    await page.locator('.etiket3d.last.redigerbar', { hasText: 'N =' }).click();
+    await page.fill('input.maalinput', '90,5');
+    await page.press('input.maalinput', 'Enter');
+    await page.waitForFunction(() => window.__ny.store.tilstand.model.laster[0].N === 90500);
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});
+
+test('ny UI: rulleposition og 3D-kamera bevares ved rettelser', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch({ ...LAUNCH, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1300, height: 500 } });
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.click('[data-view="3d"]');
+    await page.waitForSelector('.etiket3d');
+    await page.evaluate(() => { window.scrollTo(0, 250); document.querySelector('.output').scrollTop = 120; });
+    const foer = await page.evaluate(() => [window.scrollY, document.querySelector('.output').scrollTop]);
+    assert.ok(foer[0] > 0 || foer[1] > 0, 'siden kan rulles i testen');
+    for (const v of [200, 210]) {
+      await page.evaluate((x) => window.__ny.store.aendr((m) => { m.anker.hef = x; }), v);
+      await page.waitForFunction((x) => window.__ny.store.tilstand.model.anker.hef === x, v);
+      const efter = await page.evaluate(() => [window.scrollY, document.querySelector('.output').scrollTop]);
+      assert.deepEqual(efter, foer);
+    }
+  } finally { await browser.close(); }
+});
+
+test('ny UI: Ctrl+Z / Ctrl+Y og knapperne fortryder og gentager ændringer', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    const hef0 = await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef);
+    assert.ok(await page.locator('[data-fortryd="1"]').isDisabled());
+    await page.evaluate(() => window.__ny.store.aendr((m) => { m.anker.hef = 260; }));
+    assert.ok(await page.locator('[data-fortryd="1"]').isEnabled());
+    await page.locator('h1').click();
+    await page.keyboard.press('Control+z');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), hef0);
+    await page.keyboard.press('Control+y');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 260);
+    await page.click('[data-fortryd="1"]');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), hef0);
+    await page.click('[data-gentag="1"]');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 260);
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
