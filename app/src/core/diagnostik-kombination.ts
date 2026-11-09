@@ -21,7 +21,7 @@ export function diagnostikKombination(
   if (r.loeftestang) e.push(diag('info', 'loeftestang', EN('6.2.2.3'), 'plade.afstandTilBeton', { alphaM: m.plade.indspaending === 'fuld' ? 2 : 1 }));
   if (m.anker.type === 'indlimet' && t.NEd_g > 0 && alphaSus > m.anker.psi0Sus) e.push(diag('info', 'alpha-sus-over-psi0', EN('7.2.1.6'), null, { alphaSus, psi0Sus: m.anker.psi0Sus }));
   const at = r.armT;
-  if (at.aktiv && !at.virksom) e.push(diag('fejl', 'ankerarmering-traek-ikke-virksom', EN('7.2.1.9'), 'beton.armering.ankerarmeringTraek.aktiv', { mangler: at.mangler.join(', ') }));
+  if (at.aktiv && !at.virksom) e.push(diag('fejl', 'ankerarmering-traek-ikke-virksom', EN('7.2.1.9'), 'beton.armering.ankerarmeringTraek.aktiv', { mangler: at.mangler.join(', '), l1: at.l1, l1min: at.l1min, rad: at.rad, hef: m.anker.hef }));
   if (at.aktiv && at.rad <= 0.75 * m.anker.hef && at.ikkeVirksomme > 0 && at.ikkeVirksomme < at.antalBoejler) e.push(diag('info', 'ankerarmering-boejler-for-dybt', EN('7.2.1.2(2)d'), null, { antal: at.ikkeVirksomme, af: at.antalBoejler }));
   if (r.staalForskydningAarsag === 'fuk-over-1000') e.push(diag('fejl', 'fuk-over-1000-forskydning', EN('7.2.2.3.1'), null));
   if (r.spaltningAarsag === 'revnebegraensende-armering') e.push(diag('info', 'spaltning-udeladt-armering', EN('7.2.1.7 (2) b'), null));
@@ -30,7 +30,7 @@ export function diagnostikKombination(
   if (m.anker.dnom != null && m.anker.dnom > 60 && Object.keys(kb.kanterPr).length) e.push(diag('advarsel', 'dnom-over-60-kantbrud', EN('7.2.2.5'), null, { dnom: m.anker.dnom }));
   const av = r.armV, angivet = m.beton.armering.ankerarmeringForskydning.kant;
   if (av.aktiv && angivet && !r.armKant && kb.styrende) e.push(diag('info', 'forskydningsarmering-kant-ikke-belastet', EN('7.2.2.6'), null, { kant: angivet }));
-  if (av.aktiv && !av.virksom && r.armKant) e.push(diag('fejl', 'ankerarmering-forskydning-ikke-virksom', EN('7.2.2.6'), 'beton.armering.ankerarmeringForskydning.aktiv', { mangler: av.mangler.join(', ') }));
+  if (av.aktiv && !av.virksom && r.armKant) e.push(diag('fejl', 'ankerarmering-forskydning-ikke-virksom', EN('7.2.2.6'), 'beton.armering.ankerarmeringForskydning.aktiv', { mangler: av.mangler.join(', '), l1: av.l1 ?? 0, l1min: av.l1min ?? 0 }));
   if (av.virksom && r.armKant) {
     const andre = Object.keys(kb.kanterPr).filter((k) => k !== r.armKant!.kant);
     if (andre.length) e.push(diag('info', 'forskydningsarmering-daekker-kun-en-kant', EN('7.2.2.6'), null, { kanter: andre.join(', ') }));

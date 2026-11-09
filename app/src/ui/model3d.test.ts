@@ -4,17 +4,34 @@ import { byg3d } from './model3d';
 
 const m: any = structuredClone(standardModel('2026-01-01'));
 describe('3D-beskrivelse', () => {
-  it('tegner forskydningsarmering mod armeringskanten med inaktive stænger markeret', () => {
-    const i: any = structuredClone(m);
-    i.beton.armering.ankerarmeringForskydning = { ...i.beton.armering.ankerarmeringForskydning, aktiv: true, diameter: 10, daekToAkse: 40 };
-    const id = i.opstilling.anker[0].id;
+  it('tegner overfladearmering fra kanten ind forbi brudlegemet, inaktive stænger grå, og krog kun når den er valgt', () => {
+    const i: any = structuredClone(m); i.beton.kanter.xNeg = 130; i.beton.cnom = 30;
+    i.beton.armering.ankerarmeringForskydning = { ...i.beton.armering.ankerarmeringForskydning, aktiv: true, type: 'overflade', diameter: 10, daekToAkse: 40, krog: false };
+    const q = i.opstilling.anker[0], id = q.id;
     const k: any = { styrendeBrudform: null, traek: { traekAnkre: [] }, kantbrud: { styrende: null, forreste: { xNeg: { c1: 130, ankre: [id] } } }, armKant: { kant: 'xNeg' },
       armV: { staenger: [{ v: 50, l1: 90, virksom: true }, { v: -50, l1: 90, virksom: false }], l1: null, virksom: true } };
-    const st: any[] = byg3d(i, k, null).dele.filter((x) => x.type === 'stang');
-    expect(st).toHaveLength(2);
-    expect(st.map((x) => !!x.inaktiv).sort()).toEqual([false, true]);
-    expect(st[0].til[0]).toBeCloseTo(st[0].fra[0] - 90);
-    expect(st[0].fra[2]).toBe(-40);
+    const st = () => byg3d(i, k, null).dele.filter((x) => x.type === 'stang') as any[];
+    const indre = st().filter((x) => !x.variant);
+    expect(indre).toHaveLength(2);
+    expect(indre.map((x) => !!x.inaktiv).sort()).toEqual([false, true]);
+    // fra kanten (afstand til kant − cnom) og l1 indad
+    expect(indre[0].fra[0]).toBeCloseTo(-130 + 30, 5); // kanten x = −130 minus dæklag
+    expect(indre[0].til[0]).toBeCloseTo(-130 + 30 + 90, 5);
+    expect(indre[0].fra[2]).toBe(-40);
+    expect(st().filter((x) => x.variant === 'forankring')).toHaveLength(2);
+    expect(st().filter((x) => x.variant === 'tilbehoer')).toHaveLength(0);
+    i.beton.armering.ankerarmeringForskydning.krog = true;
+    expect(st().filter((x) => x.variant === 'tilbehoer')).toHaveLength(1);
+    expect(st().length).toBeGreaterThan(5);
+  });
+  it('tegner bøjle og løkke efter udformning og antal, grå når de ikke virker', () => {
+    const i: any = structuredClone(m); i.beton.kanter.xNeg = 130;
+    i.beton.armering.ankerarmeringForskydning = { ...i.beton.armering.ankerarmeringForskydning, aktiv: true, type: 'loekke', diameter: 10, daekToAkse: 40 };
+    const id = i.opstilling.anker[0].id;
+    const k: any = { styrendeBrudform: null, traek: { traekAnkre: [] }, kantbrud: { styrende: null, forreste: { xNeg: { c1: 130, ankre: [id] } } }, armKant: { kant: 'xNeg' }, armV: { ben: 4, virksom: false } };
+    const st = byg3d(i, k, null).dele.filter((x) => x.type === 'stang') as any[];
+    expect(st.filter((x) => !x.variant)).toHaveLength(2 * 3);
+    expect(st.every((x) => x.inaktiv)).toBe(true);
   });
   it('har mål for hef, h, plade, boltafstand og kantafstand, og kan slå dem fra', () => {
     const i: any = structuredClone(m); i.beton.kanter.xNeg = 200;
@@ -35,16 +52,37 @@ describe('3D-beskrivelse', () => {
     expect(kile.punkter).toHaveLength(4);
     expect(kile.punkter[1][0]).toBeLessThan(kile.punkter[0][0]);
   });
-  it('tegner bøjler som tre stænger pr. bøjle og en hef-målelinje', () => {
+  it('tegner trækbøjler i lodrette planer med bøjning ved overfladen, og lige stænger uden', () => {
     const i: any = structuredClone(m);
     const n = i.opstilling.anker.length;
     expect(byg3d(i, null, null).dele.filter((x) => x.type === 'stang')).toHaveLength(0);
-    i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 2, diameter: 12, afstand: 50, daeklagTop: 40 };
+    i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 2, diameter: 12, afstand: 50, daeklagTop: 40, krog: true, foering: 'stoed' };
     const s = byg3d(i, null, null);
-    expect(s.dele.filter((x) => x.type === 'stang')).toHaveLength(n * 2 * 3);
+    const st = s.dele.filter((x) => x.type === 'stang') as any[];
+    // pr. bøjle: to ben, bøjning og overfladestang
+    expect(st).toHaveLength(n * 2 * 4);
+    expect(st.filter((x) => x.variant === 'tilbehoer')).toHaveLength(n * 2);
+    expect(s.dele.filter((x) => x.type === 'cirkel')).toHaveLength(n);
+    // benene er lodrette og går ned til hef; bøjningen ligger øverst, ikke nederst
+    const lodret = st.filter((x) => x.fra[0] === x.til[0] && x.fra[1] === x.til[1] && !x.variant);
+    expect(lodret).toHaveLength(n * 4);
+    for (const l of lodret) { expect(l.fra[2]).toBeCloseTo(-40 - (st.indexOf(l) % 8 >= 4 ? 13 : 0), 0); expect(l.til[2]).toBe(-i.anker.hef); }
+    expect(st.filter((x) => x.fra[2] === x.til[2] && !x.variant).every((x) => x.fra[2] > -i.anker.hef)).toBe(true);
+    i.beton.armering.ankerarmeringTraek.krog = false;
+    const lige = byg3d(i, null, null).dele.filter((x) => x.type === 'stang') as any[];
+    expect(lige).toHaveLength(n * 2 * 2);
+    expect(lige.every((x) => x.fra[0] === x.til[0] && x.fra[1] === x.til[1])).toBe(true);
     expect(s.forklaring.some((f) => f.tekst === 'Armering')).toBe(true);
-    const maal: any = s.dele.find((x) => x.type === 'maal');
+    const maal: any = s.dele.find((x) => x.type === 'maal' && x.tekst.startsWith('hef'));
     expect(maal.tekst).toBe(`hef = ${i.anker.hef} mm`);
+  });
+  it('trækarmeringens ben følger afstand, dæklag, forankringsdybde og antal', () => {
+    const i: any = structuredClone(m);
+    i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 1, diameter: 10, afstand: 60, daeklagTop: 25, krog: false, foering: 'ingen', forankringsdybde: 150 };
+    const q = i.opstilling.anker[0], M = i.anker.d / 2 + 5 + 2;
+    const st: any[] = byg3d(i, null, null).dele.filter((x) => x.type === 'stang');
+    expect(st[0].fra).toEqual([q.x + 60, q.y + M, -25]);
+    expect(st[0].til[2]).toBe(-150);
   });
   it('har beton, plade og skaft/hoved/møtrik pr. bolt', () => {
     const s = byg3d(m, null, null);

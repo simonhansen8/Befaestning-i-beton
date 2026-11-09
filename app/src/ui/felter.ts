@@ -1128,7 +1128,7 @@ export const SEKTIONER: Sektion[] = [
         lbl: "Krog, bøjning eller løkke (ellers lige stang)",
         type: "switch",
         show: forskArmeringOverflade,
-        tip: "Krav til forankring i brudlegemet, 7.2.2.2(3)d: l<sub>1</sub> ≥ 4⌀ med krog, bøjning eller løkke (α = 0,7, forudsætter sidedæklag > 3⌀); l<sub>1</sub> ≥ 10⌀ for lige stænger med eller uden påsvejste tværstænger (α = 1,0). Påvirker kun beregningen, ikke tegningen.",
+        tip: "Krav til forankring i brudlegemet, 7.2.2.2(3)d: l<sub>1</sub> ≥ 4⌀ med krog, bøjning eller løkke (α = 0,7, forudsætter sidedæklag > 3⌀); l<sub>1</sub> ≥ 10⌀ for lige stænger med eller uden påsvejste tværstænger (α = 1,0). Tegnes som krog ved kanten om kantarmeringen.",
         ref: "EN 1992-4, 7.2.2.6",
       },
       {

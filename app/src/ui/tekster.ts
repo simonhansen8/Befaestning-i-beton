@@ -8,6 +8,16 @@ const t = (v: unknown, dec = 1): string => {
   return (+v.toFixed(dec)).toString().replace('.', ',').replace('-', '−');
 };
 const t0 = (v: unknown) => t(v, 0);
+const MANGEL: Record<string, (d: D) => string> = {
+  'l1-for-kort': (d) => `benenes forankringslængde l1 i brudkeglen er kun ${t0(d.l1)} mm mod krav ${t0(d.l1min)} mm. l1 beregnes af geometrien (hef − tan 35°·afstand − dæklag c_top, 7.2.1.2(2)d) og kan ikke indtastes – gør bøjlen længere ved at mindske c_top eller afstanden x, øge hef, bruge færre bøjler, eller vælg bøjning ved overfladen (krav 4⌀ i stedet for 10⌀)`,
+  'afstand-over-0.75hef': (d) => `benene ligger ${t0(d.rad)} mm fra ankeret, dvs. uden for 0,75·hef = ${t0(0.75 * Number(d.hef))} mm (7.2.1.2(2)c) – mindsk afstanden x`,
+  'dia-over-16': () => 'stangdiameter over 16 mm',
+  'fyk-over-600': () => 'fyk,re over 600 MPa',
+  'intet-ben': () => 'ingen ben',
+  'ingen-virksomme-ben': (d) => `ingen stænger er virksomme (ligger inden for 0,75·c1 og har l1 ≥ ${t0(d.l1min)} mm)`,
+  'intet-virksomt-ben-forreste': () => 'ingen ben i forreste række',
+};
+const manglerTekst = (m: unknown, d: D): string => String(m ?? '').split(', ').filter(Boolean).map((k) => MANGEL[k]?.(d) ?? k).join('; ') + '.';
 const t2 = (v: unknown) => t(v, 2);
 const KANT: Record<string, string> = { xNeg: 'x−', xPos: 'x+', yNeg: 'y−', yPos: 'y+' };
 const kant = (v: unknown) => KANT[String(v)] ?? String(v ?? '');
@@ -89,14 +99,14 @@ export const TEKSTER: Record<string, (d: D) => string> = {
   'forskydning-kan-ikke-optages': () => 'Vridning/forskydning kan ikke optages af de virksomme ankre.',
   'loeftestang': (d) => `Løftestang (6.2.2.3): αM = ${t0(d.alphaM)}.`,
   'alpha-sus-over-psi0': (d) => `αsus = ${t2(d.alphaSus)} overstiger ψ⁰sus = ${t2(d.psi0Sus)}; vedhæftningen reduceres.`,
-  'ankerarmering-traek-ikke-virksom': (d) => `Ankerarmering i træk er ikke virksom: ${d.mangler}.`,
+  'ankerarmering-traek-ikke-virksom': (d) => `Ankerarmering i træk er ikke virksom: ${manglerTekst(d.mangler, d)}`,
   'ankerarmering-boejler-for-dybt': (d) => `${t0(d.antal)} af ${t0(d.af)} bøjler ligger for dybt (> 0,75·hef) og er ikke medregnet.`,
   'fuk-over-1000-forskydning': () => 'fuk > 1000 MPa: stålbrud i forskydning kan ikke eftervises efter 7.2.2.3.1.',
   'spaltning-udeladt-armering': () => 'Spaltning er udeladt, fordi revnebegrænsende armering er forudsat (7.2.1.7 (2) b).',
   'kantbrud-kant-for-fjern': (d) => `Kant ${kant(d.kant)} er for langt væk til at give kantbrud.`,
   'dnom-over-60-kantbrud': (d) => `dnom = ${t0(d.dnom)} mm > 60 mm i kantbrud (7.2.2.5).`,
   'forskydningsarmering-kant-ikke-belastet': (d) => `Forskydningsarmeringens kant ${kant(d.kant)} er ikke belastet; armeringen er ikke medregnet.`,
-  'ankerarmering-forskydning-ikke-virksom': (d) => `Ankerarmering i forskydning er ikke virksom: ${d.mangler}.`,
+  'ankerarmering-forskydning-ikke-virksom': (d) => `Ankerarmering i forskydning er ikke virksom: ${manglerTekst(d.mangler, d)}`,
   'forskydningsarmering-daekker-kun-en-kant': (d) => `Forskydningsarmeringen dækker kun én kant; kant ${d.kanter} er uden armering.`,
   'overfladearmering-staenger-ikke-virksomme': (d) => `${t0(d.antal)} af ${t0(d.af)} overfladestænger opfylder ikke 7.2.2.2(3)c–d og er ikke medregnet.`,
   'forskydningsarmering-kant-valgt-automatisk': (d) => `Forskydningsarmeringens kant (${kant(d.kant)}) er valgt automatisk som den mest udnyttede kant uden armering (lastkombination ${t0(Number(d.kombination) + 1)}).`,
