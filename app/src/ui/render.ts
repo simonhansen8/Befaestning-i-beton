@@ -7,6 +7,7 @@ import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
+import { snitSvg, type SnitAkse } from './snit';
 import { opret3D, type Kamera, type Scene3D } from './scene3d';
 import { rapportHtml, rapportTekst } from './rapport';
 import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
@@ -287,7 +288,8 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     return sek;
   }
 
-  let visning: 'plan' | '3d' = 'plan';
+  let visning: 'plan' | 'snit' | '3d' = 'plan';
+  let snitAkse: SnitAkse = 'x';
   let scene3d: Scene3D | null = null;
   let visBrud = false;
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
@@ -296,10 +298,16 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     const t = store.tilstand;
     const kom = t.resultat ? t.resultat.kombinationer[t.valgtKombination ?? 0] ?? null : null;
     const k = kom?.resultat ?? null;
-    const knap = (v: 'plan' | '3d', txt: string) => h('button', { class: visning === v ? 'aktiv' : '', 'data-view': v, onclick: () => { visning = v; draw(); } }, txt);
-    const sek = h('section', { class: 'res' }, h('h2', {}, visning === 'plan' ? 'Plantegning' : '3D-model'), h('div', { class: 'visningsvalg' }, knap('plan', 'Plan'), knap('3d', '3D')));
+    const knap = (v: 'plan' | 'snit' | '3d', txt: string) => h('button', { class: visning === v ? 'aktiv' : '', 'data-view': v, onclick: () => { visning = v; draw(); } }, txt);
+    const sek = h('section', { class: 'res' }, h('h2', {}, visning === 'plan' ? 'Plantegning' : visning === 'snit' ? 'Snit' : '3D-model'), h('div', { class: 'visningsvalg' }, knap('plan', 'Plan'), knap('snit', 'Snit'), knap('3d', '3D')));
     if (visning === 'plan') {
       sek.append(h('div', { class: 'planbox', html: plantegningSvg(t.model, k) }), h('p', { class: 'note' }, PLAN_FORKLARING));
+      return sek;
+    }
+    if (visning === 'snit') {
+      const ak = (a: SnitAkse) => h('button', { class: snitAkse === a ? 'aktiv' : '', 'data-snit': a, onclick: () => { snitAkse = a; draw(); } }, `Langs ${a}`);
+      sek.append(h('div', { class: 'visningsvalg' }, ak('x'), ak('y')), h('div', { class: 'planbox snitbox', html: snitSvg(t.model, snitAkse) }),
+        h('p', { class: 'note' }, 'Lodret snit gennem boltene. Bolte uden for snitlinjen er vist svagt. hef, kantafstand c og pladetykkelse h er målsat.'));
       return sek;
     }
     try {

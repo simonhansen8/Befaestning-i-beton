@@ -45,3 +45,4 @@ dialog menu { display: flex; gap: .5rem; justify-content: flex-end; padding: 0; 
 .etiket3d.last { color:#7c3aed; font-weight:600; }
 .forklaring3d { display:flex; gap:12px; flex-wrap:wrap; font-size:12px; margin-top:6px; }
 .forklaring3d i { display:inline-block; width:10px; height:10px; margin-right:4px; border-radius:2px; }
+.snitbox { max-width:520px; } svg.snit { width:100%; height:auto; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; }

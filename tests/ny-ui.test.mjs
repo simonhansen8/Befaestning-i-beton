@@ -101,6 +101,10 @@ test('ny UI: 3D-visning tegner scenen og kameraknapper virker', { skip: !fs.exis
     const ok = await page.evaluate(() => { const c = document.querySelector('.scene3d canvas'); return c.width > 0 && c.height > 0; });
     assert.ok(ok);
     // tilbage til plan, og en ændring mens 3D er valgt giver ingen fejl
+    await page.click('[data-view="snit"]');
+    await page.waitForSelector('svg.snit');
+    await page.click('[data-snit="y"]');
+    await page.waitForSelector('svg.snit');
     await page.click('[data-view="plan"]');
     await page.waitForSelector('.planbox');
     assert.deepEqual(fejl, []);
