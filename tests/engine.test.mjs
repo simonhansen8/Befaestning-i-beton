@@ -303,3 +303,13 @@ function walk(v, f, path = '') {
   f(v, path);
   if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) walk(x, f, path + '.' + k);
 }
+
+test('§7.2.2.5: ψre,V = 1,4 kun med dokumenteret a ≤ 100, a ≤ 2c1 og Ø ≥ 12 (revnet beton)', async () => {
+  const run = async (arm) => A(await calc({ beton: { kanter: { xNeg: 130, xPos: null, yNeg: null, yPos: null }, armering: { ...OPEN, kantarmering: 'boejler', ...arm } }, opstilling: ONE, plade: { bx: 200, by: 200 }, laster: lk({ Vx: -10000 }) }), 'V_c').VRk;
+  const base = await run({});
+  const ok = await run({ kantarmeringAfstand: 100, kantarmeringDiameter: 12 });
+  near(ok, base * 1.4, 1e-9, 'a=100, Ø12');
+  near(await run({ kantarmeringAfstand: 150, kantarmeringDiameter: 12 }), base, 1e-9, 'a>100');
+  near(await run({ kantarmeringAfstand: 100, kantarmeringDiameter: 10 }), base, 1e-9, 'Ø<12');
+  near(await run({ kantarmeringAfstand: 100, kantarmeringDiameter: 12, _x: 1 }), ok, 1e-9);
+});
