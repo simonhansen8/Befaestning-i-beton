@@ -74,7 +74,7 @@ describe('Store: fortryd og gentag', () => {
     expect(s.fortryd()).toBe(true); expect(s.tilstand.model.beton.h).not.toBe(700); expect(s.tilstand.model.anker.hef).toBe(260);
     expect(s.kanGentage).toBe(true);
     expect(s.fortryd()).toBe(true); expect(s.tilstand.model.anker.hef).toBe(hef0);
-    expect(s.tilstand.resultat!.maksUdnyttelse).toBeCloseTo(u0, 10);
+    expect(s.tilstand.resultat!.maksUdnyttelse).toBeCloseTo(u0 as number, 10);
     expect(s.fortryd()).toBe(false);
     expect(s.gentag()).toBe(true); expect(s.tilstand.model.anker.hef).toBe(260);
     expect(s.gentag()).toBe(true); expect(s.tilstand.model.beton.h).toBe(700);
@@ -89,7 +89,7 @@ describe('Store: fortryd og gentag', () => {
   });
   it('en uændret model giver ikke et fortryd-trin', () => {
     const s = lav();
-    s.aendr((m) => { m.anker.hef = m.anker.hef; });
+    s.aendr(() => {});
     expect(s.kanFortryde).toBe(false);
   });
   it('gentagne rettelser af samme felt samles til ét trin', () => {
