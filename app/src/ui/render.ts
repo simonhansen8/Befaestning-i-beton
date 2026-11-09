@@ -6,15 +6,11 @@ import { KANTFELTER, SEKTIONER } from './felter';
 import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
+import { rapportHtml } from './rapport';
+import { BRUDFORM } from './render-tekster';
 import { tekst } from './tekster';
 import { FEJLTEKST, laesSti, visFelt } from './vaerdi';
 
-export const BRUDFORM: Record<string, string> = {
-  N_s: 'Stålbrud, træk', N_p: 'Udtrækning', N_c: 'Betonkegle', N_sp: 'Spaltning', N_cb: 'Sidebrud', N_re: 'Ankerarmering, træk (stål)',
-  N_a: 'Ankerarmering, forankring i beton', N_cre: 'Betonkegle med ankerarmering', V_s: 'Stålbrud, forskydning', V_cp: 'Pry-out',
-  V_c: 'Betonkantbrud', V_re: 'Ankerarmering, forskydning', V_a: 'Ankerarmering, forankring (forskydning)', NV_s: 'Interaktion, stål',
-  NV_c: 'Interaktion, beton', NV_re: 'Interaktion, ankerarmering',
-};
 
 type Barn = (Node | string | null | false | undefined)[];
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, attr: Record<string, unknown> = {}, ...barn: Barn): HTMLElementTagNameMap[K] {
@@ -61,6 +57,13 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           const a = h('a', { href: URL.createObjectURL(new Blob([store.tilJson()], { type: 'application/json' })), download: 'anker-projekt.json' });
           a.click(); URL.revokeObjectURL(a.href);
         } }, 'Gem'),
+        h('button', { class: 'primaer', onclick: () => {
+          const html = rapportHtml(store.tilstand.model, store.tilstand.resultat, build);
+          const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+          const w = window.open(url, '_blank');
+          if (w) w.addEventListener('load', () => w.print());
+          else { const a = h('a', { href: url, download: 'anker-rapport.html' }); a.click(); }
+        } }, 'Rapport'),
         h('label', { class: 'adv' }, h('input', { type: 'checkbox', checked: avanceret, onchange: (e: Event) => { avanceret = (e.target as HTMLInputElement).checked; draw(); } }), ' Avanceret'),
         h('span', { class: 'build' }, `build ${build}`)),
       store.tilstand.fejl && h('div', { class: 'fejlbanner', role: 'alert' }, store.tilstand.fejl),

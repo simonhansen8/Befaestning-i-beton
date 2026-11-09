@@ -18,3 +18,4 @@ button,select,input[type=text] { font:inherit; color:inherit; background:var(--c
 .diag ul { list-style:none; margin:0; padding:0; } .diag li { padding:5px 8px; border-left:3px solid var(--line); margin-bottom:4px; cursor:default; } .diag li.fejl { border-color:var(--err); } .diag li.advarsel { border-color:var(--warn); } .diag li.info { border-color:var(--accent); } .diag li .ref { color:var(--muted); font-size:12px; }
 
 .planbox { max-width:420px; margin:0 auto; } svg.plan { width:100%; height:auto; color:var(--fg); background:var(--card); border:1px solid var(--line); border-radius:6px; }
+button.primaer { background:var(--accent); color:#fff; border-color:var(--accent); }

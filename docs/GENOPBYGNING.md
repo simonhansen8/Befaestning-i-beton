@@ -11,7 +11,7 @@ Beslutning (Simon): bevar normlogikken, genopbyg strukturen som TypeScript + Vit
 | 5 | UI/state: ét state, én vej felt → model → beregning | **I gang**: felt-skema (`app/src/ui/felter.ts`, 110 felter), ét `Store` (felt → tolkning → model → indlæsning → beregning), diagnosetekster (kode → tekst, testet), første to-kolonne brugerflade (formular, laster, bolte, resultat pr. kombination, bemærkninger) og røgtest i CI. Tegning/2D/3D og rapport mangler (trin 8). Fokus: brugervenlighed og overblik, ikke identisk udseende. |
 | 6 | Sporbarhedstabel felt → formel → norm → test, kontrolleret i CI | |
 | 7 | Uafhængig verifikation (Python-reference, håndregnede eksempler, evt. PROFIS) | **I gang**: Python-reference + håndregnet eksempel for 10 rene tilfælde matcher kernen (se `verifikation.md`). Mangler: momenter, armering, indlimede anker, PROFIS |
-| 8 | Migrér 2D/3D/rapport | |
+| 8 | Migrér 2D/3D/rapport | **I gang**: plantegning (SVG) og rapport (selvstændigt HTML-dokument til udskrift/PDF, inddata afledt af felt-skemaet, escapet brugertekst, test) er færdige i ny kodebase. Mangler: 3D-visning og eventuelle ekstra rapportafsnit (beregningsgrundlag med formler pr. brudform – afhænger af traceability-tabellen, trin 6). |
 | 9 | Udfas gammel fil når facit er grønt | |
 
 Ny kodebase: `npm run typecheck`, `npm run unit`, `npm run build` (output `dist/index.html`; den gamle rod-`index.html` urørt indtil trin 9).
