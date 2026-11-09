@@ -7,7 +7,8 @@ import type { FeltDef, Felt, Model, Sektion } from './skema-typer';
 import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { rapportHtml } from './rapport';
-import { BRUDFORM } from './render-tekster';
+import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
+import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
 import { tekst } from './tekster';
 import { FEJLTEKST, laesSti, visFelt } from './vaerdi';
 
@@ -120,12 +121,24 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       const x = Number(String((e.target as HTMLInputElement).value).replace(',', '.'));
       if (Number.isFinite(x)) store.aendr(() => set(x));
     } });
+    const regen = (mm: Model) => { if (mm.opstilling.type !== 'fri') mm.opstilling.anker = genererAnkre(mm.opstilling); };
+    const param = (k: MoensterParam) => h('label', { class: 'felt' }, h('span', {}, PARAM_NAVN[k]),
+      h('input', { type: 'text', inputmode: 'decimal', value: String(m.opstilling[k] ?? '').replace('.', ','), onchange: (e: Event) => {
+        const x = Number(String((e.target as HTMLInputElement).value).replace(',', '.'));
+        if (Number.isFinite(x) && x >= 0) store.aendr((mm) => { mm.opstilling[k] = x; regen(mm); });
+      } }));
+    const moenster = MOENSTRE.find((q) => q.id === m.opstilling.type);
     return h('div', { class: 'tabel' },
+      h('div', { class: 'gruppe' },
+        h('label', { class: 'felt' }, h('span', {}, 'Opstilling'),
+          h('select', { onchange: (e: Event) => store.aendr((mm) => { mm.opstilling.type = (e.target as HTMLSelectElement).value; regen(mm); }) },
+            ...MOENSTRE.map((q) => h('option', { value: q.id, selected: q.id === m.opstilling.type }, MOENSTER_NAVN[q.id])))),
+        ...(moenster?.params ?? []).map(param)),
       h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, 'Bolt'), h('th', {}, 'x [mm]'), h('th', {}, 'y [mm]'), h('th', {}, 'Slids'), h('th', {}, ''))),
         h('tbody', {}, ...m.opstilling.anker.map((a: any, i: number) => h('tr', {},
           h('td', {}, String(a.id)),
-          h('td', {}, num(a.x, (x) => { store.tilstand.model.opstilling.anker[i].x = x; })),
-          h('td', {}, num(a.y, (y) => { store.tilstand.model.opstilling.anker[i].y = y; })),
+          h('td', {}, num(a.x, (x) => { store.tilstand.model.opstilling.anker[i].x = x; store.tilstand.model.opstilling.type = 'fri'; })),
+          h('td', {}, num(a.y, (y) => { store.tilstand.model.opstilling.anker[i].y = y; store.tilstand.model.opstilling.type = 'fri'; })),
           h('td', {}, h('select', { onchange: (e: Event) => store.aendr((mm) => { mm.opstilling.anker[i].slids = (e.target as HTMLSelectElement).value || null; }) },
             ...[['', 'ingen'], ['x', 'i x'], ['y', 'i y']].map(([v, t]) => h('option', { value: v, selected: (a.slids ?? '') === v }, t)))),
           h('td', {}, m.opstilling.anker.length > 1 && h('button', { title: 'Fjern bolt', onclick: () => store.aendr((mm) => { mm.opstilling.anker.splice(i, 1); mm.opstilling.anker.forEach((q: any, j: number) => { q.id = j + 1; }); mm.opstilling.type = 'fri'; }) }, '×')))))),
@@ -162,8 +175,8 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
 
   function resultat(): HTMLElement {
     const t = store.tilstand, r = t.resultat;
-    if (!r) return h('section', { class: 'res' }, h('h2', {}, 'Resultat'), h('p', { class: 'note' }, 'Modellen kan ikke beregnes – ret fejlene nedenfor.'));
-    const k = r.kombinationer[t.valgtKombination ?? 0]!;
+    const k = r?.kombinationer[t.valgtKombination ?? 0];
+    if (!r || !k) return h('section', { class: 'res' }, h('h2', {}, 'Resultat'), h('p', { class: 'note' }, 'Modellen kan ikke beregnes – ret fejlene nedenfor.'));
     const rk: Brudform[] = k.resultat.brudformer.filter((b) => b.relevant && b.udnyttelse != null);
     return h('section', { class: 'res' },
       h('h2', {}, 'Resultat'),

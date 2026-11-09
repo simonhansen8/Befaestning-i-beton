@@ -29,6 +29,9 @@ test('ny UI: indlæses, regner og reagerer på feltændring', { skip: !fs.exists
     await page.keyboard.press('Tab');
     await page.waitForSelector('.feltfejl');
     assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 250);
+    // boltmønster: vælg 6 bolte, 3 × 2
+    await page.evaluate(() => { const sel = [...document.querySelectorAll('select')].find((q) => [...q.options].some((o) => o.value === 'cirk')); sel.value = '6'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    await page.waitForFunction(() => window.__ny.store.tilstand.model.opstilling.anker.length === 6);
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
