@@ -177,3 +177,26 @@ describe('trækbøjlens ben føres lbd forbi brudkeglen', () => {
     expect(tekster.some((x) => x.startsWith('bukkediameter 48 mm (4⌀)'))).toBe(true);
   });
 });
+
+describe('kantarmering som lukkede bøjler om kantstænger', () => {
+  it('fire kantstænger i bøjlens hjørner, bøjler med dorn og dæklag, afstand a og krav-tekst', () => {
+    const k: any = structuredClone(m);
+    k.beton.kanter.xNeg = 300; k.beton.cnom = 30; k.beton.h = 400;
+    k.beton.armering.kantarmering = 'boejler'; k.beton.armering.kantarmeringDiameter = 12; k.beton.armering.kantarmeringAfstand = 100; k.beton.armering.kantarmeringBredde = 150;
+    const s = byg3d(k, null, null, true, true);
+    const st = s.dele.filter((x) => x.type === 'stang') as any[];
+    const langs = st.filter((x) => x.fra[0] === x.til[0] && x.fra[2] === x.til[2] && x.fra[1] !== x.til[1]); // kantstænger langs y
+    expect(langs).toHaveLength(4);
+    // bøjlerne ligger i planet vinkelret på kanten (konstant y) og alle inden for dæklaget: x ≥ −300 + cnom, z ≤ −cnom
+    const boejle = st.filter((x) => x.fra[1] === x.til[1]);
+    expect(boejle.length).toBeGreaterThan(20);
+    for (const x of boejle) { expect(Math.min(x.fra[0], x.til[0]) - 6).toBeGreaterThanOrEqual(-300 + 30 - 1e-6); expect(Math.max(x.fra[2], x.til[2]) + 6).toBeLessThanOrEqual(-30 + 1e-6); }
+    // bøjlebredde (yderside til yderside) = bs
+    const xs = boejle.flatMap((x) => [x.fra[0], x.til[0]]);
+    expect(Math.max(...xs) - Math.min(...xs) + 12).toBeCloseTo(150, 5);
+    const tekster = s.dele.filter((x) => x.type === 'tekst' || x.type === 'maal').map((x: any) => x.tekst as string);
+    expect(tekster.some((t) => t.includes('bukkediameter 48 mm'))).toBe(true);
+    expect(tekster.some((t) => t.startsWith('a = 100'))).toBe(true);
+    expect(tekster.some((t) => t.includes('a ≤ 100 mm og a ≤ 2·c1') && t.includes('opfyldt'))).toBe(true);
+  });
+});

@@ -789,6 +789,20 @@ export const SEKTIONER: Sektion[] = [
         ref: "EN 1992-4, 7.2.2.5",
       },
       {
+        k: "beton.armering.kantarmeringBredde",
+        hl: "arm.kant",
+        sym: "b<sub>s</sub>",
+        lbl: "Kantbøjlens bredde ind i elementet",
+        unit: "mm",
+        type: "num",
+        min: 20,
+        max: 1000,
+        show: (m: Model) =>
+              m.beton.revnet && m.beton.armering.kantarmering === "boejler",
+        tip: "Kantbøjlens udstrækning vinkelret ind fra kanten (kun tegning; indgår ikke i beregningen). Bøjlen tegnes lukket om fire kantstænger med samme diameter ⌀ som kantstangen, med dorn efter EN 1992-1-1 og dæklag c<sub>nom</sub>.",
+        ref: "EN 1992-4, 7.2.2.5 / EN 1992-1-1, 8.3",
+      },
+      {
         k: "beton.armering.splitArmering",
         hl: "arm.split",
         sym: "",
