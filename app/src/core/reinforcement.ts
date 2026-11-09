@@ -27,6 +27,20 @@ export interface ForskydningsArmering {
 /** Reduktion af forankringslængde ved stor dæklagstykkelse for bøjede stænger (cd > 3Ø). */
 export const forankringsFaktor = (krog: boolean, cd: number | null, d: number): number => (krog && cd != null && cd > 3 * d ? 0.7 : 1);
 
+/** Mindste bukkediameter for bøjler og kroge (EN 1992-1-1, Tabel 8.1N): 4⌀ for ⌀ ≤ 16 mm, ellers 7⌀. */
+export const dornDiameter = (ds: number): number => (ds <= 16 ? 4 : 7) * ds;
+
+export interface ForankringsLaengde { fbd: number; fyd: number; sigmaSd: number; lbRqd: number; lbMin: number; alpha: number; lbd: number }
+/** Forankringslængde uden for brudlegemet (EN 1992-4, 7.2.1.2(2)d / 7.2.2.6 henviser til EN 1992-1-1, 8.4.4):
+ *  lbd = α1·lb,rqd ≥ lb,min = max(0,3·lb,rqd; 10⌀; 100 mm), lb,rqd = ⌀/4·σsd/fbd med σsd = udnyttelsen af armeringen (N_re / V_re) · fyk/γs, højst fyd.
+ *  Forenkling: α2–α5 = 1 (konservativt); α1 = 0,7 for bukkede ender med dæklag > 3⌀ (som i N_a). */
+export function forankringsLaengde(p: { fck: number; eta1: number; ds: number; fyk: number; gammaS: number; krog: boolean; cd: number | null; alphaCt: number; gammaCt: number; udnyttelse?: number | null }): ForankringsLaengde {
+  const b = vedhaeftning({ fck: p.fck, eta1: p.eta1, ds: p.ds, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
+  const fyd = p.fyk / p.gammaS, sigmaSd = fyd * Math.min(1, Math.max(0, p.udnyttelse ?? 1)), lbRqd = (p.ds / 4) * (sigmaSd / b.fbd), alpha = forankringsFaktor(p.krog, p.cd, p.ds);
+  const lbMin = Math.max(0.3 * lbRqd, 10 * p.ds, 100);
+  return { fbd: b.fbd, fyd, sigmaSd, lbRqd, lbMin, alpha, lbd: Math.max(alpha * lbRqd, lbMin) };
+}
+
 // ------------------------------------------------------------------ Træk
 
 export type ManglerT = 'dia-over-16' | 'fyk-over-600' | 'afstand-over-0.75hef' | 'l1-for-kort' | 'intet-ben';
