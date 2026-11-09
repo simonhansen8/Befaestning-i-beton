@@ -1,4 +1,7 @@
 // Produktdata fra europæiske tekniske vurderinger (ETA). Rene tal i N/mm/MPa.
+import { GEVINDAREAL } from './constants';
+import { fckAf } from './concrete';
+import { saetSti } from './sti';
 // Kilde: ETA-19/0601 af 8. september 2025, Hilti HIT-HY 200-A V3 / HIT-HY 200-R V3, gevindstænger (Bilag B2 og C1, 50 års levetid, statisk last).
 
 export const HILTI_HY200V3_ETA = 'ETA-19/0601';
@@ -81,4 +84,18 @@ export function produktFraAnker(anker: Record<string, unknown>): Record<string, 
 /** Stier og værdier til anvendelse; ukendte nøgler ignoreres. */
 export function produktOpdateringer(v: Record<string, unknown>): [string, number | string | null][] {
   return PRODUKTNOEGLER.filter((k) => k in v && (typeof v[k] === 'number' || typeof v[k] === 'string' || v[k] === null)).map((k) => [`anker.${k}`, v[k] as number | string | null]);
+}
+
+/**
+ * Anvender Hilti HIT-HY 200 V3 på en model (indlimet anker): ETA-værdier, gevindareal og ψc efter betonens fck.
+ * Samme vej bruges af brugerfladen og af verifikationstestene.
+ */
+export function anvendHilti(m: Parameters<typeof saetSti>[0], d: Stoerrelse, t: Temperaturomraade, hul: Borehul): ProduktVaerdier {
+  const p = hiltiHY200V3(d, t, hul);
+  for (const [sti, v] of tilOpdateringer(p)) saetSti(m, sti, v);
+  saetSti(m, 'anker.type', 'indlimet');
+  saetSti(m, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
+  saetSti(m, 'anker.gevind', true);
+  saetSti(m, 'anker.psiC', Math.max(1, Math.floor((fckAf((m as any).beton) / 20) ** 0.1 * 100) / 100));
+  return p;
 }

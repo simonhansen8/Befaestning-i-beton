@@ -8,9 +8,7 @@ import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
 import { oversigtForskydning, oversigtTraek } from './arm-oversigt';
-import { hiltiHY200V3, tilOpdateringer, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
-import { GEVINDAREAL } from '../core/constants';
-import { fckAf } from '../core/concrete';
+import { anvendHilti as anvendHiltiModel, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
 import { produktFraAnker, produktOpdateringer } from '../core/produkter';
 import { gemEgetProdukt, laesEgneProdukter, sletEgetProdukt } from './egne-produkter';
 import { snitSvg, type SnitAkse } from './snit';
@@ -275,12 +273,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       h('label', {}, label, ' ', h('select', { onchange: (e: Event) => saet((e.target as HTMLSelectElement).value) },
         ...vaerdier.map(([v, tekst]) => h('option', { value: String(v), selected: v === aktuel }, tekst))));
     const anvendHilti = () => store.aendr((mm) => {
-      const p = hiltiHY200V3(praeset.d, praeset.t, praeset.hul);
-      for (const [sti, v] of tilOpdateringer(p)) saetSti(mm, sti, v);
-      saetSti(mm, 'anker.type', 'indlimet');
-      saetSti(mm, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
-      saetSti(mm, 'anker.gevind', true);
-      saetSti(mm, 'anker.psiC', Math.max(1, Math.floor((fckAf(mm.beton) / 20) ** 0.1 * 100) / 100));
+      anvendHiltiModel(mm, praeset.d, praeset.t, praeset.hul);
     });
     const valgListe: [Valg, string][] = [['ingen', 'Vælg produkt …'], ['hilti', 'Hilti HIT-HY 200 V3 (indlimet, ETA-19/0601)'], ['eget', 'Mine produkter / anden leverandør']];
     const felter: Node[] = [];

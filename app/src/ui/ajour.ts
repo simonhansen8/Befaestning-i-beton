@@ -20,10 +20,17 @@ async function json<T>(url: string): Promise<T | null> {
 
 export async function hentSeneste(): Promise<Hentet | null> {
   let seneste: string | null = null;
+  // API'et først: raw.githubusercontent.com cacher op til fem minutter og kan vise en ældre version end main.
   try {
-    const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/app/VERSION?t=${Date.now()}`);
+    const r = await fetch(`https://api.github.com/repos/${REPO}/contents/app/VERSION?ref=main`, { headers: { Accept: 'application/vnd.github.raw+json' } });
     if (r.ok) seneste = (await r.text()).trim();
-  } catch { /* offline */ }
+  } catch { /* offline eller begrænset */ }
+  if (!seneste) {
+    try {
+      const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/app/VERSION?t=${Date.now()}`);
+      if (r.ok) seneste = (await r.text()).trim();
+    } catch { /* offline */ }
+  }
   if (!seneste) return null;
   const [prs, commits] = await Promise.all([
     json<PrInfo[]>(`https://api.github.com/repos/${REPO}/pulls?state=open&per_page=20`),
