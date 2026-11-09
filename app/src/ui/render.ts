@@ -8,7 +8,7 @@ import type { Store } from './state';
 import { plantegningSvg, PLAN_FORKLARING } from './plantegning';
 import { byg3d } from './model3d';
 import { opret3D, type Kamera, type Scene3D } from './scene3d';
-import { rapportHtml } from './rapport';
+import { rapportHtml, rapportTekst } from './rapport';
 import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
 import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
 import { beregnForslag, type ForslagResultat, type SpecResultat } from '../core/forslag';
@@ -77,6 +77,11 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     ajour.prs.length > 0 && h('div', {}, h('b', {}, `Under udvikling (${ajour.prs.length} åbne PR):`),
       h('ul', {}, ...ajour.prs.map((p) => h('li', {}, h('a', { href: p.html_url, target: '_blank', rel: 'noopener' }, `#${p.number} ${p.title}`), p.draft ? ' (kladde)' : ''))))],
   [h('button', { onclick: () => { void tjekVersion(); } }, 'Tjek igen')]);
+  const kopierRapport = async () => {
+    const t = rapportTekst(store.tilstand.model, store.tilstand.resultat, build);
+    try { await navigator.clipboard.writeText(t); dialog('Rapport kopieret', [h('p', {}, 'Tekstrapporten er kopieret til udklipsholderen.')], []); }
+    catch { dialog('Kopiér rapport', [h('p', {}, 'Kopiering blev afvist af browseren. Markér og kopiér teksten her:'), h('textarea', { readonly: true, rows: 14, style: 'width:100%' }, t)], []); }
+  };
   const draw = () => {
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
@@ -113,6 +118,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           if (w) w.addEventListener('load', () => w.print());
           else { const a = h('a', { href: url, download: 'anker-rapport.html' }); a.click(); }
         } }, 'Rapport'),
+        h('button', { title: 'Kopiér en kort tekstrapport til udklipsholderen', onclick: () => { void kopierRapport(); } }, 'Kopiér rapport'),
         h('button', { onclick: indsaetDialog }, 'Indsæt JSON'),
         h('button', { title: 'Skift mellem system, mørkt og lyst tema', onclick: () => { tema = naesteTema(tema); saetTema(tema); draw(); } }, TEMA_NAVN[tema]),
         h('button', { onclick: omDialog }, 'Om'),

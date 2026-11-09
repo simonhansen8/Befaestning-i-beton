@@ -62,3 +62,22 @@ table{border-collapse:collapse;width:100%;margin:4pt 0;font-size:10pt}th,td{bord
 <h2>Bemærkninger (${unik.length})</h2><ul class="dok">${unik.map((d) => `<li class="${esc(d.niveau)}"><b>${d.niveau === 'fejl' ? 'Fejl' : d.niveau === 'advarsel' ? 'Advarsel' : 'Info'}:</b> ${esc(tekst(d))}${d.paragraf ? ` <span class="meta">(${esc(d.paragraf)})</span>` : ''}</li>`).join('')}</ul>
 </body></html>`;
 }
+
+/** Kort tekstrapport til udklipsholderen (e-mail, noter): konklusion, brudformer pr. lastkombination og bemærkninger. */
+export function rapportTekst(m: Model, r: ProjektResultat | null, build: string, dato = new Date().toISOString().slice(0, 10)): string {
+  const p = m.projekt ?? {};
+  const ud: string[] = [`${p.navn || 'Ankerberegning'}${p.element ? ' – ' + p.element : ''}${p.nr ? ' (nr. ' + p.nr + ')' : ''}`, `Befæstning i beton, DS/EN 1992-4:2018 + DK NA:2024 · build ${build} · ${dato}`, ''];
+  if (!r) return [...ud, 'Modellen kunne ikke beregnes.'].join('\n');
+  ud.push(`${r.ok ? 'OPFYLDT' : r.tilstand === 'fejl' ? 'IKKE EFTERVIST (fejl)' : 'IKKE OPFYLDT'} – største udnyttelse ${proc(r.maksUdnyttelse)}`, '');
+  for (const c of r.kombinationer) {
+    ud.push(`${c.navn}: ${proc(c.maksUdnyttelse)}`);
+    for (const b of c.resultat.brudformer.filter((x) => x.relevant)) {
+      ud.push(`  ${(BRUDFORM[b.id] ?? b.id).padEnd(34)} Ed ${dk(b.Ed / 1e3)} kN  Rd ${dk(b.Rd / 1e3)} kN  ${proc(b.udnyttelse)}${b.id === c.styrendeBrudform ? '  ← styrende' : ''}`);
+    }
+    ud.push('');
+  }
+  const bem = [...r.diagnostik, ...r.kombinationer.flatMap((c) => c.diagnostik)];
+  const unik = [...new Set(bem.filter((d) => d.niveau !== 'info').map((d) => `${d.niveau === 'fejl' ? 'Fejl' : 'Advarsel'}: ${tekst(d)}`))];
+  if (unik.length) ud.push('Bemærkninger:', ...unik.map((u) => '  - ' + u));
+  return ud.join('\n');
+}

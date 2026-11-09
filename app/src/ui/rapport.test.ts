@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rapportHtml, esc } from './rapport';
+import { rapportHtml, rapportTekst, esc } from './rapport';
 import { Store } from './state';
 import { standardModel } from '../core/indlaes';
 
@@ -25,5 +25,12 @@ describe('rapport', () => {
   });
   it('kan lave rapport uden resultat', () => {
     expect(rapportHtml(s.tilstand.model, null, 'x')).toContain('kunne ikke beregnes');
+  });
+  it('tekstrapport har konklusion, kombinationer og styrende brudform', () => {
+    const t = rapportTekst(s.tilstand.model, s.tilstand.resultat, 'b1', '2026-01-01');
+    expect(t).toMatch(/OPFYLDT|IKKE/);
+    for (const l of s.tilstand.model.laster) expect(t).toContain(l.navn);
+    expect(t).toContain('← styrende');
+    expect(rapportTekst(s.tilstand.model, null, 'b1')).toContain('kunne ikke beregnes');
   });
 });
