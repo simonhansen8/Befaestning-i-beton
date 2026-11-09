@@ -25,11 +25,13 @@ export type ManglerT = 'dia-over-16' | 'fyk-over-600' | 'afstand-over-0.75hef' |
 export interface ArmeringT {
   aktiv: boolean; virksom: boolean; mangler: ManglerT[];
   l1: number; l1Liste: number[]; l1min: number; rad: number; ben: number;
+  /** Antal bøjler pr. anker i alt og hvor mange der ikke regnes med (l1 < minimum). */
+  antalBoejler: number; ikkeVirksomme: number;
 }
 
 /** Virkning af ankerarmering for træk: forankringslængder l1 af hver bøjle (35°-kegle) og krav iht. 7.2.1.2(2). */
 export function armeringTraekVirkning(ar: TraekArmering, hef: number, ankerD: number): ArmeringT {
-  if (!ar.aktiv) return { aktiv: false, virksom: false, mangler: [], l1: 0, l1Liste: [], l1min: 0, rad: 0, ben: 0 };
+  if (!ar.aktiv) return { aktiv: false, virksom: false, mangler: [], l1: 0, l1Liste: [], l1min: 0, rad: 0, ben: 0, antalBoejler: 0, ikkeVirksomme: 0 };
   const p = ar.diameter || 12;
   const n = 2 * ar.antalBoejler;
   const x = ar.afstand;
@@ -48,7 +50,7 @@ export function armeringTraekVirkning(ar: TraekArmering, hef: number, ankerD: nu
   if (!radOk) mangler.push('afstand-over-0.75hef');
   if (l1 < l1min) mangler.push('l1-for-kort');
   if (!(ar.antalBoejler >= 1)) mangler.push('intet-ben');
-  return { aktiv: true, virksom: mangler.length === 0, mangler, l1, l1Liste: a, l1min, rad, ben: 2 * a.length };
+  return { aktiv: true, virksom: mangler.length === 0, mangler, l1, l1Liste: a, l1min, rad, ben: 2 * a.length, antalBoejler: alle.length, ikkeVirksomme: alle.length - virkListe.filter(Boolean).length };
 }
 
 export interface TraekArmeringInput {
