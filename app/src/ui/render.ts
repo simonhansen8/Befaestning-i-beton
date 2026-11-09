@@ -138,8 +138,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
           const html = rapportHtml(store.tilstand.model, store.tilstand.resultat, build);
           const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
           const w = window.open(url, '_blank');
-          if (w) w.addEventListener('load', () => w.print());
-          else { const a = h('a', { href: url, download: 'anker-rapport.html' }); a.click(); }
+          if (!w) { const a = h('a', { href: url, download: 'anker-rapport.html' }); a.click(); }
         } }, 'Rapport'),
         h('button', { title: 'Kopiér en kort tekstrapport til udklipsholderen', onclick: () => { void kopierRapport(); } }, 'Kopiér rapport'),
         h('button', { onclick: indsaetDialog }, 'Indsæt JSON'),

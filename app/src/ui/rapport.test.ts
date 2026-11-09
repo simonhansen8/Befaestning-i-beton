@@ -23,6 +23,15 @@ describe('rapport', () => {
     expect(html).toContain('Effektiv forankringsdybde');
     expect(html).toContain('C30/37');
   });
+  it('ligninger medtages kun efter valg og når beregningssporet findes', () => {
+    const detalje = (id: string) => ({ id, titel: 'Prøvetitel ' + id, ref: 'EN 1992-4, 7.x', trin: [{ s: 'Trinbeskrivelse', f: 'N<sub>Rk</sub> = k · √f<sub>ck</sub>', v: '= 12,3 kN' }], noter: [] });
+    const med = rapportHtml(s.tilstand.model, s.tilstand.resultat, 'x', '2026-01-01', { ligninger: true, detalje });
+    const uden = rapportHtml(s.tilstand.model, s.tilstand.resultat, 'x', '2026-01-01', { ligninger: false, detalje });
+    expect(med).toContain('Trinbeskrivelse');
+    expect(med).toContain('N<sub>Rk</sub> = k');
+    expect(uden).not.toContain('Trinbeskrivelse');
+    expect(rapportHtml(s.tilstand.model, s.tilstand.resultat, 'x', '2026-01-01', { ligninger: true })).not.toContain('class="ligning"');
+  });
   it('kan lave rapport uden resultat', () => {
     expect(rapportHtml(s.tilstand.model, null, 'x')).toContain('kunne ikke beregnes');
   });
