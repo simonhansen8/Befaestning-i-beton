@@ -4,6 +4,17 @@ import { byg3d } from './model3d';
 
 const m: any = structuredClone(standardModel('2026-01-01'));
 describe('3D-beskrivelse', () => {
+  it('tegner bøjler som tre stænger pr. bøjle og en hef-målelinje', () => {
+    const i: any = structuredClone(m);
+    const n = i.opstilling.anker.length;
+    expect(byg3d(i, null, null).dele.filter((x) => x.type === 'stang')).toHaveLength(0);
+    i.beton.armering.ankerarmeringTraek = { ...i.beton.armering.ankerarmeringTraek, aktiv: true, antalBoejler: 2, diameter: 12, afstand: 50, daeklagTop: 40 };
+    const s = byg3d(i, null, null);
+    expect(s.dele.filter((x) => x.type === 'stang')).toHaveLength(n * 2 * 3);
+    expect(s.forklaring.some((f) => f.tekst === 'Armering')).toBe(true);
+    const maal: any = s.dele.find((x) => x.type === 'maal');
+    expect(maal.tekst).toBe(`hef = ${i.anker.hef} mm`);
+  });
   it('har beton, plade og skaft/hoved/møtrik pr. bolt', () => {
     const s = byg3d(m, null, null);
     const n = m.opstilling.anker.length;

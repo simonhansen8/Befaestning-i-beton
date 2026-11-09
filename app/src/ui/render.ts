@@ -302,7 +302,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       sek.append(
         h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn))),
         scene3d.element,
-        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
+        h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
         h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
     } catch {
       sek.append(h('p', { class: 'note' }, '3D-visning kræver WebGL, som ikke er tilgængelig i denne browser.'));

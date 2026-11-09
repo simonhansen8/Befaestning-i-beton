@@ -8,6 +8,8 @@ export interface Udstraekning { x0: number; x1: number; y0: number; y1: number; 
 export type Del =
   | { type: 'boks'; rolle: 'beton' | 'plade'; x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; afbrudt?: boolean }
   | { type: 'cyl'; rolle: 'skaft' | 'hoved' | 'moerik' | 'moertel'; x: number; y: number; z0: number; z1: number; r: number; sider: number; ankerId: number }
+  | { type: 'stang'; rolle: 'armering'; fra: [number, number, number]; til: [number, number, number]; r: number }
+  | { type: 'maal'; fra: [number, number, number]; til: [number, number, number]; tekst: string }
   | { type: 'pil'; rolle: 'last'; fra: [number, number, number]; til: [number, number, number]; tekst: string }
   | { type: 'bue'; rolle: 'last'; centrum: [number, number, number]; akse: 'x' | 'y' | 'z'; radius: number; fortegn: 1 | -1; tekst: string; vinkel: number };
 
@@ -38,6 +40,36 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
     }
     dele.push({ type: 'cyl', rolle: 'moertel', x: q.x, y: q.y, z0: topZ, z1: topZ + 0.8 * d, r: 0.95 * d, sider: 6, ankerId: q.id });
   }
+  // ankerarmering for træk: bøjler (to ben) rundt om hvert anker, afvekslende langs x og y
+  const at = be.armering?.ankerarmeringTraek;
+  if (at?.aktiv) {
+    const r = (at.diameter || 12) / 2, bund = -(at.forankringsdybde ?? hef), top = -(at.daeklagTop ?? 40);
+    for (const q of ankre) {
+      for (let i = 0; i < Math.max(1, at.antalBoejler ?? 1); i++) {
+        const langsX = i % 2 === 0, o = at.afstand + Math.floor(i / 2) * 2 * r * 2;
+        const [ax, ay] = langsX ? [0, 1] : [1, 0];
+        const ben = (fortegn: number): [number, number, number][] => [[q.x + fortegn * o * ax, q.y + fortegn * o * ay, top], [q.x + fortegn * o * ax, q.y + fortegn * o * ay, bund]];
+        const [a1, a2] = ben(1) as [[number, number, number], [number, number, number]], [b1, b2] = ben(-1) as [[number, number, number], [number, number, number]];
+        dele.push({ type: 'stang', rolle: 'armering', fra: a1, til: a2, r }, { type: 'stang', rolle: 'armering', fra: b1, til: b2, r }, { type: 'stang', rolle: 'armering', fra: a2, til: b2, r });
+      }
+    }
+  }
+  // kantarmering (bøjler langs frie kanter), vist som stænger med valgt afstand
+  if (be.armering?.kantarmering === 'boejler' && be.armering.kantarmeringDiameter) {
+    const dk2 = be.armering.kantarmeringDiameter / 2, c = be.cnom ?? 30;
+    for (const [kant, k] of [['xNeg', 'x0'], ['xPos', 'x1']] as const) {
+      if (!fri(kant)) continue;
+      const x = k === 'x0' ? x0 + c : x1 - c;
+      dele.push({ type: 'stang', rolle: 'armering', fra: [x, y0 + c, -dybde + c], til: [x, y1 - c, -dybde + c], r: dk2 }, { type: 'stang', rolle: 'armering', fra: [x, y0 + c, -c], til: [x, y1 - c, -c], r: dk2 });
+    }
+    for (const [kant, k] of [['yNeg', 'y0'], ['yPos', 'y1']] as const) {
+      if (!fri(kant)) continue;
+      const y = k === 'y0' ? y0 + c : y1 - c;
+      dele.push({ type: 'stang', rolle: 'armering', fra: [x0 + c, y, -dybde + c], til: [x1 - c, y, -dybde + c], r: dk2 }, { type: 'stang', rolle: 'armering', fra: [x0 + c, y, -c], til: [x1 - c, y, -c], r: dk2 });
+    }
+  }
+  // målelinje: effektiv forankringsdybde
+  if (ankre.length) { const q = ankre[0]!; dele.push({ type: 'maal', fra: [q.x + 1.6 * d, q.y, -hef], til: [q.x + 1.6 * d, q.y, 0], tekst: `hef = ${dk(hef, 0)} mm` }); }
   const udst: Udstraekning = { x0, x1, y0, y1, z0: -dybde, z1: topZ + 2 * d };
   const stoerrelse = Math.max(x1 - x0, y1 - y0, dybde);
   // laster
@@ -58,7 +90,8 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   const forklaring = [
     { farve: 'beton', tekst: be.revnet ? 'Beton (revnet)' : 'Beton (urevnet)' },
     { farve: 'staal', tekst: indstoebt ? 'Bolt med hoved' : 'Indlimet gevindstang' },
-    ...(dele.some((x) => x.rolle === 'last') ? [{ farve: 'last', tekst: 'Laster' }] : []),
+    ...(dele.some((x) => x.type === 'stang') ? [{ farve: 'armering', tekst: 'Armering' }] : []),
+    ...(dele.some((x) => x.type === 'pil' || x.type === 'bue') ? [{ farve: 'last', tekst: 'Laster' }] : []),
   ];
   return { dele, udstraekning: udst, stoerrelse, forklaring };
 }

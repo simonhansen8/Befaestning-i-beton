@@ -5,7 +5,7 @@ import { CSS2DObject, CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRe
 import type { Del, Scene3DBeskrivelse } from './model3d';
 
 export type Kamera = 'iso' | 'top' | 'front' | 'side';
-const FARVE = { beton: 0xaab0ba, plade: 0x6e7684, staal: 0x2c323b, last: 0x7c3aed, akse: 0x667085 };
+const FARVE = { beton: 0xaab0ba, plade: 0x6e7684, staal: 0x2c323b, last: 0x7c3aed, arm: 0xb45309, akse: 0x667085 };
 
 // model (x, y, z op) → three (x, y op, z mod dig)
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, z, -y);
@@ -107,6 +107,18 @@ export function opret3D(): Scene3D {
       if (d.sider === 4) mesh.rotation.y = Math.PI / 4;
       mesh.position.copy(v(d.x, d.y, (d.z0 + d.z1) / 2));
       g.add(mesh);
+    } else if (d.type === 'stang') {
+      const a = v(...d.fra), b = v(...d.til), len = a.distanceTo(b);
+      if (len > 1e-6) {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(d.r, d.r, len, 10), new THREE.MeshStandardMaterial({ color: FARVE.arm, roughness: 0.5 }));
+        m.position.copy(a.clone().add(b).multiplyScalar(0.5));
+        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+        g.add(m);
+      }
+    } else if (d.type === 'maal') {
+      const a = v(...d.fra), b = v(...d.til);
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), new THREE.LineBasicMaterial({ color: FARVE.akse, depthTest: false })));
+      const e = etiket(d.tekst, 'etiket3d maal'); e.position.copy(a.clone().add(b).multiplyScalar(0.5)); g.add(e);
     } else if (d.type === 'pil') {
       g.add(pil(v(...d.fra), v(...d.til), FARVE.last, s * 0.004));
       const e = etiket(d.tekst, 'etiket3d last'); e.position.copy(v(...d.til)); g.add(e);
@@ -130,7 +142,7 @@ export function opret3D(): Scene3D {
     beskrivelse = b;
     scene.remove(indhold);
     indhold.traverse((o) => {
-      if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); }
+      if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments || o instanceof THREE.Line) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); }
       if (o instanceof CSS2DObject) o.element.remove();
     });
     indhold = new THREE.Group();
