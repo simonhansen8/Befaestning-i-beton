@@ -10,6 +10,13 @@ const FARVE = { beton: 0xaab0ba, plade: 0x6e7684, staal: 0x2c323b, last: 0x7c3ae
 // model (x, y, z op) → three (x, y op, z mod dig)
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, z, -y);
 
+export interface Scene3DValg {
+  /** null hvis målet kan rettes; ellers en forklaring (vises som tooltip). */
+  kanRettes?: (felt: string) => string | null;
+  /** Anvender ny værdi; returnerer false, hvis den afvises. */
+  ret?: (felt: string, vaerdi: number) => boolean;
+}
+
 export interface Scene3D {
   element: HTMLElement;
   opdater(b: Scene3DBeskrivelse): void;
@@ -62,7 +69,7 @@ function bue(centrum: THREE.Vector3, akse: 'x' | 'y' | 'z', radius: number, fort
   return g;
 }
 
-export function opret3D(): Scene3D {
+export function opret3D(valg: Scene3DValg = {}): Scene3D {
   const element = document.createElement('div');
   element.className = 'scene3d';
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: false });
@@ -90,6 +97,34 @@ export function opret3D(): Scene3D {
   };
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(tilpas) : null;
   ro?.observe(element);
+
+  /** Klik på et mål åbner et indtastningsfelt; Enter anvender, Esc eller klik udenfor fortryder. */
+  function goerRedigerbar(el: HTMLElement, tekst: string, felt: string, vaerdi: number) {
+    const hvorfor = valg.kanRettes?.(felt) ?? null;
+    el.classList.add(hvorfor ? 'laast' : 'redigerbar');
+    el.title = hvorfor ?? 'Klik for at rette målet';
+    if (hvorfor) return;
+    for (const ev of ['pointerdown', 'mousedown', 'touchstart']) el.addEventListener(ev, (e) => e.stopPropagation());
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (el.querySelector('input')) return;
+      const navn = tekst.split(' = ')[0]!;
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.inputMode = 'decimal'; inp.value = String(Math.round(vaerdi * 10) / 10).replace('.', ',');
+      inp.size = 6; inp.className = 'maalinput'; inp.setAttribute('aria-label', `Ret ${navn} i mm`);
+      const gendan = () => { el.textContent = tekst; };
+      inp.addEventListener('keydown', (k) => {
+        k.stopPropagation();
+        if (k.key === 'Escape') gendan();
+        else if (k.key === 'Enter') {
+          const v = Number(inp.value.replace(',', '.'));
+          if (!valg.ret?.(felt, v)) { inp.classList.add('ugyldig'); inp.title = 'Ugyldig værdi'; }
+        }
+      });
+      inp.addEventListener('blur', gendan);
+      el.textContent = `${navn} = `; el.append(inp, ' mm'); inp.focus(); inp.select();
+    });
+  }
 
   function tilfoej(d: Del, g: THREE.Group, s: number) {
     if (d.type === 'boks') {
@@ -140,6 +175,7 @@ export function opret3D(): Scene3D {
         for (const p of [a, b]) g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p.clone().sub(perp), p.clone().add(perp)]), new THREE.LineBasicMaterial({ color: FARVE.akse, depthTest: false })));
       }
       const e = etiket(d.tekst, 'etiket3d maal'); e.position.copy(a.clone().add(b).multiplyScalar(0.5)); g.add(e);
+      if (d.felt && d.vaerdi != null && valg.ret) goerRedigerbar(e.element, d.tekst, d.felt, d.vaerdi);
     } else if (d.type === 'pil') {
       g.add(pil(v(...d.fra), v(...d.til), FARVE.last, s * 0.004));
       const e = etiket(d.tekst, 'etiket3d last'); e.position.copy(v(...d.til)); g.add(e);

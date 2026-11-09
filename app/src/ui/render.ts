@@ -13,6 +13,7 @@ import { fckAf } from '../core/concrete';
 import { produktFraAnker, produktOpdateringer } from '../core/produkter';
 import { gemEgetProdukt, laesEgneProdukter, sletEgetProdukt } from './egne-produkter';
 import { snitSvg, type SnitAkse } from './snit';
+import { anvendMaal, maalRedigerbarhed } from './maal-redigering';
 import { opret3D, type Kamera, type Scene3D } from './scene3d';
 import { rapportHtml, rapportTekst } from './rapport';
 import { genererAnkre, MOENSTRE, type MoensterParam } from '../core/opstilling';
@@ -351,6 +352,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let scene3d: Scene3D | null = null;
   let visBrud = false;
   let visMaal = true;
+  let visLast = true;
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
 
   function tegning(): HTMLElement {
@@ -370,14 +372,21 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       return sek;
     }
     try {
-      scene3d ??= opret3D();
-      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal);
+      scene3d ??= opret3D({
+        kanRettes: (felt) => { const r = maalRedigerbarhed(store.tilstand.model, felt); return r.ok ? null : r.hvorfor; },
+        ret: (felt, v) => {
+          if (!anvendMaal(structuredClone(store.tilstand.model), felt, v)) return false;
+          store.aendr((mm) => { anvendMaal(mm, felt, v); });
+          return true;
+        },
+      });
+      const b = byg3d(t.model, k, kom ? { ...kom.last } as unknown as Record<string, number> : null, visBrud, visMaal, visLast);
       scene3d.opdater(b);
       sek.append(
-        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
+        h('div', { class: 'visningsvalg' }, ...KAMERAER.map(([id, navn]) => h('button', { 'data-kamera': id, onclick: () => scene3d!.saetKamera(id) }, navn)), h('button', { class: visLast ? 'aktiv' : '', 'data-kraefter': '1', onclick: () => { visLast = !visLast; draw(); } }, 'Kræfter'), h('button', { class: visMaal ? 'aktiv' : '', 'data-maal': '1', onclick: () => { visMaal = !visMaal; draw(); } }, 'Mål'), h('button', { class: visBrud ? 'aktiv' : '', 'data-brud': '1', onclick: () => { visBrud = !visBrud; draw(); } }, 'Brudlegeme')),
         scene3d.element,
         h('div', { class: 'forklaring3d' }, ...b.forklaring.map((f) => h('span', {}, h('i', { style: `background:${({ beton: '#aab0ba', staal: '#2c323b', last: '#7c3aed', plade: '#6e7684', armering: '#b45309', brud: '#dc2626' } as Record<string, string>)[f.farve] ?? '#888'}` }), f.tekst))),
-        h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
+        h('p', { class: 'note' }, 'Træk for at dreje, scroll for at zoome. Klik på et mål for at rette det (Enter anvender, Esc fortryder). Betonen er gennemsigtig; lasterne er vist med deres fortegn.'));
     } catch {
       sek.append(h('p', { class: 'note' }, '3D-visning kræver WebGL, som ikke er tilgængelig i denne browser.'));
     }

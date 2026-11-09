@@ -154,3 +154,31 @@ test('ny UI: eget produkt kan gemmes og anvendes igen', { skip: !fs.existsSync(D
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
+
+test('ny UI: mål kan rettes ved klik i 3D, og kræfter kan skjules', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch({ ...LAUNCH, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  try {
+    const page = await browser.newPage();
+    const fejl = [];
+    page.on('pageerror', (e) => fejl.push(String(e)));
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.click('[data-view="3d"]');
+    await page.waitForSelector('.etiket3d.last');
+    await page.click('[data-kraefter="1"]');
+    await page.waitForSelector('.scene3d canvas');
+    assert.equal(await page.locator('.etiket3d.last').count(), 0);
+    await page.click('[data-kraefter="1"]');
+    await page.waitForSelector('.etiket3d.last');
+    await page.locator('.etiket3d.redigerbar', { hasText: 'hef' }).click();
+    await page.fill('input.maalinput', '220');
+    await page.press('input.maalinput', 'Enter');
+    await page.waitForFunction(() => window.__ny.store.tilstand.model.anker.hef === 220);
+    // ugyldig værdi ændrer ikke modellen
+    await page.locator('.etiket3d.redigerbar', { hasText: 'hef' }).click();
+    await page.fill('input.maalinput', 'abc');
+    await page.press('input.maalinput', 'Enter');
+    assert.equal(await page.evaluate(() => window.__ny.store.tilstand.model.anker.hef), 220);
+    assert.deepEqual(fejl, []);
+  } finally { await browser.close(); }
+});
