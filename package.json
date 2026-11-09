@@ -8,7 +8,8 @@
     "golden:generate": "node golden/generate.mjs",
     "build": "vite build --config app/vite.config.ts",
     "typecheck": "tsc --noEmit -p app/tsconfig.json",
-    "unit": "vitest run --config app/vite.config.ts"
+    "unit": "vitest run --config app/vite.config.ts",
+    "sporbarhed": "SKRIV_SPORBARHED=1 vitest run --config app/vite.config.ts sporbarhed"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
