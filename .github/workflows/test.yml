@@ -14,6 +14,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run unit
       - run: npm run build
+      - name: index.html i roden er ajour med app/
+        run: npm run publicer -- --tjek
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - name: Uafhængig reference (Python) er uændret
