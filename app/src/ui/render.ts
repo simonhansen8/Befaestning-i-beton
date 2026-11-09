@@ -93,10 +93,16 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
     const aktivt = document.activeElement as HTMLElement | null;
     const fokus = aktivt?.dataset?.felt;
     const sel = aktivt instanceof HTMLInputElement ? [aktivt.selectionStart, aktivt.selectionEnd] : null;
+    // Bevar rulleposition (side og resultatpanel), så en rettelse ikke hopper til toppen
+    const sideX = window.scrollX, sideY = window.scrollY;
+    const outputTop = rod.querySelector('.output')?.scrollTop ?? 0;
     rod.replaceChildren(topbar(), h('main', { class: 'layout' }, h('div', { class: 'input' }, ...sektioner()), h('div', { class: 'output' }, resultat(), ...(store.tilstand.resultat && !store.tilstand.resultat.ok && store.tilstand.resultat.kombinationer.length ? [forslagSektion()] : []), tegning(), diagnostik())));
+    const nyOutput = rod.querySelector('.output');
+    if (nyOutput) nyOutput.scrollTop = outputTop;
+    window.scrollTo(sideX, sideY);
     if (fokus) {
       const n = rod.querySelector<HTMLElement>(`[data-felt="${CSS.escape(fokus)}"]`);
-      n?.focus();
+      n?.focus({ preventScroll: true });
       if (n instanceof HTMLInputElement && sel && sel[0] != null) n.setSelectionRange(sel[0], sel[1] ?? sel[0]);
     }
   };

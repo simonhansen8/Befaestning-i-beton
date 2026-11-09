@@ -187,3 +187,23 @@ test('ny UI: mål kan rettes ved klik i 3D, og kræfter kan skjules', { skip: !f
     assert.deepEqual(fejl, []);
   } finally { await browser.close(); }
 });
+
+test('ny UI: rulleposition og 3D-kamera bevares ved rettelser', { skip: !fs.existsSync(DIST) && 'index.html mangler' }, async () => {
+  const browser = await chromium.launch({ ...LAUNCH, args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1300, height: 500 } });
+    await page.goto(pathToFileURL(DIST).href);
+    await page.waitForSelector('.hoved');
+    await page.click('[data-view="3d"]');
+    await page.waitForSelector('.etiket3d');
+    await page.evaluate(() => { window.scrollTo(0, 250); document.querySelector('.output').scrollTop = 120; });
+    const foer = await page.evaluate(() => [window.scrollY, document.querySelector('.output').scrollTop]);
+    assert.ok(foer[0] > 0 || foer[1] > 0, 'siden kan rulles i testen');
+    for (const v of [200, 210]) {
+      await page.evaluate((x) => window.__ny.store.aendr((m) => { m.anker.hef = x; }), v);
+      await page.waitForFunction((x) => window.__ny.store.tilstand.model.anker.hef === x, v);
+      const efter = await page.evaluate(() => [window.scrollY, document.querySelector('.output').scrollTop]);
+      assert.deepEqual(efter, foer);
+    }
+  } finally { await browser.close(); }
+});
