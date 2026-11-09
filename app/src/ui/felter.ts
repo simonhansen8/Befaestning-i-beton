@@ -422,7 +422,13 @@ export const SEKTIONER: Sektion[] = [
         nullable: true,
         adv: true,
         verify: (m: Model) => (erIndstoebt(m) ? "V6" : null),
-        std: (m: Model) => (erIndstoebt(m) ? stdTekst(2 * m.anker.hef) : "EAD-udtryk"),
+        std: (m: Model) => {
+          if (erIndstoebt(m)) return stdTekst(2 * m.anker.hef);
+          const hef = m.anker.hef, hh = m.beton.h;
+          if (!(hef > 0) || !(hh > 0)) return "EAD-udtryk";
+          const r = hh / hef;
+          return stdTekst(r >= 2 ? hef : r > 1.3 ? 4.6 * hef - 1.8 * hh : 2.26 * hef);
+        },
         tip: "Fra ETA/produktdata. Indstøbt uden ETA: 2,0·h<sub>ef</sub> (ingeniørskøn – skal verificeres).",
         ref: "EN 1992-4, 7.2.1.7",
       },

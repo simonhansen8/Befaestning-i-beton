@@ -37,7 +37,7 @@ const TAU_UCR_VAND: Record<Temperaturomraade, number[]> = {
 const PSI0_SUS: Record<Temperaturomraade, number> = { I: 0.8, II: 0.89, III: 0.72 };
 
 export interface ProduktVaerdier {
-  produkt: string; d: number; d0: number; hefMin: number; hefMax: number; smin: number; cmin: number;
+  produkt: string; d: number; d0: number; hefMin: number; hefMax: number; smin: number; cmin: number; dnom: number; k7: number; k8: number;
   tauRkCr: number; tauRkUcr: number; psi0Sus: number; kcrN: number; kucrN: number; gammaInst: number;
 }
 
@@ -45,7 +45,7 @@ export function hiltiHY200V3(d: Stoerrelse, t: Temperaturomraade, hul: Borehul):
   const k = i(d), vand = hul === 'vandfyldt';
   return {
     produkt: `Hilti HIT-HY 200 V3 · ${HILTI_HY200V3_ETA}`,
-    d, d0: D0[k]!, hefMin: HEF_MIN[k]!, hefMax: HEF_MAX[k]!, smin: SMIN[k]!, cmin: CMIN[k]!,
+    d, d0: D0[k]!, hefMin: HEF_MIN[k]!, hefMax: HEF_MAX[k]!, smin: SMIN[k]!, cmin: CMIN[k]!, dnom: d, k7: 1.0, k8: 2.0,
     tauRkCr: (vand ? TAU_CR_VAND : TAU_CR_TOERT)[t][k]!,
     tauRkUcr: vand ? TAU_UCR_VAND[t][k]! : TAU_UCR_TOERT[t],
     psi0Sus: PSI0_SUS[t], kcrN: 7.7, kucrN: 11, gammaInst: vand ? 1.4 : 1.0,

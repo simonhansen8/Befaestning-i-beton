@@ -31,3 +31,15 @@ describe('egne produkter', () => {
     expect(PRODUKTNOEGLER).not.toContain('hef' as never);
   });
 });
+
+describe('ETA-givne værdier følger produktet', () => {
+  it('Hilti sætter dnom = d, k7 = 1,0 og k8 = 2,0 og gemmes i egne produkter', () => {
+    for (const d of STOERRELSER) {
+      const p = hiltiHY200V3(d, 'I', 'toert-vaadt');
+      expect(p.dnom).toBe(d); expect(p.k7).toBe(1); expect(p.k8).toBe(2);
+      const stier = tilOpdateringer(p).map(([s]) => s);
+      expect(stier).toEqual(expect.arrayContaining(['anker.dnom', 'anker.k7', 'anker.k8', 'anker.smin', 'anker.cmin']));
+      for (const k of ['dnom', 'k7', 'k8', 'smin', 'cmin']) expect(PRODUKTNOEGLER).toContain(k);
+    }
+  });
+});

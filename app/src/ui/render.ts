@@ -154,13 +154,16 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       store.tilstand.afvist.length > 0 && h('div', { class: 'advarselbanner' }, `${store.tilstand.afvist.length} værdier blev afvist ved indlæsning (standardværdi brugt): ${store.tilstand.afvist.map((a) => a.felt).join(', ')}`));
   }
 
+  const ETA_FELTER = new Set(['anker.cmin', 'anker.smin', 'anker.hmin', 'anker.dnom', 'anker.ccrN', 'anker.ccrSp', 'anker.k7', 'anker.k8']);
+  const erEtaProdukt = (m: Model) => typeof m.anker.produkt === 'string' && m.anker.produkt.includes('ETA');
   function felt(f: FeltDef, m: Model): HTMLElement | null {
     if (f.show && !f.show(m)) return null;
     if (f.adv && !avanceret) return null;
     const v = laesSti(m, f.k);
     const fejl = store.tilstand.feltfejl[f.k];
     const dis = f.disabled?.(m) ?? null;
-    const std = f.std && (v == null || v === '') ? f.std(m) : '';
+    let std = f.std && (v == null || v === '') ? f.std(m) : '';
+    if (std && erEtaProdukt(m) && ETA_FELTER.has(f.k)) std = std.replace(/^std\./, 'ETA');
     let ind: HTMLElement;
     if (f.type === 'switch') {
       ind = h('input', { type: 'checkbox', 'data-felt': f.k, checked: v === true, disabled: !!dis, onchange: (e: Event) => store.saetFelt(f, (e.target as HTMLInputElement).checked) });
