@@ -120,7 +120,7 @@ export function brudlegemer(id: string, c: BrudKontekst, set = new Set<string>()
       ud.push(...kegler(traek, 1.5 * T, T));
       break;
     }
-    case 'V_re': case 'V_a': {
+    case 'V_re': case 'V_a': case 'V_ek': {
       const kant = k.armKant?.kant, fr = kant ? k.kantbrud.forreste[kant] : null;
       if (kant && fr) ud.push(...kil(c, kant, fr.ankre, fr.R.c1));
       break;

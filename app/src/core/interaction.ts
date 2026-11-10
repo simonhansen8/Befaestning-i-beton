@@ -41,7 +41,7 @@ export interface BetonInteraktion {
 /** NV_c / NV_re (7.55, 7.56, 7.57). `poster` er alle øvrige brudformers udnyttelser. */
 export function interaktionBeton(poster: Udnyttelsespost[], tilfaelde: ArmeringsTilfaelde, valg: 'gunstigst' | 'potens' | 'lineaer', k11: number): BetonInteraktion {
   const traek = tilfaelde === 'begge' || tilfaelde === 'traek' ? ['N_p', 'N_sp', 'N_cb', 'N_re', 'N_a', 'N_cre'] : ['N_p', 'N_c', 'N_sp', 'N_cb'];
-  const forsk = tilfaelde === 'begge' ? ['V_cp', 'V_c', 'V_re', 'V_a'] : tilfaelde === 'traek' ? ['V_c', 'V_cp'] : tilfaelde === 'forskydning' ? ['V_cp', 'V_re', 'V_a', 'V_c'] : ['V_cp', 'V_c'];
+  const forsk = tilfaelde === 'begge' ? ['V_cp', 'V_c', 'V_re', 'V_a', 'V_ek'] : tilfaelde === 'traek' ? ['V_c', 'V_cp'] : tilfaelde === 'forskydning' ? ['V_cp', 'V_re', 'V_a', 'V_ek', 'V_c'] : ['V_cp', 'V_c'];
   const a = stoerste(poster, traek), l = stoerste(poster, forsk);
   const c = a.beta, u = l.beta;
   const base = { betaN: c, betaV: u, styrendeTraek: a.kilde, styrendeForskydning: l.kilde };

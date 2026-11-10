@@ -176,6 +176,8 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
     eta1: r(`${fv}.eta1`, G.eta1, null, { gt: 0, max: 1, nullable: true, krit: O }),
     cd: r(`${fv}.cd`, G.cd, null, { min: 0, nullable: true, krit: false }),
     bekraeftKantstang: boolsk(G.bekraeftKantstang, false),
+    kantstangDiameter: r(`${fv}.kantstangDiameter`, G.kantstangDiameter, null, { gt: 0, nullable: true, krit: false }),
+    trykstiverVinkel: r(`${fv}.trykstiverVinkel`, G.trykstiverVinkel, 45, { gt: 0, max: 90, krit: false }),
     afstandBoejler: r(`${fv}.afstandBoejler`, G.afstandBoejler, null, { gt: 0, nullable: true, krit: false }),
   };
   if (forsk.benPrAnker == null && forsk.antalBenIAlt == null) forsk.benPrAnker = 2;

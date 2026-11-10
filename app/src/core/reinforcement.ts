@@ -28,6 +28,10 @@ export interface ForskydningsArmering {
   afstandBoejler?: number | null;
   /** Brugerens bekræftelse af 7.2.2.2(3)f): kantstang langs kanten er dimensioneret med trykstivere (45°). Kun overfladearmering. */
   bekraeftKantstang?: boolean;
+  /** Kantstang langs kanten (fig. 7.10 a), kun overfladearmering: diameter (mm). null = ikke angivet, så kantstangen eftervises ikke (kræver bekræftelse). */
+  kantstangDiameter?: number | null;
+  /** Trykstivernes vinkel fra belastningsretningen (vinkelret på kanten), °. Standard 45° (7.2.2.2(3)f). */
+  trykstiverVinkel?: number | null;
 }
 
 /** Reduktion af forankringslængde ved stor dæklagstykkelse for bøjede stænger (cd > 3Ø). */
@@ -229,7 +233,7 @@ export interface ForskydningsArmeringInput {
   /** Basisfordeling (alle ankre) af forskydning. */
   fordeling: ForskydningsFordeling; ankre: Anker[];
 }
-export interface ForskydningsArmeringResultat { V_re: Eftervisning; V_a: Eftervisning }
+export interface ForskydningsArmeringResultat { V_re: Eftervisning; V_a: Eftervisning; V_ek?: Eftervisning }
 
 /** V_re (flydning af armering inkl. excentricitet) og V_a (forankring, kun overfladearmering). */
 export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): ForskydningsArmeringResultat {
@@ -257,5 +261,14 @@ export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): Fors
   const g2 = (As * ar.fyk) / p.gammaMsRe;
   const sum = (e.staenger ?? []).filter((s) => s.virksom).reduce((s, st) => s + Math.min((st.l1 * Math.PI * d * b.fbd) / f, g2), 0);
   const V_a: Eftervisning = { id: 'V_a', relevant: true, NEd, NRd: sum, NRk: 0, udnyttelse: udnyttelse(NEd, sum), styrendeAnker: id };
+  // kantstang (fig. 7.10 a, 7.2.2.2(3)f): trykstivere fra ankeret til knuderne ved de vinkelrette stænger; kantstangen er trækbånd mellem knuderne.
+  // Kraft pr. vinkelret stang = NEd/n (n = virksomme stænger pr. anker). Strutten har den tværgående komposant F_stang·tan(α) (α fra belastningsretningen),
+  // som kantstangen optager som træk: T_ek = F_stang·tan α (α = 45° → T_ek = F_stang).
+  if (ar.kantstangDiameter != null && ar.kantstangDiameter > 0) {
+    const n = Math.max(1, e.ben), alfa = ((ar.trykstiverVinkel ?? 45) * Math.PI) / 180, T = (NEd / n) * Math.tan(alfa);
+    const NRk_ek = ((Math.PI / 4) * ar.kantstangDiameter ** 2) * ar.fyk, NRd_ek = NRk_ek / p.gammaMsRe;
+    const V_ek: Eftervisning = { id: 'V_ek', relevant: true, NEd: T, NRd: NRd_ek, NRk: NRk_ek, udnyttelse: udnyttelse(T, NRd_ek), styrendeAnker: id };
+    return { V_re, V_a, V_ek };
+  }
   return { V_re, V_a };
 }
