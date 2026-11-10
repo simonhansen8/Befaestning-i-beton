@@ -134,6 +134,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         dele.push({ type: 'maal', fra: benZ(zt), til: benZ(zKegle), tekst: `l1 = ${dk(zt - zKegle, 0)} mm${k ? ` (min. ${dk(k.armT.l1min, 0)})` : ''}` });
         dele.push({ type: 'maal', fra: benZ(zKegle), til: benZ(zbund), tekst: `${lbd != null ? `lbd = ${dk(lbd, 0)} mm (σsd = ${dk(k!.forank.T!.sigmaSd, 0)} MPa)` : 'forankring'}${at.foering === 'ingen' ? ` (ender i ${dk(-bundZ, 0)})` : ''}` });
       }
+      dele.push({ type: 'tekst', pos: [ben[0] - u0[0] * 25, ben[1] - u0[1] * 25, zt - 30], tekst: 'TRÆKARMERING (fig. 7.2): lodrette hårnåle' });
       dele.push({ type: 'tekst', pos: [ben[0] + u0[0] * 25, ben[1] + u0[1] * 25, zbund + 10], tekst: `bukkediameter ${dk(dorn, 0)} mm (${p <= 16 ? '4' : '7'}⌀) · radius til bøjlens akse ${dk(dorn / 2 + r, 0)} mm` });
       dele.push({ type: 'tekst', pos: [ben[0] - u0[0] * 25, ben[1] - u0[1] * 25, zt + 12], tekst: `afstand til anker ${dk(rad, 0)} mm ≤ 0,75·hef = ${dk(0.75 * hef, 0)} mm` });
       if (-bundZ > be.h - cn) dele.push({ type: 'tekst', pos: [ben[0], ben[1], -Math.min(be.h - cn, dybde)], tekst: `OBS: benet når ${dk(-bundZ, 0)} mm ned, men elementet er kun ${dk(be.h, 0)} mm tykt (dæklag ${dk(cn, 0)})` });
@@ -180,6 +181,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         }
         if (visMaal && række[0]) {
           const q = række[0], z0 = 0.5, c1 = kantAfst(q);
+          dele.push({ type: 'tekst', pos: G(langs(q) + c1, tvaers(q) - 0.75 * c1 - 40, z0 + 25), tekst: 'FORSKYDNINGSARMERING (fig. 7.10 a): vandret ⟂ kant' });
           dele.push({ type: 'maal', fra: G(langs(q), tvaers(q) - 0.75 * c1, z0), til: G(langs(q), tvaers(q) + 0.75 * c1, z0), tekst: `±0,75·c1 = ${dk(0.75 * c1, 0)} mm` });
           const b0 = lateral[0]!, fE0 = langs(q) + c1 - cnom, v1 = tvaers(q) + b0.v + 25;
           dele.push({ type: 'maal', fra: G(fE0, v1, zs), til: G(fE0 - b0.l, v1, zs), tekst: `l1 = ${dk(b0.l, 0)} mm (min. ${dk((av.krog ? 4 : 10) * p, 0)})` });
@@ -216,6 +218,10 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
         }
       }
     }
+  }
+  // forskydningsarmering er aktiv men kan ikke tegnes uden en forreste række mod en fri kant (fig. 7.10 vender mod kanten)
+  if (visMaal && av?.aktiv && !(k?.armKant && k.kantbrud?.forreste?.[k.armKant.kant])) {
+    dele.push({ type: 'tekst', pos: [0, pl.by / 2 + 60, topZ], tekst: 'Forskydningsarmering vises ikke: ingen fri kant' });
   }
   // kantarmering (7.2.2.5, ψre,V): kantstænger (⌀) langs den frie kant, omsluttet af åbne hårnålebøjler (samme ⌀) med bøjningen ved kanten med afstanden a.
   // Bøjlen ligger i planet vinkelret på kanten: dæklag cnom til bøjlens yderside, dornbøjede hjørner (EN 1992-1-1, Tabel 8.1N),
