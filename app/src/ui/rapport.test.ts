@@ -32,6 +32,21 @@ describe('rapport', () => {
     expect(uden).not.toContain('Trinbeskrivelse');
     expect(rapportHtml(s.tilstand.model, s.tilstand.resultat, 'x', '2026-01-01', { ligninger: true })).not.toContain('class="ligning"');
   });
+  it('har klikbar indholdsfortegnelse med links til afsnit og brudformer', () => {
+    const ankre = new Set([...html.matchAll(/ id="([^"]+)"/g)].map((q) => q[1]));
+    const links = [...html.matchAll(/href="#([^"]+)"/g)].map((q) => q[1]!);
+    expect(html).toContain('class="toc"');
+    expect(links.length).toBeGreaterThan(10);
+    for (const l of links) expect(ankre.has(l)).toBe(true);
+    expect(html).toMatch(/href="#bf-0-/);
+  });
+  it('ligninger har egne ankre, som tabellen linker til', () => {
+    const detalje = (id: string) => ({ id, titel: 't' + id, ref: '', trin: [{ s: 'a', v: 'b' }], noter: [] });
+    const med = rapportHtml(s.tilstand.model, s.tilstand.resultat, 'x', '2026-01-01', { ligninger: true, detalje });
+    const ankre = new Set([...med.matchAll(/ id="([^"]+)"/g)].map((q) => q[1]));
+    for (const l of [...med.matchAll(/href="#([^"]+)"/g)].map((q) => q[1]!)) expect(ankre.has(l)).toBe(true);
+    expect(med).toContain('id="lign-bf-0-');
+  });
   it('kan lave rapport uden resultat', () => {
     expect(rapportHtml(s.tilstand.model, null, 'x')).toContain('kunne ikke beregnes');
   });
