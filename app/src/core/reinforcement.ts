@@ -13,6 +13,10 @@ export interface TraekArmering {
   bekraeft?: { a: boolean; e: boolean; f: boolean };
   /** Bøjleparrene drejet 90° om ankeret (kun tegning; beregningen er uafhængig af retningen). */
   drejet?: boolean;
+  /** Afstand fra boltens akse til bøjleparrets plan (mm); null = lige fri af skaftet (d/2 + ⌀/2 + 2). Indgår i afstanden til benene. */
+  planAfstand?: number | null;
+  /** Frit drejningsvinkel af bøjleparrene om ankeret (°, kun tegning); null = 0° eller 90° efter 'drejet'. */
+  vinkel?: number | null;
   /** Overfladearmering som bøjlerne omslutter (kun tegning): diameter og c/c-afstand. */
   fladeDiameter?: number; fladeAfstand?: number;
 }
@@ -43,7 +47,7 @@ export function forankringsLaengde(p: { fck: number; eta1: number; ds: number; f
 
 // ------------------------------------------------------------------ Træk
 
-export type ManglerT = 'dia-over-16' | 'fyk-over-600' | 'afstand-over-0.75hef' | 'l1-for-kort' | 'intet-ben';
+export type ManglerT = 'dia-over-16' | 'fyk-over-600' | 'afstand-over-0.75hef' | 'l1-for-kort' | 'intet-ben' | 'skaerer-skaft';
 export interface ArmeringT {
   aktiv: boolean; virksom: boolean; mangler: ManglerT[];
   l1: number; l1Liste: number[]; l1min: number; rad: number; ben: number;
@@ -57,7 +61,7 @@ export function armeringTraekVirkning(ar: TraekArmering, hef: number, ankerD: nu
   const p = ar.diameter || 12;
   const n = 2 * ar.antalBoejler;
   const x = ar.afstand;
-  const M = ankerD / 2 + p / 2 + 2;
+  const Mfri = ankerD / 2 + p / 2 + 2, M = ar.planAfstand != null && ar.planAfstand > 0 ? ar.planAfstand : Mfri;
   const rad = Math.hypot(x, M);
   const radOk = rad <= 0.75 * hef;
   const antal = n / 2, tan35 = Math.tan((35 * Math.PI) / 180);
@@ -70,6 +74,7 @@ export function armeringTraekVirkning(ar: TraekArmering, hef: number, ankerD: nu
   if (p > 16) mangler.push('dia-over-16');
   if (ar.fyk > 600) mangler.push('fyk-over-600');
   if (!radOk) mangler.push('afstand-over-0.75hef');
+  if (M < ankerD / 2 + p / 2 - 1e-9) mangler.push('skaerer-skaft');
   if (l1 < l1min) mangler.push('l1-for-kort');
   if (!(ar.antalBoejler >= 1)) mangler.push('intet-ben');
   return { aktiv: true, virksom: mangler.length === 0, mangler, l1, l1Liste: a, l1min, rad, ben: 2 * a.length, antalBoejler: alle.length, ikkeVirksomme: alle.length - virkListe.filter(Boolean).length };

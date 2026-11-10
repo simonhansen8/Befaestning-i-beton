@@ -63,7 +63,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   // (EN 1992-1-1, 8.4.4; α2–α5 = 1). Overfladearmeringen er rigtige stænger (⌀s, ss); en stang i hvert lag går gennem hver bøjle.
   const at = be.armering?.ankerarmeringTraek;
   if (at?.aktiv && ankre.length) {
-    const p = at.diameter || 12, r = p / 2, n = Math.max(1, Math.round(at.antalBoejler ?? 1)), x = at.afstand, M = d / 2 + r + 2;
+    const p = at.diameter || 12, r = p / 2, n = Math.max(1, Math.round(at.antalBoejler ?? 1)), x = at.afstand, M = at.planAfstand != null && at.planAfstand > 0 ? at.planAfstand : d / 2 + r + 2;
     const fs = at.fladeDiameter ?? 10, ss = at.fladeAfstand ?? 150, cn = be.cnom ?? 30;
     const rad = Math.hypot(x, M), zKegle = -(hef - Math.tan((35 * Math.PI) / 180) * rad); // dybde hvor benet skærer brudkeglen
     const lbd = k?.forank?.T?.lbd ?? null;
@@ -87,7 +87,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       const kl = klip(p0, dv); if (!kl) return;
       stang([p0[0] + dv[0] * kl[0], p0[1] + dv[1] * kl[0], z], [p0[0] + dv[0] * kl[1], p0[1] + dv[1] * kl[1], z], fs / 2, { variant: 'tilbehoer' });
     };
-    const th0 = at.drejet ? Math.PI / 2 : 0;
+    const th0 = at.vinkel != null ? (at.vinkel * Math.PI) / 180 : at.drejet ? Math.PI / 2 : 0;
     const aksial = n === 1;
     for (const q of ankre) {
       for (let j = 0; j < n; j++) {
