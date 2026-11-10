@@ -33,3 +33,22 @@ export function oversigtForskydning(m: Model, a: ArmeringV | null): string[] {
   }
   return l;
 }
+
+/**
+ * De to kantarmeringer er forskellige valg med forskellige krav, og kun den ene regner for en given række:
+ * ankerarmering for forskydning (7.2.2.6) erstatter betonkantbruddet for den dækkede række; kantarmering (ψre,V, 7.2.2.5(13)) er kun en faktor i betonkantbruddet.
+ */
+export function kantvalg(m: Model, kr: any): { aktiv: boolean; tekst: string }[] {
+  const ar = m.beton.armering, av = ar.ankerarmeringForskydning;
+  const kant = (k: string) => ({ xNeg: 'x−', xPos: 'x+', yNeg: 'y−', yPos: 'y+' } as Record<string, string>)[k] ?? k;
+  const dak = !!(av.aktiv && kr?.armV?.virksom && kr?.armKant);
+  const l: { aktiv: boolean; tekst: string }[] = [];
+  if (!av.aktiv) l.push({ aktiv: false, tekst: 'Ankerarmering for forskydning (7.2.2.6, fig. 7.10) er slået fra.' });
+  else if (dak) l.push({ aktiv: true, tekst: `Ankerarmering for forskydning (${av.type === 'overflade' ? 'overfladearmering' : av.type === 'boejle' ? 'bøjler' : 'løkker'}, 7.2.2.6) bærer forskydningen mod kant ${kant(kr.armKant.kant)}. Betonkantbrud og ψre,V regnes ikke for den række.` });
+  else l.push({ aktiv: false, tekst: 'Ankerarmering for forskydning er slået til, men virker ikke (se advarslerne) – betonkantbrud med ψre,V regnes i stedet.' });
+  const psi = kr?.armKant ? kr?.kantbrud?.forreste?.[kr.armKant.kant]?.psiRe : undefined;
+  if (ar.kantarmering === 'ingen') l.push({ aktiv: false, tekst: 'Kantarmering for betonkantbrud (ψre,V, 7.2.2.5(13)): ingen – ψre,V = 1,0.' });
+  else if (dak) l.push({ aktiv: false, tekst: 'Kantarmering for betonkantbrud (ψre,V): ikke i brug for den række, der dækkes af ankerarmeringen. Den gælder stadig for øvrige kanter og rækker.' });
+  else l.push({ aktiv: true, tekst: `Kantarmering for betonkantbrud (ψre,V, 7.2.2.5(13)): ψre,V = ${psi != null ? String(psi).replace('.', ',') : '1,4 hvis kravene er opfyldt'} i V_Rk,c.` });
+  return l;
+}

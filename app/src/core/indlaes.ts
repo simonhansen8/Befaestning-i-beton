@@ -21,7 +21,7 @@ export function standardModel(dato = ''): Obj {
         ankerarmeringTraek: { aktiv: false, diameter: 12, antalBoejler: 1, fyk: 500, afstand: 50, daeklagTop: 40, krog: true, eta1: 1, foering: 'ingen', forankringsdybde: null, cd: null, drejet: false, planAfstand: null, vinkel: null, fladeDiameter: 10, fladeAfstand: 150, bekraeft: { a: false, e: false, f: false } },
         ankerarmeringForskydning: {
           aktiv: false, type: 'boejle', diameter: 10, benPrAnker: 2, antalBoejler: 1, antalLoekker: 1, fyk: 500, afstand: 50, daekToAkse: 40,
-          l1: null, krog: true, eta1: null, kant: null, es: null, cd: null, afstandBoejler: null,
+          l1: null, krog: true, eta1: null, kant: null, es: null, cd: null, afstandBoejler: null, bekraeftKantstang: false,
         },
       },
     },
