@@ -156,6 +156,7 @@ export function beregnKombination(
         h: m.beton.h, cnom: m.beton.cnom, hef: m.anker.hef, fck, gammaMsRe: p.gammaMsRe, gammaCt: p.gammaCt, alphaCt: p.alphaCt, fordeling: v, ankre,
       });
       out.push(fraTraek(r.V_re), fraTraek(r.V_a));
+      if (r.V_ek) out.push(fraTraek(r.V_ek));
     }
   }
 

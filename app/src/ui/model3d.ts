@@ -176,17 +176,18 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
             const hj: [number, number][] = [[x0 + cnom, y0 + cnom], [x1 - cnom, y0 + cnom], [x0 + cnom, y1 - cnom], [x1 - cnom, y1 - cnom]];
             const pr = hj.map((c) => c[0] * per[0] + c[1] * per[1]), lo = Math.min(...pr) - t0, hi = Math.max(...pr) - t0;
             const ka = av.krog ? fE - dornV / 2 - r : fE - r, kz = av.krog ? zs - dornV / 2 - r : zs - 2 * r;
-            stang(G(ka, t0 + lo, kz), G(ka, t0 + hi, kz), r, { variant: 'tilbehoer' });
+            stang(G(ka, t0 + lo, kz), G(ka, t0 + hi, kz), (av.kantstangDiameter && av.kantstangDiameter > 0 ? av.kantstangDiameter : p) / 2, { variant: 'tilbehoer' });
           }
         }
         if (visMaal && række[0]) {
+          const ek = k.brudformer?.find((x: { id: string }) => x.id === 'V_ek');
           const q = række[0], z0 = 0.5, c1 = kantAfst(q);
           dele.push({ type: 'tekst', pos: G(langs(q) + c1, tvaers(q) - 0.75 * c1 - 40, z0 + 25), tekst: 'FORSKYDNINGSARMERING (fig. 7.10 a): vandret ⟂ kant' });
           dele.push({ type: 'maal', fra: G(langs(q), tvaers(q) - 0.75 * c1, z0), til: G(langs(q), tvaers(q) + 0.75 * c1, z0), tekst: `±0,75·c1 = ${dk(0.75 * c1, 0)} mm` });
           const b0 = lateral[0]!, fE0 = langs(q) + c1 - cnom, v1 = tvaers(q) + b0.v + 25;
           dele.push({ type: 'maal', fra: G(fE0, v1, zs), til: G(fE0 - b0.l, v1, zs), tekst: `l1 = ${dk(b0.l, 0)} mm (min. ${dk((av.krog ? 4 : 10) * p, 0)})` });
           dele.push({ type: 'maal', fra: G(fE0 - b0.l, v1, zs), til: G(fE0 - b0.l - hale, v1, zs), tekst: lbdV != null ? `lbd = ${dk(lbdV, 0)} mm (σsd = ${dk(k.forank.V!.sigmaSd, 0)} MPa)` : 'forankring' });
-          dele.push({ type: 'tekst', pos: G(fE0, v1 + 60, zs - 30), tekst: 'kantarmering langs kanten (7.2.2.2 (3) f): dimensioneres med trykstivere 45°' });
+          dele.push({ type: 'tekst', pos: G(fE0, v1 + 60, zs - 30), tekst: ek ? `kantstang ⌀${dk(av.kantstangDiameter ?? 0, 0)} (fig. 7.10 a): T_ek = ${dk(ek.Ed / 1000, 1)} kN ≤ ${dk(ek.Rd / 1000, 1)} kN (α = ${dk(av.trykstiverVinkel ?? 45, 0)}°) · ${ek.udnyttelse != null ? dk(ek.udnyttelse * 100, 0) + ' %' : ''}` : 'kantstang langs kanten (7.2.2.2(3)f): angiv ⌀ for at eftervise med trykstivere' });
           if (av.krog) dele.push({ type: 'tekst', pos: G(fE0, v1, zs + 12), tekst: `krog: bukkediameter ${dk(dornV, 0)} mm, lige ende 10⌀ = ${dk(10 * p, 0)} mm` });
         }
       } else if (række.length) {

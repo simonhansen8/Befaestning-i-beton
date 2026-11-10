@@ -154,6 +154,17 @@ export function beregningsdetalje(id: string, m: Model, k: KombinationsResultat)
       }
       break;
     }
+    case 'V_ek': {
+      const av = m.beton.armering.ankerarmeringForskydning, ar = k.armV, n = Math.max(1, ar.antalVirksomme), alfa = av.trykstiverVinkel ?? 45;
+      const NEdRe = k.brudformer.find((x) => x.id === 'V_re')?.Ed ?? 0;
+      a.push(t('Last på armeringen', 'N<sub>Ed,re</sub> = (e<sub>s</sub>/z + 1)·V<sub>Ed</sub>', kN(NEdRe)));
+      a.push(t('Kraft pr. vinkelret stang', 'F<sub>s</sub> = N<sub>Ed,re</sub>/n, n = ' + n, kN(NEdRe / n)));
+      a.push(t('Trykstivere fra ankeret til knuderne ved stængerne', `α = ${T(alfa, 0)}° fra belastningsretningen (forenkling 45°)`, ''));
+      a.push(t('Træk i kantstangen mellem knuderne', 'T<sub>ek</sub> = F<sub>s</sub>·tan α', kN(b.Ed)));
+      a.push(t('Kapacitet', `N<sub>Rd,ek</sub> = A<sub>s</sub>·f<sub>yk</sub>/γ<sub>Ms,re</sub>, ⌀${T(av.kantstangDiameter ?? 0, 0)} mm`, kN(b.Rd)));
+      a.push(...afslut(b, 'γ<sub>Ms,re</sub>', g.MsRe).slice(1));
+      break;
+    }
     case 'V_re': case 'V_a': {
       const av = m.beton.armering.ankerarmeringForskydning, ar = k.armV;
       a.push(t('Udformning, stangdiameter, virksomme ben pr. anker', 'k<sub>10</sub>' + (ar.form === 'overflade' ? ' = 1,0' : ' = 0,5'), `${ar.form}, ⌀${T(av.diameter, 0)} mm, ${ar.antalVirksomme}`));
