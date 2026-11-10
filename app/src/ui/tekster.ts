@@ -11,6 +11,7 @@ const t0 = (v: unknown) => t(v, 0);
 const MANGEL: Record<string, (d: D) => string> = {
   'l1-for-kort': (d) => `benenes forankringslængde l1 i brudkeglen er kun ${t0(d.l1)} mm mod krav ${t0(d.l1min)} mm. l1 beregnes af geometrien (hef − tan 35°·afstand − dæklag c_top, 7.2.1.2(2)d) og kan ikke indtastes – gør bøjlen længere ved at mindske c_top eller afstanden x, øge hef, bruge færre bøjler, eller vælg bøjning ved overfladen (krav 4⌀ i stedet for 10⌀)`,
   'afstand-over-0.75hef': (d) => `benene ligger ${t0(d.rad)} mm fra ankeret, dvs. uden for 0,75·hef = ${t0(0.75 * Number(d.hef))} mm (7.2.1.2(2)c) – mindsk afstanden x`,
+  'skaerer-skaft': () => 'bøjleparrets plan ligger tættere på boltens akse end ⌀/2 – bøjlen skærer skaftet (7.2.1.2(2)c: så tæt på som praktisk muligt, men ikke gennem ankeret)',
   'dia-over-16': () => 'stangdiameter over 16 mm',
   'fyk-over-600': () => 'fyk,re over 600 MPa',
   'intet-ben': () => 'ingen ben',
