@@ -113,9 +113,17 @@ figcaption{color:var(--ink3);font-size:8.5pt;margin-top:2pt}
 .ligning{margin:2pt 0 8pt;break-inside:auto}.ligning .noter{color:var(--ink3);font-size:8.5pt;margin:0 0 4pt}
 .forb h4{margin:8pt 0 2pt;font-size:9.5pt}.forb ul,ul.dok{margin:0;padding-left:16pt}.forb li,ul.dok li{margin:1.5pt 0}
 li.fejl{color:var(--bad)}li.advarsel{color:var(--warn)}li.info{color:var(--ink)}
+.toc{margin:12pt 0 0;padding:6pt 10pt;border:1px solid var(--rule);border-radius:4pt;font-size:9pt;break-inside:avoid}
+.toc h2.tochead{font-size:10.5pt;margin:0 0 3pt;border:0}.toc ol{margin:0;padding-left:16pt}.toc ul{margin:1pt 0 3pt;padding-left:14pt;list-style:none}.toc li{margin:1pt 0}
+.toc .bf{display:block;color:var(--ink3);font-size:8pt;padding-left:8pt}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+a.lnk{color:inherit}a.lnk:hover{color:var(--accent);text-decoration:underline}
+h2 .op,.vaerktoej+.side .op{float:right;font-size:8pt;font-weight:400}
+h2,h3,tr,.ligning{scroll-margin-top:12px}
+html{scroll-behavior:smooth}
 .under{margin-top:18pt;padding-top:5pt;border-top:1px solid var(--rule);color:var(--ink3);font-size:8pt;display:flex;justify-content:space-between}
 @page{size:A4;margin:15mm 14mm 16mm;@bottom-left{content:"${'${FODTEKST}'}";font:8pt system-ui,sans-serif;color:#7b8791}@bottom-right{content:"Side " counter(page) " af " counter(pages);font:8pt system-ui,sans-serif;color:#7b8791}}
-@media print{html{background:#fff}.side{box-shadow:none;margin:0;padding:0;max-width:none}.vaerktoej{display:none}h2{break-after:avoid}}
+@media print{html{background:#fff}h2 .op{display:none}a{color:inherit}.side{box-shadow:none;margin:0;padding:0;max-width:none}.vaerktoej{display:none}h2{break-after:avoid}}
 @media (max-width:700px){.side{padding:12px}header.top{flex-direction:column;align-items:flex-start}.fig{flex-direction:column}.smaa{grid-template-columns:1fr}}
 `;
 
@@ -129,7 +137,10 @@ export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, 
   const medLigninger = !!(valg.ligninger && valg.detalje);
   const navn = (id: string) => BRUDFORM[id] ?? id;
   let nr = 0;
-  const h2 = (t: string) => `<h2>${++nr}. ${t}</h2>`;
+  /* Indholdsfortegnelse: overskrifter og brudformer er klikbare (også som links i PDF-udskrift). */
+  const toc: { id: string; t: string; sub?: { id: string; t: string; sub?: { id: string; t: string }[] }[] }[] = [];
+  const h2 = (t: string, id: string, plain = t) => { toc.push({ id, t: `${nr + 1}. ${plain}` }); return `<h2 id="${id}">${++nr}. ${t}<a class="op" href="#indhold" title="Til indholdsfortegnelsen">↑ indhold</a></h2>`; };
+  const bfId = (ci: number, id: string) => `bf-${ci}-${id.replace(/[^\w-]/g, '_')}`;
 
   /* 1. Resultat */
   const rel = (c: NonNullable<typeof g>) => c.resultat.brudformer.filter((b) => b.relevant);
@@ -138,24 +149,24 @@ export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, 
     ? `<table class="mx"><thead><tr><th>Brudform</th><th>Norm</th>${k.map((c, i) => `<th class="n${i === gk ? ' gov' : ''}">${esc(c.navn)}</th>`).join('')}<th class="n">maks.</th></tr></thead><tbody>${alleId.map((id) => {
       const us = k.map((c) => { const b = c.resultat.brudformer.find((x) => x.id === id); return b && b.relevant ? b.udnyttelse : null; });
       const mx = Math.max(-1, ...us.filter((u): u is number => u != null));
-      return `<tr><td><span class="id">${esc(id)}</span> ${esc(navn(id))}</td><td class="kref">${esc(norm(id).replace('EN 1992-4, ', ''))}</td>${us.map((u) => `<td class="n ${KLASSE(u)}${u != null && u === mx ? ' mxv' : ''}">${u == null ? '–' : proc(u)}</td>`).join('')}<td class="n ${mx < 0 ? 'na' : KLASSE(mx)}"><b>${mx < 0 ? '–' : proc(mx)}</b>${mx < 0 ? '' : bar(mx)}</td></tr>`;
+      return `<tr><td><a class="lnk" href="#${bfId(Math.max(0, us.findIndex((u) => u === mx)), id)}"><span class="id">${esc(id)}</span> ${esc(navn(id))}</a></td><td class="kref">${esc(norm(id).replace('EN 1992-4, ', ''))}</td>${us.map((u) => `<td class="n ${KLASSE(u)}${u != null && u === mx ? ' mxv' : ''}">${u == null ? '–' : proc(u)}</td>`).join('')}<td class="n ${mx < 0 ? 'na' : KLASSE(mx)}"><b>${mx < 0 ? '–' : proc(mx)}</b>${mx < 0 ? '' : bar(mx)}</td></tr>`;
     }).join('')}<tr class="tot"><td colspan="2">η<sub>maks</sub> pr. lastkombination</td>${k.map((c) => `<td class="n ${KLASSE(c.maksUdnyttelse)}">${proc(c.maksUdnyttelse)}</td>`).join('')}<td class="n ${KLASSE(r.maksUdnyttelse)}">${proc(r.maksUdnyttelse)}</td></tr></tbody></table>`
     : '';
   const dom = r
     ? `<div class="dom ${r.ok ? 'ok' : 'bad'}"><div class="stor">${r.ok ? 'OK' : r.tilstand === 'fejl' ? 'IKKE EFTERVIST' : 'IKKE OK'}</div><div class="tekst">${r.tilstand === 'fejl' ? 'Beregningen har fejl, se bemærkninger. ' : ''}Største udnyttelse <b>η = ${proc(r.maksUdnyttelse)}</b> for ${k.length === 1 ? 'den ene lastkombination' : `alle ${k.length} lastkombinationer`}.${r.styrendeBrudform && g ? ` Styrende: ${esc(g.navn)}, ${esc(navn(r.styrendeBrudform))} <span class="kref">(${esc(norm(r.styrendeBrudform).replace('EN 1992-4, ', ''))})</span>.` : ''}</div></div>`
     : '<div class="dom bad"><div class="stor">IKKE BEREGNET</div><div class="tekst">Modellen kunne ikke beregnes.</div></div>';
-  const resultat = h2('Resultat') + dom + (matrix ? '<h3>Udnyttelse pr. lastkombination</h3>' + matrix : '');
+  const resultat = h2('Resultat', 'resultat') + dom + (matrix ? '<h3>Udnyttelse pr. lastkombination</h3>' + matrix : '');
 
   /* 2. Inddata */
   const pk = r
     ? `<h3>Partialkoefficienter og materialer</h3><table><tbody><tr><th>γ<sub>c</sub></th><td class="n">${dk(r.partialkoefficienter.gammaC, 2)}</td><th>γ<sub>3</sub></th><td class="n">${dk(r.partialkoefficienter.gamma3, 2)}</td><th>γ<sub>Mc</sub></th><td class="n">${dk(r.partialkoefficienter.gammaMc, 2)}</td></tr><tr><th>γ<sub>Ms</sub></th><td class="n">${dk(r.partialkoefficienter.gammaMs, 2)}</td><th>γ<sub>Ms,V</sub></th><td class="n">${dk(r.partialkoefficienter.gammaMsV, 2)}</td><th>γ<sub>inst</sub></th><td class="n">${dk(r.partialkoefficienter.gammaInst, 2)}</td></tr><tr><th>f<sub>ck</sub> [MPa]</th><td class="n">${dk(r.fck, 0)}</td><th>E<sub>c</sub> [MPa]</th><td class="n">${dk(r.Ec, 0)}</td><th>E<sub>s</sub> [MPa]</th><td class="n">${dk(r.indstillinger.Es, 0)}</td></tr></tbody></table>`
     : '';
-  const inddata = h2('Inddata') + inddataTabeller(m) + pk;
+  const inddata = h2('Inddata', 'inddata') + inddataTabeller(m) + pk;
 
   /* 3. Plan og snit */
   let plan = '';
   if (r && g) {
-    plan = h2('Plan og snit') +
+    plan = h2('Plan og snit', 'plan') +
       `<div class="fig"><figure>${plantegningSvg(m, g.resultat)}<figcaption>Plan, styrende kombination ${esc(g.navn)}. ${esc(PLAN_FORKLARING)} Mål i mm.</figcaption></figure><figure>${snitSvg(m, 'x')}<figcaption>Snit i x-retningen. Mål i mm.</figcaption></figure></div>` +
       (k.length > 1 ? `<div class="smaa">${k.map((c, i) => (i === gk ? '' : `<figure>${plantegningSvg(m, c.resultat)}<figcaption>${esc(c.navn)} – ${proc(c.maksUdnyttelse)}</figcaption></figure>`)).join('')}</div>` : '');
   }
@@ -163,35 +174,41 @@ export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, 
   /* 4. Ankerkræfter */
   const ids = m.opstilling.anker.map((a: any) => a.id);
   const kraefter = r && k.length
-    ? h2('Ankerkræfter') + `<div class="meta2" style="color:var(--ink3);font-size:8.5pt">Regningsmæssige værdier [kN]. N<sub>Ed</sub> er træk i ankeret, V<sub>Ed</sub> er resulterende forskydning.</div><table><thead><tr><th rowspan="2">Bolt</th>${k.map((c, i) => `<th class="n${i === gk ? ' gov' : ''}" colspan="2" style="text-align:center">${esc(c.navn)}</th>`).join('')}</tr><tr>${k.map(() => '<th class="n">N<sub>Ed</sub></th><th class="n">V<sub>Ed</sub></th>').join('')}</tr></thead><tbody>${ids.map((id: unknown, i: number) => `<tr><td>${esc(id)}</td>${k.map((c) => `<td class="n">${dk(Math.max(0, c.resultat.fordeling.F[i] ?? 0) / 1e3)}</td><td class="n">${dk((c.resultat.forskydning.V[i] ?? 0) / 1e3)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    ? h2('Ankerkræfter', 'ankerkraefter') + `<div class="meta2" style="color:var(--ink3);font-size:8.5pt">Regningsmæssige værdier [kN]. N<sub>Ed</sub> er træk i ankeret, V<sub>Ed</sub> er resulterende forskydning.</div><table><thead><tr><th rowspan="2">Bolt</th>${k.map((c, i) => `<th class="n${i === gk ? ' gov' : ''}" colspan="2" style="text-align:center">${esc(c.navn)}</th>`).join('')}</tr><tr>${k.map(() => '<th class="n">N<sub>Ed</sub></th><th class="n">V<sub>Ed</sub></th>').join('')}</tr></thead><tbody>${ids.map((id: unknown, i: number) => `<tr><td>${esc(id)}</td>${k.map((c) => `<td class="n">${dk(Math.max(0, c.resultat.fordeling.F[i] ?? 0) / 1e3)}</td><td class="n">${dk((c.resultat.forskydning.V[i] ?? 0) / 1e3)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
     : '';
 
   /* 5. Eftervisninger (+ ligninger) */
+  const eftSub: NonNullable<(typeof toc)[number]['sub']> = [];
   const eftervis = r
-    ? h2('Eftervisninger') + (medLigninger ? '<div class="meta2" style="color:var(--ink3);font-size:8.5pt">For hver lastkombination vises brudformerne med bæreevner og udnyttelse, og under tabellen ligningerne med indsatte værdier.</div>' : '') +
+    ? h2('Eftervisninger', 'eftervisninger') + (medLigninger ? '<div class="meta2" style="color:var(--ink3);font-size:8.5pt">For hver lastkombination vises brudformerne med bæreevner og udnyttelse, og under tabellen ligningerne med indsatte værdier.</div>' : '') +
       k.map((c, ci) => {
         const rows = c.resultat.brudformer.map((b) => b.relevant
-          ? `<tr class="${b.id === c.styrendeBrudform ? 'styrende' : ''}"><td><span class="id">${esc(b.id)}</span> ${esc(navn(b.id))}</td><td class="kref">${esc(norm(b.id).replace('EN 1992-4, ', ''))}</td><td class="n">${kn(b.Ed)}</td><td class="n">${kn(b.Rk)}</td><td class="n">${kn(b.Rd)}</td><td class="n ${KLASSE(b.udnyttelse)}"><b>${proc(b.udnyttelse)}</b>${bar(b.udnyttelse)}</td><td>${esc(ankerListe(b.styrendeAnker, m))}</td></tr>`
+          ? `<tr id="${bfId(ci, b.id)}" class="${b.id === c.styrendeBrudform ? 'styrende' : ''}"><td><a class="lnk" href="#${medLigninger ? 'lign-' : ''}${bfId(ci, b.id)}" title="${medLigninger ? 'Gå til ligningerne' : 'Gå til brudformen'}"><span class="id">${esc(b.id)}</span> ${esc(navn(b.id))}</a></td><td class="kref">${esc(norm(b.id).replace('EN 1992-4, ', ''))}</td><td class="n">${kn(b.Ed)}</td><td class="n">${kn(b.Rk)}</td><td class="n">${kn(b.Rd)}</td><td class="n ${KLASSE(b.udnyttelse)}"><b>${proc(b.udnyttelse)}</b>${bar(b.udnyttelse)}</td><td>${esc(ankerListe(b.styrendeAnker, m))}</td></tr>`
           : `<tr class="ikke"><td><span class="id">${esc(b.id)}</span> ${esc(navn(b.id))}</td><td class="kref">${esc(norm(b.id).replace('EN 1992-4, ', ''))}</td><td colspan="5">ikke aktuel</td></tr>`).join('');
         const lign = medLigninger
           ? c.resultat.brudformer.filter((b) => b.relevant).map((b) => {
             const d = valg.detalje!(b.id, m, c.resultat);
             if (!d || !d.trin.length) return '';
-            return `<div class="ligning"><h3 class="fl"><span>${esc(d.titel)} <small>${esc(d.ref)}</small></span><span class="u ${KLASSE(b.udnyttelse)}">η = ${proc(b.udnyttelse)}</span></h3>${d.noter.length ? `<p class="noter">${d.noter.join(' ')}</p>` : ''}<table class="st"><tbody>${d.trin.map((t) => `<tr><td>${t.s}</td><td class="f">${t.f ?? ''}</td><td>${t.v}</td></tr>`).join('')}</tbody></table></div>`;
+            return `<div class="ligning" id="lign-${bfId(ci, b.id)}"><h3 class="fl"><span>${esc(d.titel)} <small>${esc(d.ref)}</small></span><span class="u ${KLASSE(b.udnyttelse)}"><a class="lnk" href="#${bfId(ci, b.id)}" title="Tilbage til tabellen">η = ${proc(b.udnyttelse)} ↑</a></span></h3>${d.noter.length ? `<p class="noter">${d.noter.join(' ')}</p>` : ''}<table class="st"><tbody>${d.trin.map((t) => `<tr><td>${t.s}</td><td class="f">${t.f ?? ''}</td><td>${t.v}</td></tr>`).join('')}</tbody></table></div>`;
           }).join('')
           : '';
-        return `<h3 class="fl"><span>${esc(c.navn)}${ci === gk ? ' <small>styrende kombination</small>' : ''}</span><span class="u ${KLASSE(c.maksUdnyttelse)}">η<sub>maks</sub> = ${proc(c.maksUdnyttelse)}</span></h3><table><thead><tr><th>Brudform</th><th>Norm</th><th class="n">E<sub>d</sub> [kN]</th><th class="n">R<sub>k</sub> [kN]</th><th class="n">R<sub>d</sub> [kN]</th><th class="n">Udnyttelse</th><th>Styrende anker</th></tr></thead><tbody>${rows}</tbody></table>${lign}`;
+        eftSub.push({ id: `komb-${ci}`, t: c.navn, sub: c.resultat.brudformer.filter((b) => b.relevant).map((b) => ({ id: medLigninger ? 'lign-' + bfId(ci, b.id) : bfId(ci, b.id), t: navn(b.id) })) });
+        return `<h3 class="fl" id="komb-${ci}"><span>${esc(c.navn)}${ci === gk ? ' <small>styrende kombination</small>' : ''}</span><span class="u ${KLASSE(c.maksUdnyttelse)}">η<sub>maks</sub> = ${proc(c.maksUdnyttelse)}</span></h3><table><thead><tr><th>Brudform</th><th>Norm</th><th class="n">E<sub>d</sub> [kN]</th><th class="n">R<sub>k</sub> [kN]</th><th class="n">R<sub>d</sub> [kN]</th><th class="n">Udnyttelse</th><th>Styrende anker</th></tr></thead><tbody>${rows}</tbody></table>${lign}`;
       }).join('') + (medLigninger ? '<div class="meta2" style="color:var(--ink3);font-size:8.5pt">Afsnitsnumre er hentet fra programmets henvisninger og er ikke i alle tilfælde kontrolleret mod normteksten (se dokumentationen om sporbarhed).</div>' : '')
     : '';
 
   /* 6. Forudsætninger */
-  const forb = h2('Forudsætninger og omfang') +
+  const forb = h2('Forudsætninger og omfang', 'forudsaetninger') +
     `<div class="forb"><p>Befæstning i beton efter DS/EN 1992-4:2018 og DS/EN 1992-4 DK NA:2024. Statisk/kvasistatisk brudgrænsetilstand.</p><h4>Forudsætninger</h4><ul><li>Laster indtastes som regningsmæssige værdier, inkl. K<sub>FI</sub> ved konsekvensklasse CC3.</li><li>Fodpladen forudsættes stiv (EN 1992-4, 6.2.1(2)); pladen, svejsninger og søjle eftervises separat.</li></ul><h4>Uden for omfang</h4><ul><li>Udmattelse, seismik, brand, ulykkeslast, ankerskinner, ekspansions-/skrue-/underskæringsankre, eftervisning af fodplade og svejsninger samt videreførelse af kræfter i betonelementet.</li></ul></div>`;
 
   /* 7. Bemærkninger */
   const bem = r ? [...r.diagnostik, ...r.kombinationer.flatMap((c) => c.diagnostik.map((d) => ({ ...d })))] : [];
   const unik = [...new Map(bem.map((d) => [`${d.niveau}|${tekst(d)}`, d])).values()].sort((a, b) => ['fejl', 'advarsel', 'info'].indexOf(a.niveau) - ['fejl', 'advarsel', 'info'].indexOf(b.niveau));
-  const bemSek = h2(`Bemærkninger (${unik.length})`) + `<ul class="dok">${unik.map((d) => `<li class="${esc(d.niveau)}"><b>${d.niveau === 'fejl' ? 'Fejl' : d.niveau === 'advarsel' ? 'Advarsel' : 'Info'}:</b> ${esc(tekst(d))}${d.paragraf ? ` <span class="kref">(${esc(d.paragraf)})</span>` : ''}</li>`).join('')}</ul>`;
+  const bemSek = h2(`Bemærkninger (${unik.length})`, 'bemaerkninger') + `<ul class="dok">${unik.map((d) => `<li class="${esc(d.niveau)}"><b>${d.niveau === 'fejl' ? 'Fejl' : d.niveau === 'advarsel' ? 'Advarsel' : 'Info'}:</b> ${esc(tekst(d))}${d.paragraf ? ` <span class="kref">(${esc(d.paragraf)})</span>` : ''}</li>`).join('')}</ul>`;
+
+  const eft = toc.find((x) => x.id === 'eftervisninger');
+  if (eft) eft.sub = eftSub;
+  const indhold = `<nav class="toc" id="indhold" aria-label="Indhold"><h2 class="tochead">Indhold</h2><ol>${toc.map((x) => `<li><a href="#${x.id}">${x.t}</a>${x.sub?.length ? `<ul>${x.sub.map((c) => `<li><a href="#${c.id}">${esc(c.t)}</a>${c.sub?.length ? `<span class="bf">${c.sub.map((b) => `<a href="#${b.id}">${esc(b.t)}</a>`).join(' · ')}</span>` : ''}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ol></nav>`;
 
   const projNavn = p.navn || 'Ankerberegning';
   const fod = `${projNavn}${p.nr ? ' · nr. ' + p.nr : ''} · build ${build}`.replace(/[<>&"'\\\n\r]/g, ' ');
@@ -199,7 +216,7 @@ export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, 
   return `<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(projNavn)} – rapport</title><style>${CSS.replace('${FODTEKST}', fod)}</style></head><body>
 <div class="vaerktoej"><button type="button" onclick="window.print()">Udskriv / gem som PDF</button></div>
 <div class="side"><header class="top"><div><h1>${titel}</h1><div class="norm">DS/EN 1992-4:2018 + DS/EN 1992-4 DK NA:2024</div></div><div class="build">${esc(dato)}<br>build ${esc(build)}</div></header>
-${meta}${resultat}${inddata}${plan}${kraefter}${eftervis}${forb}${bemSek}
+${meta}${indhold}${resultat}${inddata}${plan}${kraefter}${eftervis}${forb}${bemSek}
 <div class="under"><span>${esc(projNavn)}</span><span>Genereret af Ankerberegning EN 1992-4 · build ${esc(build)}</span></div></div>
 </body></html>`;
 }
