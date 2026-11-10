@@ -747,10 +747,13 @@ export const SEKTIONER: Sektion[] = [
         ref: "EN 1992-4, 7.2.1.4 (5), (7.5)",
       },
       {
+        custom: "kantvalg",
+      },
+      {
         k: "beton.armering.kantarmering",
         hl: "arm.kant",
         sym: "ψ<sub>re,V</sub>",
-        lbl: "Kantarmering",
+        lbl: "Kantarmering for betonkantbrud (ψre,V)",
         type: "select",
         options: [["ingen", "Ingen (1,0)"], ["boejler", "Kantstang + bøjler (1,4)"]],
         disabled: (m: Model) =>
@@ -799,7 +802,7 @@ export const SEKTIONER: Sektion[] = [
         max: 1000,
         show: (m: Model) =>
               m.beton.revnet && m.beton.armering.kantarmering === "boejler",
-        tip: "Kantbøjlens udstrækning vinkelret ind fra kanten (kun tegning; indgår ikke i beregningen). Bøjlen tegnes lukket om fire kantstænger med samme diameter ⌀ som kantstangen, med dorn efter EN 1992-1-1 og dæklag c<sub>nom</sub>.",
+        tip: "Kantbøjlens udstrækning vinkelret ind fra kanten (kun tegning; indgår ikke i beregningen). Bøjlen tegnes som en åben hårnål med bøjningen (dorn efter EN 1992-1-1) ved kanten om to kantstænger med samme diameter ⌀ som kantstangen; benene går vandret ind i elementet.",
         ref: "EN 1992-4, 7.2.2.5 / EN 1992-1-1, 8.3",
       },
       {
@@ -1274,6 +1277,20 @@ export const SEKTIONER: Sektion[] = [
         show: forskArmeringOverflade,
         tip: "Krav til forankring i brudlegemet, 7.2.2.2(3)d: l<sub>1</sub> ≥ 4⌀ med krog, bøjning eller løkke (α = 0,7, forudsætter sidedæklag > 3⌀); l<sub>1</sub> ≥ 10⌀ for lige stænger med eller uden påsvejste tværstænger (α = 1,0). Tegnes som krog ved kanten om kantarmeringen.",
         ref: "EN 1992-4, 7.2.2.6",
+      },
+      {
+        k: "beton.armering.ankerarmeringForskydning.bekraeftKantstang",
+        hl: "arm.V.kantstang",
+        sym: "f",
+        lbl: "Kantstang langs kanten er dimensioneret (45° trykstivere)",
+        type: "switch",
+        show: forskArmeringOverflade,
+        tip: "Overfladearmering kræver en kantstang langs kanten, dimensioneret efter en strut-and-tie-model; som forenkling må trykstivernes vinkel sættes til 45°. Programmet tegner kantstangen, men regner den ikke – bekræft her, når du har dimensioneret den. Dette er en anden armering end \"Kantarmering\" for ψ<sub>re,V</sub> i betonkantbrud.",
+        ref: "EN 1992-4, 7.2.2.2(3)f)",
+      },
+      {
+        custom: "kantvalg",
+        show: forskArmeringAktiv,
       },
       {
         custom: "armsum",

@@ -35,7 +35,7 @@ describe('indlaesFil mod facit', () => {
     const ar = ny.beton?.armering;
     if (ar) delete ar.kantarmeringBredde; // ny tegneinput: bøjlebredde for kantarmering
     if (ar?.ankerarmeringTraek) { delete ar.ankerarmeringTraek.bekraeft; delete ar.ankerarmeringTraek.drejet; delete ar.ankerarmeringTraek.planAfstand; delete ar.ankerarmeringTraek.vinkel; delete ar.ankerarmeringTraek.fladeDiameter; delete ar.ankerarmeringTraek.fladeAfstand; }
-    if (ar?.ankerarmeringForskydning) delete ar.ankerarmeringForskydning.afstandBoejler;
+    if (ar?.ankerarmeringForskydning) { delete ar.ankerarmeringForskydning.afstandBoejler; delete ar.ankerarmeringForskydning.bekraeftKantstang; }
     expect(ny).toEqual(gl);
   });
   it('filer som appen blokerer på er også fatale i ny parser eller får afviste værdier', () => {

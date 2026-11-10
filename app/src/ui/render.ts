@@ -10,7 +10,7 @@ import { byg3d } from './model3d';
 import { armUdvid, saetArmUdvid } from './skema-hjaelp';
 import { beregningsdetalje } from './brud-detaljer';
 import { IDEALISERET } from './brudlegemer';
-import { oversigtForskydning, oversigtTraek } from './arm-oversigt';
+import { kantvalg, oversigtForskydning, oversigtTraek } from './arm-oversigt';
 import { anvendHilti as anvendHiltiModel, STOERRELSER, type Borehul, type Stoerrelse, type Temperaturomraade } from '../core/produkter';
 import { produktFraAnker, produktOpdateringer } from '../core/produkter';
 import { gemEgetProdukt, laesEgneProdukter, sletEgetProdukt } from './egne-produkter';
@@ -230,6 +230,10 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
         if (f.show && !f.show(m)) continue;
         if (f.custom === 'edges') ud.push(h('div', { class: 'gruppe' }, ...KANTFELTER.map((k) => felt(k, m))), betonBlok(m));
         else if (f.custom === 'layout') ud.push(opstilling(m));
+        else if (f.custom === 'kantvalg') {
+          const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;
+          mal.push(h('div', { class: 'kantvalg' }, ...kantvalg(m, kr).map((x) => h('div', { class: `kv ${x.aktiv ? 'aktiv' : 'inaktiv'}` }, h('b', {}, x.aktiv ? 'AKTIV I BEREGNINGEN · ' : 'IKKE I BRUG · '), x.tekst))));
+        }
         else if (f.custom === 'armsum') {
           const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;
           const lin = f.which === 'T' ? oversigtTraek(m, kr?.armT ?? null) : oversigtForskydning(m, kr?.armV ?? null);

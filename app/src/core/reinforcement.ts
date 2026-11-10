@@ -26,6 +26,8 @@ export interface ForskydningsArmering {
   fyk: number; afstand: number | null; daekToAkse: number | null; l1: number | null; krog: boolean; eta1: number | null; es: number | null; cd: number | null;
   /** Afstand mellem bøjler/løkker (c/c, ind i elementet fra ankeret); null = alle regnes med og lægges ⌀+1 under hinanden. */
   afstandBoejler?: number | null;
+  /** Brugerens bekræftelse af 7.2.2.2(3)f): kantstang langs kanten er dimensioneret med trykstivere (45°). Kun overfladearmering. */
+  bekraeftKantstang?: boolean;
 }
 
 /** Reduktion af forankringslængde ved stor dæklagstykkelse for bøjede stænger (cd > 3Ø). */

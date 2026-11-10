@@ -65,3 +65,9 @@ table.brud tr.valgbar { cursor:pointer; } table.brud tr.valgbar:hover td { backg
 .armgruppe.dimmet { opacity:.55; } .armvis { margin:2px 0 6px; font-size:12px; background:none; border:none; color:var(--accent,#2563eb); cursor:pointer; padding:2px 0; }
 
 @media (max-width:700px) { .top { position:static; } }
+
+/* de to kantarmeringer: tydelig markering af hvilken der regner */
+.kantvalg { display: grid; gap: 6px; margin: 8px 0; }
+.kantvalg .kv { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 0.9em; }
+.kantvalg .kv.aktiv { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.kantvalg .kv.inaktiv { opacity: 0.7; border-style: dashed; }
