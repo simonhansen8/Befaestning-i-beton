@@ -23,7 +23,7 @@ import { drejOpstilling90, genererAnkre, tilpasPlade, MOENSTRE, type MoensterPar
 import { BRUDFORM, MOENSTER_NAVN, PARAM_NAVN } from './render-tekster';
 import { beregnForslag, type ForslagResultat, type SpecResultat } from '../core/forslag';
 import { saetSti } from '../core/sti';
-import { REPO, hentSeneste, vurderVersion, type AjourStatus } from './ajour';
+import { REPO, danskTid, hentSeneste, vurderVersion, type AjourStatus } from './ajour';
 import { laesTema, naesteTema, saetTema, type Tema } from './autogem';
 import { aendringTekst, etiket, forudsaetning, hvorforTekst } from './forslag-tekster';
 import { tekst } from './tekster';
@@ -57,7 +57,8 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let tema: Tema = laesTema();
   const tjekVersion = async () => {
     ajour = { ...ajour, tilstand: 'check', etiket: 'Tjekker version …' }; draw();
-    ajour = vurderVersion(build, await hentSeneste()); draw();
+    const hentet = await hentSeneste();
+    ajour = { ...vurderVersion(build, hentet), versionTid: hentet?.versionTid ?? null, tjekket: new Date().toISOString() }; draw();
   };
   const TEMA_NAVN: Record<Tema, string> = { system: 'Tema: system', moerk: 'Tema: mørk', lys: 'Tema: lys' };
   const dialog = (titel: string, indhold: (Node | false | null)[], knapper: Node[] = []) => {
@@ -80,8 +81,10 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   };
   const ajourDialog = () => dialog('Versionstjek', [
     h('p', {}, h('b', {}, 'Din version: '), build),
-    h('p', {}, h('b', {}, 'Seneste på main: '), ajour.seneste ?? 'ukendt'),
-    ajour.commit && h('p', { class: 'note' }, `Seneste commit: ${ajour.commit.tekst} (${ajour.commit.dato})`),
+    h('p', {}, h('b', {}, 'Seneste på main: '), ajour.seneste ?? 'ukendt', ajour.versionTid ? ` (udgivet ${danskTid(ajour.versionTid)})` : ''),
+    ajour.tilstand !== 'old' && ajour.versionTid ? h('p', { class: 'note' }, `Din version er udgivet ${danskTid(ajour.versionTid)}.`) : null,
+    ajour.commit && h('p', { class: 'note' }, `Seneste commit: ${ajour.commit.tekst} (${ajour.commit.tid ? danskTid(ajour.commit.tid) : ajour.commit.dato})`),
+    ajour.tjekket ? h('p', { class: 'note' }, `Sidst tjekket: ${danskTid(ajour.tjekket)}`) : null,
     ajour.tilstand === 'old' && h('p', {}, h('b', {}, 'Der findes en nyere version. '), 'Genindlæs siden (Ctrl/Cmd+Shift+R) eller hent den nyeste index.html.'),
     ajour.tilstand === 'off' && h('p', { class: 'note' }, 'Kunne ikke kontakte GitHub (offline eller blokeret), så det kan ikke ses, om der er en nyere version.'),
     ajour.prsUkendt && ajour.tilstand !== 'off' && h('p', { class: 'note' }, "Listen over åbne PR'er kunne ikke hentes."),
