@@ -164,9 +164,12 @@ test('ny UI: mål kan rettes ved klik i 3D, og kræfter kan skjules', { skip: !f
     await page.goto(pathToFileURL(DIST).href);
     await page.waitForSelector('.hoved');
     await page.click('[data-view="3d"]');
+    await page.waitForSelector('.scene3d canvas');
+    // kræfter er slået fra som udgangspunkt
+    assert.equal(await page.locator('.etiket3d.last').count(), 0);
+    await page.click('[data-kraefter="1"]');
     await page.waitForSelector('.etiket3d.last');
     await page.click('[data-kraefter="1"]');
-    await page.waitForSelector('.scene3d canvas');
     assert.equal(await page.locator('.etiket3d.last').count(), 0);
     await page.click('[data-kraefter="1"]');
     await page.waitForSelector('.etiket3d.last');
