@@ -459,7 +459,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
   let visBrud = false;
   let valgtBrud: string | null = null;
   let visMaal = true;
-  let visLast = true;
+  let visLast = false;
   let visTilbehoer = true; // overfladearmering (stænger); kan skjules for overblikket
   const KAMERAER: [Kamera, string][] = [['iso', 'Iso'], ['top', 'Oppefra'], ['front', 'Forfra'], ['side', 'Fra siden']];
 
