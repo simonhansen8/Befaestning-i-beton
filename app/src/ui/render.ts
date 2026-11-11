@@ -232,7 +232,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
         else if (f.custom === 'layout') ud.push(opstilling(m));
         else if (f.custom === 'kantvalg') {
           const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;
-          mal.push(h('div', { class: 'kantvalg' }, ...kantvalg(m, kr).map((x) => h('div', { class: `kv ${x.aktiv ? 'aktiv' : 'inaktiv'}` }, h('b', {}, x.aktiv ? 'AKTIV I BEREGNINGEN · ' : 'IKKE I BRUG · '), x.tekst))));
+          mal.push(h('div', { class: 'kantvalg' }, ...kantvalg(m, kr).map((x) => h('div', { class: `kv ${x.advarsel ? 'advarsel' : x.aktiv ? 'aktiv' : 'inaktiv'}` }, h('b', {}, x.advarsel ? 'ADVARSEL · ' : x.aktiv ? 'AKTIV I BEREGNINGEN · ' : 'IKKE I BRUG · '), x.tekst))));
         }
         else if (f.custom === 'armsum') {
           const kr = store.tilstand.resultat?.kombinationer[store.tilstand.valgtKombination ?? 0]?.resultat;

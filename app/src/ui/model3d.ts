@@ -216,6 +216,13 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
             for (let i = 0; i + 1 < sti.length; i++) { const a2 = sti[i]!, b2 = sti[i + 1]!; if (Math.hypot(a2[0] - b2[0], a2[1] - b2[1]) > 1e-6) stang(G(a2[0] + sk, a2[1], z), G(b2[0] + sk, b2[1], z), r, { inaktiv: ia }); }
             for (const vv of [lo, hi]) stang(G(bag + sk, vv, z), G(bag + sk - hale, vv, z), r, { inaktiv: ia, variant: 'forankring' });
           }
+          {
+            // kantstang langs kanten (fig. 7.10 b/c, 7.2.2.2(3)f): ligger uden for bøjlernes lukkede ende mod kanten, gennemgående langs kanten
+            const rk2 = (av.kantstangDiameter && av.kantstangDiameter > 0 ? av.kantstangDiameter : p) / 2;
+            const hj: [number, number][] = [[x0 + cnom, y0 + cnom], [x1 - cnom, y0 + cnom], [x0 + cnom, y1 - cnom], [x1 - cnom, y1 - cnom]];
+            const pr = hj.map((c) => c[0] * per[0] + c[1] * per[1]);
+            stang(G(fore + r + rk2, Math.min(...pr), zs), G(fore + r + rk2, Math.max(...pr), zs), rk2, { variant: 'tilbehoer', inaktiv: alle });
+          }
         }
       }
     }
