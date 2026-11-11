@@ -21,7 +21,7 @@ export type Del =
   | { type: 'pil'; rolle: 'last'; fra: [number, number, number]; til: [number, number, number]; tekst: string; felt?: string; vaerdi?: number }
   | { type: 'bue'; rolle: 'last'; centrum: [number, number, number]; akse: 'x' | 'y' | 'z'; radius: number; fortegn: 1 | -1; tekst: string; vinkel: number; felt?: string; vaerdi?: number };
 
-export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; stoerrelse: number; forklaring: { farve: string; tekst: string }[] }
+export interface Scene3DBeskrivelse { dele: Del[]; udstraekning: Udstraekning; stoerrelse: number; forklaring: { farve: string; tekst: string }[]; noter: string[] }
 
 /** Afstand fra forreste anker (mindste koordinat for −kanter, største for +kanter) til kanten – til kravet a ≤ 2·c1. */
 const q0x = (ankre: { x: number; y: number }[], w: 'x' | 'y' | 'xmax' | 'ymax'): number => {
@@ -310,6 +310,9 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
   if (aktiv('T')) dele.push({ type: 'bue', rolle: 'last', centrum: [0, 0, topZ + 2], akse: 'z', radius: Math.max(pl.bx, pl.by) * 0.42, fortegn: l.T! > 0 ? 1 : -1, tekst: `T = ${dk(l.T! / 1e6)} kNm`, felt: 'last:T', vaerdi: l.T! / 1e6, vinkel: 300 });
   if (!visTilbehoer) dele.splice(0, dele.length, ...dele.filter((x) => !(x.type === 'stang' && x.variant === 'tilbehoer')));
   if (!visLast) dele.splice(0, dele.length, ...dele.filter((x) => x.type !== 'pil' && x.type !== 'bue'));
+  // Tekstnoter/advarsler hører ikke hjemme i selve 3D-visningen: de vises under den.
+  const noter = [...new Set(dele.filter((d): d is Extract<Del, { type: 'tekst' }> => d.type === 'tekst').map((d) => d.tekst))];
+  for (let i = dele.length - 1; i >= 0; i--) if (dele[i]!.type === 'tekst') dele.splice(i, 1);
   // idealiserede brudlegemer for den styrende brudform (EN 1992-4, 35°-model); kun vejledende
   const styr = k?.styrendeBrudform ?? null;
   const kombi = styr === 'NV_c';
@@ -339,5 +342,5 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
     ...(dele.some((x) => x.type === 'cirkel') ? [{ farve: 'zone', tekst: 'Zone 0,75·hef om ankeret' }] : []),
     ...(dele.some((x) => x.type === 'pil' || x.type === 'bue') ? [{ farve: 'last', tekst: 'Laster' }] : []),
   ];
-  return { dele, udstraekning: udst, stoerrelse, forklaring };
+  return { dele, udstraekning: udst, stoerrelse, forklaring, noter };
 }
