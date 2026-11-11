@@ -36,6 +36,15 @@ describe('3D-beskrivelse', () => {
     expect(st.filter((x) => x.variant === 'forankring')).toHaveLength(2 * 2);
     expect(st.every((x) => x.inaktiv)).toBe(true);
   });
+  it('tegner kantstang langs kanten også for bøjler og løkker', () => {
+    const i: any = structuredClone(m); i.beton.kanter.xNeg = 130;
+    i.beton.armering.ankerarmeringForskydning = { ...i.beton.armering.ankerarmeringForskydning, aktiv: true, type: 'boejle', diameter: 10, daekToAkse: 40, kantstangDiameter: 12 };
+    const id = i.opstilling.anker[0].id;
+    const k: any = { styrendeBrudform: null, traek: { traekAnkre: [] }, kantbrud: { styrende: null, forreste: { xNeg: { c1: 130, ankre: [id] } } }, armKant: { kant: 'xNeg' }, armV: { ben: 2, virksom: true } };
+    const tb = byg3d(i, k, null).dele.filter((x) => x.type === 'stang' && x.variant === 'tilbehoer') as any[];
+    expect(tb.length).toBe(1);
+    expect(tb[0].radius ?? 6).toBeCloseTo(6);
+  });
   it('har mål for hef, h, plade, boltafstand og kantafstand, og kan slå dem fra', () => {
     const i: any = structuredClone(m); i.beton.kanter.xNeg = 200;
     const tekster = byg3d(i, null, null, false, true).dele.filter((x) => x.type === 'maal').map((x: any) => x.tekst as string);
