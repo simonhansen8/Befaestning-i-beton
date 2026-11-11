@@ -71,3 +71,6 @@ table.brud tr.valgbar { cursor:pointer; } table.brud tr.valgbar:hover td { backg
 .kantvalg .kv { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 0.9em; }
 .kantvalg .kv.aktiv { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .kantvalg .kv.inaktiv { opacity: 0.7; border-style: dashed; }
+
+.noter3d { margin: .4rem 0; padding: .4rem .8rem .4rem 1.4rem; font-size: .85rem; color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; }
+.noter3d li { margin: .15rem 0; }

@@ -172,7 +172,7 @@ describe('trækbøjlens ben føres lbd forbi brudkeglen', () => {
     const lbd = k.forank.T!.lbd;
     const st = s.dele.filter((x) => x.type === 'stang' && !x.variant) as any[];
     expect(Math.min(...st.map((x) => Math.min(x.fra[2], x.til[2])))).toBeCloseTo(zKegle - lbd, 4);
-    const tekster = s.dele.filter((x) => x.type === 'maal' || x.type === 'tekst').map((x: any) => x.tekst as string);
+    const tekster = [...s.dele.filter((x) => x.type === 'maal').map((x: any) => x.tekst as string), ...s.noter];
     expect(tekster.some((x) => x.startsWith('l1 = '))).toBe(true);
     expect(tekster.some((x) => x.startsWith('lbd = '))).toBe(true);
     expect(tekster.some((x) => x.startsWith('bukkediameter 48 mm (4⌀)'))).toBe(true);
@@ -197,7 +197,7 @@ describe('kantarmering som åbne hårnålebøjler (åbne ind mod elementet) om k
     // bøjlebredde (yderside til yderside) = bs
     const xs = boejle.flatMap((x) => [x.fra[0], x.til[0]]);
     expect(Math.max(...xs) - Math.min(...xs) + 12).toBeCloseTo(150, 5);
-    const tekster = s.dele.filter((x) => x.type === 'tekst' || x.type === 'maal').map((x: any) => x.tekst as string);
+    const tekster = [...s.dele.filter((x) => x.type === 'maal').map((x: any) => x.tekst as string), ...s.noter];
     expect(tekster.some((t) => t.includes('bukkediameter 48 mm'))).toBe(true);
     expect(tekster.some((t) => t.startsWith('a = 100'))).toBe(true);
     expect(tekster.some((t) => t.includes('a ≤ 100 mm og a ≤ 2·c1') && t.includes('opfyldt'))).toBe(true);
