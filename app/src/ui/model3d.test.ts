@@ -212,3 +212,87 @@ describe('kantarmering som åbne hårnålebøjler (åbne ind mod elementet) om k
     expect(tekster.some((t) => t.includes('a ≤ 100 mm og a ≤ 2·c1') && t.includes('opfyldt'))).toBe(true);
   });
 });
+
+describe('armeringen i 3D kan udføres: ingen stænger gennem ankre eller hinanden', () => {
+  type P = [number, number, number];
+  // uafhængig afstandsberegning (sampling) til kontrol af geometrien
+  const afst = (a: P, b: P, c: P, d: P) => {
+    let mn = Infinity;
+    for (let i = 0; i <= 40; i++) {
+      const s = i / 40, p: P = [a[0] + (b[0] - a[0]) * s, a[1] + (b[1] - a[1]) * s, a[2] + (b[2] - a[2]) * s];
+      const dv: P = [d[0] - c[0], d[1] - c[1], d[2] - c[2]], L = dv[0] ** 2 + dv[1] ** 2 + dv[2] ** 2;
+      const t = L ? Math.max(0, Math.min(1, ((p[0] - c[0]) * dv[0] + (p[1] - c[1]) * dv[1] + (p[2] - c[2]) * dv[2]) / L)) : 0;
+      mn = Math.min(mn, Math.hypot(p[0] - c[0] - dv[0] * t, p[1] - c[1] - dv[1] * t, p[2] - c[2] - dv[2] * t));
+    }
+    return mn;
+  };
+  const beregn = async (f: (i: any) => void) => {
+    const { beregnTilstand } = await import('./state');
+    const i: any = structuredClone(m); f(i);
+    const t = beregnTilstand(i), k = t.resultat!.kombinationer[0]!.resultat;
+    return { i, s: byg3d(t.model, k, null) };
+  };
+  const kollisionsNoter = (s: ReturnType<typeof byg3d>) => s.noter.filter((n) => n.startsWith('OBS') && (n.includes('skærer') || n.includes('går gennem')));
+  const T = (i: any, x: object) => Object.assign(i.beton.armering.ankerarmeringTraek, { aktiv: true, foering: 'stoed', ...x });
+  const V = (i: any, x: object) => Object.assign(i.beton.armering.ankerarmeringForskydning, { aktiv: true, ...x });
+  const tilfaelde: [string, (i: any) => void][] = [
+    ['træk, 1 bøjle', (i) => T(i, { antalBoejler: 1, krog: true })],
+    ['træk, 2 bøjler', (i) => T(i, { antalBoejler: 2, krog: true })],
+    ['træk, 3 bøjler drejet 30°', (i) => T(i, { antalBoejler: 3, krog: true, vinkel: 30 })],
+    ['forskydning, overflade med krog', (i) => V(i, { type: 'overflade', krog: true, kantstangDiameter: 12 })],
+    ['forskydning, overflade lige', (i) => V(i, { type: 'overflade', krog: false, kantstangDiameter: 12 })],
+    ['forskydning, bøjle ⌀10', (i) => V(i, { type: 'boejle', antalBoejler: 2 })],
+    ['forskydning, bøjle ⌀16', (i) => V(i, { type: 'boejle', antalBoejler: 2, diameter: 16 })],
+    ['forskydning, løkker', (i) => V(i, { type: 'loekke', antalLoekker: 2 })],
+    ['kantarmering ψre,V', (i) => Object.assign(i.beton.armering, { kantarmering: 'boejler', kantarmeringDiameter: 12, kantarmeringAfstand: 100 })],
+  ];
+  for (const [navn, f] of tilfaelde) {
+    it(`${navn}: stængerne højst rører hinanden og ankrene`, async () => {
+      const { s } = await beregn(f);
+      expect(kollisionsNoter(s)).toEqual([]);
+      const st = s.dele.filter((x) => x.type === 'stang') as any[];
+      const cyl = s.dele.filter((x: any) => x.type === 'cyl' && (x.rolle === 'skaft' || x.rolle === 'hoved')) as any[];
+      for (const a of st) for (const c of cyl) expect(a.r + c.r - afst(a.fra, a.til, [c.x, c.y, c.z0], [c.x, c.y, c.z1])).toBeLessThan(0.5);
+    });
+  }
+  it('overfladestængerne i træk går uden om bolteskafterne (ikke gennem boltens akse)', async () => {
+    const { i, s } = await beregn((i) => T(i, { antalBoejler: 1, krog: true }));
+    const flade = s.dele.filter((x) => x.type === 'stang' && x.variant === 'tilbehoer') as any[];
+    expect(flade.length).toBeGreaterThan(2);
+    for (const q of i.opstilling.anker) for (const b of flade) expect(afst(b.fra, b.til, [q.x, q.y, -i.anker.hef], [q.x, q.y, 0])).toBeGreaterThanOrEqual(i.anker.d / 2 + b.r - 0.5);
+  });
+  it('løkker og bøjler bukkes med mindst 4⌀ og ligger an mod skaftet på kantsiden', async () => {
+    const { i, s } = await beregn((i) => V(i, { type: 'loekke', antalLoekker: 1, diameter: 10 }));
+    const q = i.opstilling.anker.find((a: any) => a.x === -120 && a.y === -120);
+    const loekke = s.dele.filter((x) => x.type === 'stang' && !x.variant && Math.abs((x as any).fra[1] - q.y) < 60 && (x as any).fra[0] < q.x + 30) as any[];
+    // benene ligger dornradius + ⌀/2 = 20 + 5 = 25 mm fra skaftets akse (ikke 15 mm, som ville give en 2⌀-bøjning)
+    const ys = loekke.flatMap((x) => [x.fra[1], x.til[1]]);
+    expect(Math.max(...ys) - q.y).toBeCloseTo(25, 5);
+    expect(q.y - Math.min(...ys)).toBeCloseTo(25, 5);
+    // forreste punkt (mod kanten x−) rører skaftet: akse i d/2 + ⌀/2 = 15 mm foran ankeret
+    expect(q.x - Math.min(...loekke.flatMap((x) => [x.fra[0], x.til[0]]))).toBeCloseTo(15, 5);
+  });
+  it('træk- og forskydningsarmering i samme lag giver en note med dybderne', async () => {
+    const { s } = await beregn((i) => { T(i, { antalBoejler: 1, krog: true }); V(i, { type: 'loekke', antalLoekker: 1 }); });
+    const n = kollisionsNoter(s);
+    expect(n.length).toBeGreaterThan(0);
+    expect(n.some((x) => x.includes('trækbøjlerne') && x.includes('40 mm'))).toBe(true);
+  });
+  it('kantarmeringens stænger ligger inde i bøjningen og rører bøjlen uden at skære den', async () => {
+    const { s } = await beregn((i) => Object.assign(i.beton.armering, { kantarmering: 'boejler', kantarmeringDiameter: 12, kantarmeringAfstand: 100 }));
+    const st = s.dele.filter((x) => x.type === 'stang') as any[];
+    const kantst = st.filter((x) => !x.variant), boejler = st.filter((x) => x.variant === 'forankring');
+    expect(kantst).toHaveLength(2);
+    for (const a of kantst) {
+      const mn = Math.min(...boejler.map((b) => afst(a.fra, a.til, b.fra, b.til) - a.r - b.r));
+      expect(mn).toBeGreaterThan(-0.5);
+      expect(mn).toBeLessThan(0.5); // ligger an mod bøjlen
+    }
+  });
+  it('ψre,V-noten bruger samme krav som beregningen (⌀ ≥ 12, revnet beton)', async () => {
+    const tekst = async (f: (i: any) => void) => (await beregn((i) => { Object.assign(i.beton.armering, { kantarmering: 'boejler', kantarmeringDiameter: 12, kantarmeringAfstand: 100 }); f(i); })).s.noter.find((n) => n.startsWith('krav ψre,V'))!;
+    expect(await tekst(() => {})).toContain('(opfyldt)');
+    expect(await tekst((i) => { i.beton.armering.kantarmeringDiameter = 10; })).toContain('IKKE opfyldt: ⌀ < 12 mm');
+    expect(await tekst((i) => { i.beton.revnet = false; })).toContain('IKKE opfyldt: betonen er urevnet');
+  });
+});
