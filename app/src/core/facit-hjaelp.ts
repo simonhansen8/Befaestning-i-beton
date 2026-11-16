@@ -6,3 +6,13 @@ export function legacyKfi(model: { indstillinger?: { kfiPaaLaster?: boolean; kon
   const i = model.indstillinger ?? {};
   return i.kfiPaaLaster ? Math.min(1, KFI[i.konsekvensklasse ?? 'CC2'] ?? 1) : 1;
 }
+
+/**
+ * Kun til facit-tests: den gamle kerne brugte γMs,re = 1,20 uden γ3. Den nye kerne bruger γs = 1,20·γ3
+ * (DS/EN 1992-1-1 DK NA, Tabel 2.1Na). For at kunne sammenligne divideres facit-modellens γMs,re med γ3.
+ */
+export function legacyGammaMsRe(model: { indstillinger?: { gammaMsRe?: number; kontrolklasse?: string } }): number {
+  const i = model.indstillinger ?? {};
+  const g3 = i.kontrolklasse === 'lempet' ? 1.1 : 1;
+  return (typeof i.gammaMsRe === 'number' && i.gammaMsRe > 0 ? i.gammaMsRe : 1.2) / g3;
+}

@@ -35,7 +35,7 @@ export interface KernemodelBeton {
 }
 export interface Kernemodel {
   beton: KernemodelBeton; anker: KernemodelAnker;
-  plade: { bx: number; by: number; t: number; hulfrigang: string; afstandTilBeton?: number; lasthoejde?: number | null; mellemlaeg: string; indspaending: string };
+  plade: { bx: number; by: number; t: number; hulfrigang: string; afstandTilBeton?: number; lasthoejde?: number | null; mellemlaeg: string; indspaending: string; lastX?: number; lastY?: number };
   opstilling: { anker: Anker[] };
 }
 

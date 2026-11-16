@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { beregnProjekt, type Projektmodel } from './beregn';
-import { legacyKfi } from './facit-hjaelp';
+import { legacyGammaMsRe, legacyKfi } from './facit-hjaelp';
 import { skalerLast } from './loads';
 
 const G = JSON.parse(readFileSync(new URL('../../../golden/cases.json', import.meta.url), 'utf8'));
@@ -12,7 +12,7 @@ describe('beregnProjekt mod facit', () => {
     const m = c.model;
     // Facit regner med fast Ec = 30000 og gamma3 efter kontrolklasse; K_FI på laster er fjernet i ny kerne.
     const k = legacyKfi(m);
-    const model = { ...m, indstillinger: { ...m.indstillinger, gamma3: undefined, Ec: 30000 }, laster: m.laster.map((l: any) => ({ ...skalerLast(l, k), alphaSus: l.alphaSus })) } as Projektmodel;
+    const model = { ...m, indstillinger: { ...m.indstillinger, gammaMsRe: legacyGammaMsRe(m), gamma3: undefined, Ec: 30000 }, laster: m.laster.map((l: any) => ({ ...skalerLast(l, k), alphaSus: l.alphaSus })) } as Projektmodel;
     const r = beregnProjekt(model);
     const gammelFejl = (c.resultat.fejl as string[]).filter((f) => f !== 'k:indstillinger.kfiPaaLaster');
     if (c.resultat.tilstand !== 'ok') {

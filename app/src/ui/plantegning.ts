@@ -56,9 +56,14 @@ export function plantegningSvg(m: Model, k: KombinationsResultat | null): string
     o.push(`<text x="${f1(X(a.x) + rad + 2)}" y="${f1(Y(a.y) - rad - 1)}" font-size="9" fill="currentColor">${a.id}${F > 0 ? ` · ${f1(F / 1000)}` : ''}</text>`);
   });
   if (k && k.fordeling.C > 0) o.push(`<circle cx="${f1(X(k.fordeling.xC))}" cy="${f1(Y(k.fordeling.yC))}" r="3" fill="var(--warn)"><title>Resultant af trykzonen: ${f1(k.fordeling.C / 1000)} kN</title></circle>`);
+  const lx = Number(m.plade.lastX) || 0, ly = Number(m.plade.lastY) || 0;
+  if (lx || ly) {
+    const cx = X(lx), cy = Y(ly);
+    o.push(`<g stroke="var(--accent)" stroke-width="1.4" fill="none"><circle cx="${f1(cx)}" cy="${f1(cy)}" r="5"/><line x1="${f1(cx - 7)}" y1="${f1(cy)}" x2="${f1(cx + 7)}" y2="${f1(cy)}"/><line x1="${f1(cx)}" y1="${f1(cy - 7)}" x2="${f1(cx)}" y2="${f1(cy + 7)}"/><title>Lastpunkt (${f1(lx)}; ${f1(ly)}) mm</title></g>`);
+  }
   o.push('</svg>');
   return o.join('');
 }
 
 /** Forklaring til plantegningen (tekst i præsentationslaget). */
-export const PLAN_FORKLARING = 'Skravering = uden for beton · blå ramme = fodplade · rød fyld = ankertræk (kN ved bolt) · gul = trykzone · blå pil = forskydning.';
+export const PLAN_FORKLARING = 'Skravering = uden for beton · blå ramme = fodplade · rød fyld = ankertræk (kN ved bolt) · gul = trykzone · blå pil = forskydning · blåt sigtekorn = lastpunkt (hvis det ikke er origo).';

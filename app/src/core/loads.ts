@@ -13,6 +13,16 @@ export function skalerLast(l: Last, kfi: number): Last {
   return { ...l, N: l.N > 0 ? kfi * l.N : Math.min(1, kfi) * l.N, Vx: kfi * l.Vx, Vy: kfi * l.Vy, Mx: kfi * l.Mx, My: kfi * l.My, T: kfi * l.T };
 }
 
+/**
+ * Flytter en last, der angriber i punktet (ex, ey) i pladens plan, til origo (referencepunktet, som ankrenes
+ * koordinater og momenterne henføres til). Fortegn som i fordelTraek/fordelForskydning:
+ * ΣF·y = Mx, ΣF·x = −My og T = Σ(x·Vy − y·Vx). Derfor Mx += N·ey, My −= N·ex og T += ex·Vy − ey·Vx.
+ */
+export function flytLastTilOrigo(l: Last, ex: number, ey: number): Last {
+  if (!ex && !ey) return { ...l };
+  return { ...l, Mx: (l.Mx || 0) + (l.N || 0) * ey, My: (l.My || 0) - (l.N || 0) * ex, T: (l.T || 0) + ex * (l.Vy || 0) - ey * (l.Vx || 0) };
+}
+
 export interface TraekFordeling {
   /** Ankerkraft pr. anker [N] (≥ 0 = træk). */
   F: number[];

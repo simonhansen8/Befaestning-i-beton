@@ -98,13 +98,14 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
   if (AsFil != null && Math.abs(AsFil - As) > 0.005 * As) info('advarsel', 'as-afledt-af-d', 'ISO 898-1', 'anker.As', { d: dd, angivet: AsFil, As });
   const klasse = String(l.staalklasse ?? '8.8');
   const sk = (STAALKLASSER as Record<string, { fuk: number; fyk: number; duktil: boolean }>)[klasse] ?? null;
+  if ((klasse === 'A4-70' || klasse === 'A4-80') && dd > 24) info('advarsel', 'rustfri-over-m24', 'EN ISO 3506-1 / ETA', 'anker.staalklasse', { d: dd, klasse });
   const fuk = r('anker.fuk', l.fuk, sk?.fuk ?? 800, { gt: 0 });
   const fyk = r('anker.fyk', l.fyk, sk?.fyk ?? 640, { gt: 0 });
   if (fyk >= fuk) fejl('fyk-over-fuk', 'anker.fyk', EN('Tabel 4.1'), false, { fyk, fuk });
   const nul = { gt: 0, nullable: true as const };
   const kr = { gt: 0, nullable: true as const, krit: false };
   const A = {
-    type, d: dd, dnom: r('anker.dnom', l.dnom, null, nul) ?? dd, gevind, As,
+    type, produkt: typeof l.produkt === 'string' ? l.produkt : '', d: dd, dnom: r('anker.dnom', l.dnom, null, nul) ?? dd, gevind, As,
     hef: r('anker.hef', l.hef, 100, { gt: 0 }),
     staalklasse: klasse, fuk, fyk, duktil: boolsk(l.duktil, sk?.duktil ?? true),
     dh: r('anker.dh', l.dh, 2 * dd, { gt: 0, krit: !y }),
@@ -227,6 +228,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
     hulfrigang: vaelg(hul, ['normal', 'stor'] as const, 'normal'),
     afstandTilBeton: r('plade.afstandTilBeton', c.afstandTilBeton, 0, { min: 0 }),
     lasthoejde: r('plade.lasthoejde', c.lasthoejde, null, { nullable: true, min: 0 }),
+    lastX: r('plade.lastX', c.lastX, 0, {}), lastY: r('plade.lastY', c.lastY, 0, {}),
     mellemlaeg: vaelg(c.mellemlaeg, ['ingen', 'moertel', 'aaben'] as const, 'ingen'),
     indspaending: vaelg(c.indspaending, ['fri', 'fuld'] as const, 'fri'),
   };

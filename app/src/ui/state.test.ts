@@ -3,6 +3,7 @@ import { Store } from './state';
 import { KANTFELTER, SEKTIONER } from './felter';
 import type { FeltDef } from './skema-typer';
 import { standardModel } from '../core/indlaes';
+import { anvendHilti } from '../core/produkter';
 
 const felt = (k: string): FeltDef => {
   const kf = KANTFELTER.find((f) => f.k === k);
@@ -45,6 +46,36 @@ describe('Store', () => {
     s.indlaesTekst(JSON.stringify(m));
     expect(s.tilstand.model.anker.As).toBe(84.3);
     expect(s.tilstand.diagnostik.some((d) => d.kode === 'as-afledt-af-d')).toBe(true);
+  });
+  it('indstøbt uden produkt: hovedmål og d0 følger boltdiameteren', () => {
+    const s = new Store(standardModel('2026-01-01')); // M20, dh 40, th 16, d0 24
+    s.saetFelt(felt('anker.d'), '12');
+    expect(s.tilstand.model.anker.dh).toBe(24);
+    expect(s.tilstand.model.anker.th).toBe(10);
+    expect(s.tilstand.model.anker.d0).toBe(16);
+  });
+  it('Hilti HIT-HY 200 V3: ψc følger betonklassen, og produktdata følger diameteren', () => {
+    const m = standardModel('2026-01-01');
+    anvendHilti(m, 16, 'II', 'toert-vaadt');
+    const s = new Store(m);
+    s.saetFelt(felt('beton.klasse'), 'C20/25');
+    expect(s.tilstand.model.anker.psiC).toBeCloseTo(1, 12);
+    s.saetFelt(felt('beton.klasse'), 'C50/60');
+    expect(s.tilstand.model.anker.psiC).toBeCloseTo((50 / 20) ** 0.1, 12);
+    s.saetFelt(felt('anker.d'), '24');
+    const a = s.tilstand.model.anker;
+    expect([a.d, a.d0, a.smin, a.cmin, a.tauRkCr, a.psi0Sus]).toEqual([24, 28, 115, 60, 8.0, 0.89]);
+    expect(s.tilstand.diagnostik.some((d) => d.kode === 'produktdata-passer-ikke-d' || d.kode === 'psic-passer-ikke-beton')).toBe(false);
+  });
+  it('en fil med forældet ψc eller produktdata for en anden størrelse giver advarsler', () => {
+    const m = standardModel('2026-01-01');
+    anvendHilti(m, 16, 'I', 'toert-vaadt');
+    m.beton.klasse = 'C20/25'; // ψc står stadig til C30/37
+    m.anker.d = 20;            // d0 står stadig til M16
+    const s = new Store(m);
+    const koder = s.tilstand.diagnostik.map((d) => d.kode);
+    expect(koder).toContain('psic-passer-ikke-beton');
+    expect(koder).toContain('produktdata-passer-ikke-d');
   });
   it('ugyldig indtastning ændrer ikke modellen', () => {
     const s = new Store(standardModel('2026-01-01'));

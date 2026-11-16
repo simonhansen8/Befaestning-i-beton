@@ -86,38 +86,38 @@ export function kantbrud(p: KantInput): KantbrudResultat {
   const tomt = (aarsag: KantbrudResultat['aarsag']): KantbrudResultat => ({ relevant: false, aarsag, VEd: 0, VRd: 0, VRk: 0, udnyttelse: null, styrendeAnker: null, styrende: null, kanterPr: {}, forreste: {}, daekkede: [], forFjerne: [], kanterOversigt: [] });
   if (!(lasttal > 1e-6)) return tomt('ingen-forskydning');
   if (!frie.length) return tomt('ingen-frie-kanter');
-  const afstand = Math.max(10 * p.hef, 60 * p.dnom);
+  const cGraense = Math.max(10 * p.hef, 60 * p.dnom);
   const skala = Math.abs(last.Vx) + Math.abs(last.Vy) + Math.abs(last.T) / 100 + 1;
   const kanterPr: KantbrudResultat['kanterPr'] = {};
   const forreste: KantbrudResultat['forreste'] = {};
   const forFjerne: KantNavn[] = [];
   const daekkede: KantKandidat[] = [];
-  const dd = p.daekket ? new Set(p.daekket.ids) : null;
+  const daekkedeIds = p.daekket ? new Set(p.daekket.ids) : null;
   const geo = { kanter: p.kanter, fck: p.fck, revnet: p.revnet, hef: p.hef, dnom: p.dnom, h: p.h };
   const idx = (a: Anker) => ankre.indexOf(a as never);
 
   const kandidat = (D: Kantdef, row: Anker[], dist: ForskydningsFordeling, Vperp: number, Vpar: number, eV: number, bagerste: boolean): KantKandidat => {
-    const Jv = Math.hypot(Vperp, Vpar);
-    const aV = Vperp > 0 ? Math.atan2(Vpar, Vperp) : Math.PI / 2;
+    const VEd = Math.hypot(Vperp, Vpar);
+    const alphaV = Vperp > 0 ? Math.atan2(Vpar, Vperp) : Math.PI / 2;
     const c1 = Math.min(...row.map((a) => kantafstand(a, p.kanter, D.kant)));
     const R = kantGeometri(geo, D.kant, row, c1);
     const psiEcV = R.c1 > 0 ? 1 / (1 + (2 * eV) / (3 * R.c1)) : 1;
-    const psiA = Math.max(1, Math.sqrt(1 / (Math.cos(aV) ** 2 + (0.5 * Math.sin(aV)) ** 2)));
+    const psiA = Math.max(1, Math.sqrt(1 / (Math.cos(alphaV) ** 2 + (0.5 * Math.sin(alphaV)) ** 2)));
     const psiRe =
       p.revnet && p.kantarmering === 'boejler' && p.hef >= 2.5 * p.cnom && p.kantarmeringAfstand != null && p.kantarmeringDiameter != null &&
       p.kantarmeringAfstand <= 100 && p.kantarmeringAfstand <= 2 * R.c1 && p.kantarmeringDiameter >= 12 ? 1.4 : 1;
     let f08 = 1;
     if (ankre.length === 2 && Math.abs(last.T) > 1e-6) {
-      const Y = ankre.map((_a, i) => p.fordeling.Vx[i]! * D.n[0] + p.fordeling.Vy[i]! * D.n[1]);
-      if (Y[0]! * Y[1]! < 0) f08 = 0.8;
+      const vNormal = ankre.map((_a, i) => p.fordeling.Vx[i]! * D.n[0] + p.fordeling.Vy[i]! * D.n[1]);
+      if (vNormal[0]! * vNormal[1]! < 0) f08 = 0.8;
     }
     const VRk = R.A0 > 0 ? ((R.V0 * R.Ac) / R.A0) * R.pS * R.pH * psiEcV * psiA * psiRe * f08 : 0;
     const VRd = VRk / p.gammaMcV;
-    const u = dist.mulig && VRd > 0 ? Jv / VRd : Infinity;
-    return { kant: D.kant, akse: D.akse, ankre: row.map((a) => a.id), dist, Vperp, Vpar, VEd: Jv, alphaV: aV, eV, R, psiEc: psiEcV, psiA, psiRe, f08, VRk, VRd, udnyttelse: u, c1, bagerste, stor: false };
+    const eta = dist.mulig && VRd > 0 ? VEd / VRd : Infinity;
+    return { kant: D.kant, akse: D.akse, ankre: row.map((a) => a.id), dist, Vperp, Vpar, VEd, alphaV, eV, R, psiEc: psiEcV, psiA, psiRe, f08, VRk, VRd, udnyttelse: eta, c1, bagerste, stor: false };
   };
   const registrer = (k: KantKandidat) => {
-    if (dd && k.kant === p.daekket!.kant && k.ankre.every((id) => dd.has(id))) { daekkede.push(k); return; }
+    if (daekkedeIds && k.kant === p.daekket!.kant && k.ankre.every((id) => daekkedeIds.has(id))) { daekkede.push(k); return; }
     const cur = kanterPr[k.kant];
     if (!cur || k.udnyttelse > cur.udnyttelse) kanterPr[k.kant] = k;
   };
@@ -127,48 +127,48 @@ export function kantbrud(p: KantInput): KantbrudResultat {
   });
 
   for (const D of frie) {
-    const ne = ankre.filter((a) => a.slids !== D.akse);
-    if (!ne.length) continue;
-    const afst = (a: Anker) => kantafstand(a, p.kanter, D.kant);
-    const U = Math.min(...ne.map(afst));
-    if (U >= afstand) { forFjerne.push(D.kant); continue; }
-    const tol = Math.max(1, p.forresteRaekkeTol * U);
-    const rows: Anker[][] = [];
-    for (const a of [...ne].sort((x, y) => afst(x) - afst(y))) {
-      const sidste = rows[rows.length - 1];
-      if (sidste && afst(a) <= afst(sidste[0]!) + tol) sidste.push(a); else rows.push([a]);
+    const kandidatAnkre = ankre.filter((a) => a.slids !== D.akse);
+    if (!kandidatAnkre.length) continue;
+    const cAf = (a: Anker) => kantafstand(a, p.kanter, D.kant);
+    const cMin = Math.min(...kandidatAnkre.map(cAf));
+    if (cMin >= cGraense) { forFjerne.push(D.kant); continue; }
+    const raekkeTol = Math.max(1, p.forresteRaekkeTol * cMin);
+    const raekker: Anker[][] = [];
+    for (const a of [...kandidatAnkre].sort((x, y) => cAf(x) - cAf(y))) {
+      const sidste = raekker[raekker.length - 1];
+      if (sidste && cAf(a) <= cAf(sidste[0]!) + raekkeTol) sidste.push(a); else raekker.push([a]);
     }
     if (!p.daekket) {
-      const O = rows[0]!;
-      const { kx, ky } = stivheder(D, new Set(O));
-      const J = Math.min(...O.map(afst));
-      forreste[D.kant] = { kant: D.kant, ankre: O.map((a) => a.id), c1: J, R: kantGeometri(geo, D.kant, O, J), dist: fordelForskydning(ankre, kx, ky, last) };
+      const raekke = raekker[0]!;
+      const { kx, ky } = stivheder(D, new Set(raekke));
+      const c1Forreste = Math.min(...raekke.map(cAf));
+      forreste[D.kant] = { kant: D.kant, ankre: raekke.map((a) => a.id), c1: c1Forreste, R: kantGeometri(geo, D.kant, raekke, c1Forreste), dist: fordelForskydning(ankre, kx, ky, last) };
     }
-    const Z = p.stor ? rows : [rows[0]!];
-    for (const O of Z) {
-      const { kx, ky } = stivheder(D, new Set(O));
-      const z = fordelForskydning(ankre, kx, ky, last);
-      let Q = 0, par = 0, moment = 0;
-      for (const a of O) {
+    const undersoegte = p.stor ? raekker : [raekker[0]!];
+    for (const raekke of undersoegte) {
+      const { kx, ky } = stivheder(D, new Set(raekke));
+      const fordelingR = fordelForskydning(ankre, kx, ky, last);
+      let vVinkelret = 0, vParallel = 0, moment = 0;
+      for (const a of raekke) {
         const i = idx(a);
-        const vn = z.Vx[i]! * D.n[0] + z.Vy[i]! * D.n[1];
-        if (vn > 0) { Q += vn; moment += vn * koordLangsKant(a, D.kant); }
-        par += z.Vx[i]! * D.t[0] + z.Vy[i]! * D.t[1];
+        const vn = fordelingR.Vx[i]! * D.n[0] + fordelingR.Vy[i]! * D.n[1];
+        if (vn > 0) { vVinkelret += vn; moment += vn * koordLangsKant(a, D.kant); }
+        vParallel += fordelingR.Vx[i]! * D.t[0] + fordelingR.Vy[i]! * D.t[1];
       }
-      par = Math.abs(par);
-      if (!(z.mulig && Math.hypot(Q, par) < 1e-6 * skala)) {
-        const mid = O.reduce((s, a) => s + koordLangsKant(a, D.kant), 0) / O.length;
-        const eV = Q > 0 ? Math.abs(moment / Q - mid) : 0;
-        const k = kandidat(D, O, z, Q, par, eV, false);
-        k.stor = p.stor && rows.length > 1;
+      vParallel = Math.abs(vParallel);
+      if (!(fordelingR.mulig && Math.hypot(vVinkelret, vParallel) < 1e-6 * skala)) {
+        const midte = raekke.reduce((s, a) => s + koordLangsKant(a, D.kant), 0) / raekke.length;
+        const eV = vVinkelret > 0 ? Math.abs(moment / vVinkelret - midte) : 0;
+        const k = kandidat(D, raekke, fordelingR, vVinkelret, vParallel, eV, false);
+        k.stor = p.stor && raekker.length > 1;
         registrer(k);
       }
       if (!p.stor) {
-        for (const bag of rows.slice(1)) {
-          let pv = 0;
-          for (const a of bag) { const i = idx(a); pv += z.Vx[i]! * D.t[0] + z.Vy[i]! * D.t[1]; }
-          pv = Math.abs(pv);
-          if (pv > 1e-6 * skala) { const k = kandidat(D, bag, z, 0, pv, 0, true); k.stor = false; registrer(k); }
+        for (const bag of raekker.slice(1)) {
+          let vParallelBag = 0;
+          for (const a of bag) { const i = idx(a); vParallelBag += fordelingR.Vx[i]! * D.t[0] + fordelingR.Vy[i]! * D.t[1]; }
+          vParallelBag = Math.abs(vParallelBag);
+          if (vParallelBag > 1e-6 * skala) { const k = kandidat(D, bag, fordelingR, 0, vParallelBag, 0, true); k.stor = false; registrer(k); }
         }
       }
     }

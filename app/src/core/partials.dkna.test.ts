@@ -28,6 +28,16 @@ describe('DK NA:2024 Tabel 4.1', () => {
     expect(k.gammaMsRe).toBe(1.2);
   });
 
+  it('γ3 virker på beton og armering (DS/EN 1992-1-1 DK NA, Tabel 2.1Na: γc = 1,45·γ3, γc,træk = 1,70·γ3, γs = 1,20·γ3)', () => {
+    const { indstillinger: lempet } = parseIndstillinger({ kontrolklasse: 'lempet' });
+    const k = partialkoefficienter(lempet, { type: 'indstoebt', fuk: 800, fyk: 640 });
+    expect(k.gamma3).toBe(1.1);
+    expect(k.gammaMc).toBeCloseTo(1.45 * 1.1, 12);
+    expect(k.gammaCt).toBeCloseTo(1.7 * 1.1, 12);
+    expect(k.gammaMsRe).toBeCloseTo(1.2 * 1.1, 12);
+    expect(k.gammaMs).toBe(1.5); // ankerets stål: Tabel 4.1 i DS/EN 1992-4 DK NA, uden γ3
+  });
+
   describe('ulykke og seismik (højre kolonne)', () => {
     const { indstillinger: ul } = parseIndstillinger({ situation: 'ulykke', kontrolklasse: 'lempet' });
     const q = (fuk: number, fyk: number) => partialkoefficienter(ul, { type: 'indstoebt', fuk, fyk });

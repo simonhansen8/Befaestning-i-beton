@@ -64,26 +64,26 @@ export interface ArmeringT {
 /** Virkning af ankerarmering for træk: forankringslængder l1 af hver bøjle (35°-kegle) og krav iht. 7.2.1.2(2). */
 export function armeringTraekVirkning(ar: TraekArmering, hef: number, ankerD: number): ArmeringT {
   if (!ar.aktiv) return { aktiv: false, virksom: false, mangler: [], l1: 0, l1Liste: [], l1min: 0, rad: 0, ben: 0, antalBoejler: 0, ikkeVirksomme: 0 };
-  const p = ar.diameter || 12;
-  const n = 2 * ar.antalBoejler;
-  const x = ar.afstand;
-  const Mfri = ankerD / 2 + p / 2 + 2, M = ar.planAfstand != null && ar.planAfstand > 0 ? ar.planAfstand : Mfri;
-  const rad = Math.hypot(x, M);
+  const ds = ar.diameter || 12;
+  const nBen = 2 * ar.antalBoejler;
+  const afstand = ar.afstand;
+  const Mfri = ankerD / 2 + ds / 2 + 2, planAfst = ar.planAfstand != null && ar.planAfstand > 0 ? ar.planAfstand : Mfri;
+  const rad = Math.hypot(afstand, planAfst);
   const radOk = rad <= 0.75 * hef;
-  const antal = n / 2, tan35 = Math.tan((35 * Math.PI) / 180);
-  const l1min = (ar.krog ? 4 : 10) * p;
-  const alle = Array.from({ length: antal }, (_, j) => hef - tan35 * rad - (ar.daeklagTop + j * (p + 1)));
-  const virkListe = alle.map((v) => radOk && v >= l1min);
-  const a = alle.filter((_v, i) => virkListe[i] || !radOk);
-  const l1 = a.length ? Math.min(...a) : alle[0]!;
+  const antal = nBen / 2, tan35 = Math.tan((35 * Math.PI) / 180);
+  const l1min = (ar.krog ? 4 : 10) * ds;
+  const l1Alle = Array.from({ length: antal }, (_, j) => hef - tan35 * rad - (ar.daeklagTop + j * (ds + 1)));
+  const virkListe = l1Alle.map((v) => radOk && v >= l1min);
+  const virksomme = l1Alle.filter((_v, i) => virkListe[i] || !radOk);
+  const l1 = virksomme.length ? Math.min(...virksomme) : l1Alle[0]!;
   const mangler: ManglerT[] = [];
-  if (p > 16) mangler.push('dia-over-16');
+  if (ds > 16) mangler.push('dia-over-16');
   if (ar.fyk > 600) mangler.push('fyk-over-600');
   if (!radOk) mangler.push('afstand-over-0.75hef');
-  if (M < ankerD / 2 + p / 2 - 1e-9) mangler.push('skaerer-skaft');
+  if (planAfst < ankerD / 2 + ds / 2 - 1e-9) mangler.push('skaerer-skaft');
   if (l1 < l1min) mangler.push('l1-for-kort');
   if (!(ar.antalBoejler >= 1)) mangler.push('intet-ben');
-  return { aktiv: true, virksom: mangler.length === 0, mangler, l1, l1Liste: a, l1min, rad, ben: 2 * a.length, antalBoejler: alle.length, ikkeVirksomme: alle.length - virkListe.filter(Boolean).length };
+  return { aktiv: true, virksom: mangler.length === 0, mangler, l1, l1Liste: virksomme, l1min, rad, ben: 2 * virksomme.length, antalBoejler: l1Alle.length, ikkeVirksomme: l1Alle.length - virkListe.filter(Boolean).length };
 }
 
 export interface TraekArmeringInput {
@@ -99,22 +99,22 @@ const irr = (id: string): Eftervisning => ({ id, relevant: false, NEd: 0, NRd: 0
 export function eftervisTraekArmering(p: TraekArmeringInput, t: TraekOversigt): TraekArmeringResultat {
   const ud = { N_re: irr('N_re'), N_a: irr('N_a'), N_cre: irr('N_cre') };
   if (!p.virkning.virksom || !(t.NEd_h > 0)) return ud;
-  const e = p.virkning, d = p.ar.diameter;
-  const As = (Math.PI / 4) * d * d;
-  const NRk = e.ben * As * p.ar.fyk;
+  const virk = p.virkning, ds = p.ar.diameter;
+  const As = (Math.PI / 4) * ds * ds;
+  const NRk = virk.ben * As * p.ar.fyk;
   const NRd = NRk / p.gammaMsRe;
   const N_re: Eftervisning = { id: 'N_re', relevant: true, NEd: t.NEd_h, NRd, NRk, udnyttelse: udnyttelse(t.NEd_h, NRd), styrendeAnker: t.idMaxN };
-  const b = vedhaeftning({ fck: p.fck, eta1: p.ar.eta1, ds: d, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
-  const f = forankringsFaktor(p.ar.krog, p.ar.cd, d);
-  const g = (As * p.ar.fyk) / p.gammaMsRe;
-  const sum = 2 * e.l1Liste.reduce((s, l) => s + Math.min((l * Math.PI * d * b.fbd) / f, g), 0);
+  const bond = vedhaeftning({ fck: p.fck, eta1: p.ar.eta1, ds: ds, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
+  const alpha = forankringsFaktor(p.ar.krog, p.ar.cd, ds);
+  const NRdBen = (As * p.ar.fyk) / p.gammaMsRe;
+  const sum = 2 * virk.l1Liste.reduce((s, l) => s + Math.min((l * Math.PI * ds * bond.fbd) / alpha, NRdBen), 0);
   const N_a: Eftervisning = { id: 'N_a', relevant: true, NEd: t.NEd_h, NRd: sum, NRk: 0, udnyttelse: udnyttelse(t.NEd_h, sum), styrendeAnker: t.idMaxN };
   let N_cre = irr('N_cre');
   if (p.ar.foering !== 'stoed') {
-    const T = p.ar.forankringsdybde ?? p.hef;
-    const k = betonkegle({ ...p.kegle, ankre: t.traekAnkre, e1: t.eN1, e2: t.eN2, momentfaktor: null, hefOverstyring: T });
-    const A = k.NRk / p.gammaMc;
-    N_cre = { id: 'N_cre', relevant: true, NEd: t.NEd_g, NRd: A, NRk: k.NRk, udnyttelse: udnyttelse(t.NEd_g, A), styrendeAnker: t.traekAnkre[0]?.id ?? null };
+    const dybde = p.ar.forankringsdybde ?? p.hef;
+    const kegleArm = betonkegle({ ...p.kegle, ankre: t.traekAnkre, e1: t.eN1, e2: t.eN2, momentfaktor: null, hefOverstyring: dybde });
+    const NRdc = kegleArm.NRk / p.gammaMc;
+    N_cre = { id: 'N_cre', relevant: true, NEd: t.NEd_g, NRd: NRdc, NRk: kegleArm.NRk, udnyttelse: udnyttelse(t.NEd_g, NRdc), styrendeAnker: t.traekAnkre[0]?.id ?? null };
   }
   return { N_re, N_a, N_cre };
 }
@@ -160,70 +160,70 @@ export interface VirkningVInput {
 }
 
 /** Overfladearmeringens stænger pr. anker (7.2.2.2(3)): lateral afstand v, forankringslængde l1 og om de er virksomme. */
-function overfladeStaenger(p: VirkningVInput, kant: KantNavn, c1e: number | null): { staenger: Staenger[]; U: Anker[] } {
-  const m = p.ar, k = m.diameter;
-  const T = m.afstand ?? Math.max(p.ankerD * 1.8, 30);
-  const daek = m.daekToAkse ?? 40;
-  const F = p.ankre.map((q) => kantafstand(q, p.kanter, kant));
-  const D = Math.min(...F);
-  const ne = c1e != null ? c1e : D;
-  const tol = Math.max(1, p.forresteRaekkeTol * D);
-  const U = p.ankre.filter((_q, i) => F[i]! <= D + tol);
-  const W = Math.max(1, Math.round(m.benPrAnker ?? Math.floor((m.antalBenIAlt ?? 2 * U.length) / U.length)));
-  const G = (m.krog ? 4 : 10) * k;
-  const Z = (v: number) => { const w = ne - Math.hypot(v, daek) / 1.5 - p.cnom; return m.l1 != null ? Math.min(m.l1, w) : w; };
+function overfladeStaenger(p: VirkningVInput, kant: KantNavn, c1e: number | null): { staenger: Staenger[]; forreste: Anker[] } {
+  const ar = p.ar, ds = ar.diameter;
+  const afstand1 = ar.afstand ?? Math.max(p.ankerD * 1.8, 30);
+  const daekAkse = ar.daekToAkse ?? 40;
+  const cAnkre = p.ankre.map((q) => kantafstand(q, p.kanter, kant));
+  const cMin = Math.min(...cAnkre);
+  const c1 = c1e != null ? c1e : cMin;
+  const tol = Math.max(1, p.forresteRaekkeTol * cMin);
+  const forreste = p.ankre.filter((_q, i) => cAnkre[i]! <= cMin + tol);
+  const antal = Math.max(1, Math.round(ar.benPrAnker ?? Math.floor((ar.antalBenIAlt ?? 2 * forreste.length) / forreste.length)));
+  const l1min = (ar.krog ? 4 : 10) * ds;
+  const l1Af = (v: number) => { const w = c1 - Math.hypot(v, daekAkse) / 1.5 - p.cnom; return ar.l1 != null ? Math.min(ar.l1, w) : w; };
   const staenger: Staenger[] = [];
-  for (let i = 0; i < W; i++) {
-    const v = (i % 2 ? -1 : 1) * (T + Math.floor(i / 2) * Math.max(4 * k, 50));
-    const l1 = Z(v);
-    staenger.push({ v, l1, virksom: Math.abs(v) <= 0.75 * D && l1 >= G });
+  for (let i = 0; i < antal; i++) {
+    const v = (i % 2 ? -1 : 1) * (afstand1 + Math.floor(i / 2) * Math.max(4 * ds, 50));
+    const l1 = l1Af(v);
+    staenger.push({ v, l1, virksom: Math.abs(v) <= 0.75 * cMin && l1 >= l1min });
   }
-  return { staenger, U };
+  return { staenger, forreste };
 }
 
 /** Virkning af ankerarmering for forskydning (xd). */
 export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
-  const t = p.ar;
+  const ar = p.ar;
   const tom: ArmeringV = { aktiv: false, virksom: false, mangler: [], form: null, ben: 0, l1min: null, l1: null, eta1: 1, staenger: null, antalVirksomme: 0, boejler: null, zone: null };
-  if (!t.aktiv) return tom;
-  const dia = t.diameter, form = t.type;
+  if (!ar.aktiv) return tom;
+  const dia = ar.diameter, form = ar.type;
   const mangler: ManglerV[] = [];
-  if (t.fyk > 600) mangler.push('fyk-over-600');
-  const e = p.armKant;
-  const a = e ? e.ankre.length : 1;
-  const l = t.benPrAnker ?? Math.floor((t.antalBenIAlt ?? 0) / a);
-  let c = l, u: number | null = null, h: number | null = null, stg: Staenger[] | null = null;
+  if (ar.fyk > 600) mangler.push('fyk-over-600');
+  const armKant = p.armKant;
+  const nAnkre = armKant ? armKant.ankre.length : 1;
+  const benPrAnker = ar.benPrAnker ?? Math.floor((ar.antalBenIAlt ?? 0) / nAnkre);
+  let ben = benPrAnker, l1Virk: number | null = null, l1min: number | null = null, stgListe: Staenger[] | null = null;
   let boejler: ArmeringV['boejler'] = null, zone: number | null = null;
   if (form === 'overflade') {
     if (dia > 16) mangler.push('dia-over-16');
-    h = (t.krog ? 4 : 10) * dia;
-    if (e) {
-      const { staenger, U } = overfladeStaenger(p, e.kant, e.R.c1);
-      let y: { bars: Staenger[]; virk: Staenger[] } | null = null;
-      for (const id of e.ankre) {
-        const bars = U.some((q) => q.id === id) ? staenger : [];
+    l1min = (ar.krog ? 4 : 10) * dia;
+    if (armKant) {
+      const { staenger, forreste } = overfladeStaenger(p, armKant.kant, armKant.R.c1);
+      let svagest: { bars: Staenger[]; virk: Staenger[] } | null = null;
+      for (const id of armKant.ankre) {
+        const bars = forreste.some((q) => q.id === id) ? staenger : [];
         const virk = bars.filter((b) => b.virksom);
-        if (!y || virk.length < y.virk.length) y = { bars, virk };
+        if (!svagest || virk.length < svagest.virk.length) svagest = { bars, virk };
       }
-      stg = y ? y.bars : [];
-      c = y ? y.virk.length : 0;
-      u = stg.length ? Math.min(...stg.filter((b) => b.virksom).map((b) => b.l1)) : null;
-      if (c === 0) mangler.push('ingen-virksomme-ben');
+      stgListe = svagest ? svagest.bars : [];
+      ben = svagest ? svagest.virk.length : 0;
+      l1Virk = stgListe.length ? Math.min(...stgListe.filter((b) => b.virksom).map((b) => b.l1)) : null;
+      if (ben === 0) mangler.push('ingen-virksomme-ben');
     }
   } else {
-    const n = form === 'boejle' ? (t.antalBoejler ?? Math.max(1, Math.ceil((l * a) / 2))) : (t.antalLoekker ?? Math.max(1, Math.ceil(l / 2)));
-    let ne = n;
-    if (t.afstandBoejler != null && t.afstandBoejler > 0) {
+    const antal = form === 'boejle' ? (ar.antalBoejler ?? Math.max(1, Math.ceil((benPrAnker * nAnkre) / 2))) : (ar.antalLoekker ?? Math.max(1, Math.ceil(benPrAnker / 2)));
+    let antalVirk = antal;
+    if (ar.afstandBoejler != null && ar.afstandBoejler > 0) {
       // bøjler/løkker følger efter hinanden ind i elementet med afstanden s; kun dem inden for 0,5·c1 regnes med (fortolkning, skal verificeres)
-      zone = 0.5 * (e ? e.R.c1 : Infinity);
-      boejler = Array.from({ length: n }, (_v, j) => ({ pos: j * t.afstandBoejler!, virksom: j * t.afstandBoejler! <= zone! + 1e-9 }));
-      ne = boejler.filter((b) => b.virksom).length;
+      zone = 0.5 * (armKant ? armKant.R.c1 : Infinity);
+      boejler = Array.from({ length: antal }, (_v, j) => ({ pos: j * ar.afstandBoejler!, virksom: j * ar.afstandBoejler! <= zone! + 1e-9 }));
+      antalVirk = boejler.filter((b) => b.virksom).length;
     }
-    c = form === 'boejle' ? (2 * ne) / a : 2 * ne;
+    ben = form === 'boejle' ? (2 * antalVirk) / nAnkre : 2 * antalVirk;
   }
-  if (form !== 'boejle' && !(c >= 1)) mangler.push('intet-virksomt-ben-forreste');
-  const eta1 = t.eta1 ?? (p.h <= 250 ? 1 : 0.7);
-  return { aktiv: true, virksom: mangler.length === 0, mangler, form, ben: c, l1min: h, l1: u, eta1, staenger: stg, antalVirksomme: c, boejler, zone };
+  if (form !== 'boejle' && !(ben >= 1)) mangler.push('intet-virksomt-ben-forreste');
+  const eta1 = ar.eta1 ?? (p.h <= 250 ? 1 : 0.7);
+  return { aktiv: true, virksom: mangler.length === 0, mangler, form, ben: ben, l1min: l1min, l1: l1Virk, eta1, staenger: stgListe, antalVirksomme: ben, boejler, zone };
 }
 
 export interface ForskydningsArmeringInput {
@@ -237,37 +237,37 @@ export interface ForskydningsArmeringResultat { V_re: Eftervisning; V_a: Eftervi
 
 /** V_re (flydning af armering inkl. excentricitet) og V_a (forankring, kun overfladearmering). */
 export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): ForskydningsArmeringResultat {
-  const { ar, virkning: e } = p;
-  const d = ar.diameter;
+  const { ar, virkning: virk } = p;
+  const ds = ar.diameter;
   const es = ar.es ?? (p.lastHoejde ?? p.pladeAfstandTilBeton + p.pladeT) + (ar.daekToAkse ?? 40);
   const z = 0.85 * Math.min(p.h - p.cnom, 2 * p.hef, 2 * p.armKant.R.c1);
   const dists = [p.kantKandidat?.dist, p.armKant.dist].filter((x): x is ForskydningsFordeling => !!x && x.mulig !== false);
-  let y = -1, g = 0;
+  let VEdMaks = -1, iMaks = 0;
   p.ankre.forEach((_q, j) => {
     const base = Math.hypot(p.fordeling.Vx[j]!, p.fordeling.Vy[j]!);
-    const m = Math.max(base, ...dists.map((x) => x.V[j]!));
-    if (m > y) { y = m; g = j; }
+    const vAnker = Math.max(base, ...dists.map((x) => x.V[j]!));
+    if (vAnker > VEdMaks) { VEdMaks = vAnker; iMaks = j; }
   });
-  const id = p.ankre[g]!.id;
-  const NEd = (es / z + 1) * y;
+  const id = p.ankre[iMaks]!.id;
+  const NEd = (es / z + 1) * VEdMaks;
   const k10 = ar.type === 'overflade' ? 1 : 0.5;
-  const As = (Math.PI / 4) * d * d;
-  const NRk = k10 * e.ben * As * ar.fyk;
+  const As = (Math.PI / 4) * ds * ds;
+  const NRk = k10 * virk.ben * As * ar.fyk;
   const NRd = NRk / p.gammaMsRe;
   const V_re: Eftervisning = { id: 'V_re', relevant: true, NEd, NRd, NRk, udnyttelse: udnyttelse(NEd, NRd), styrendeAnker: id };
-  if (e.form !== 'overflade') return { V_re, V_a: irr('V_a') };
-  const b = vedhaeftning({ fck: p.fck, eta1: e.eta1, ds: d, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
-  const f = forankringsFaktor(ar.krog, ar.cd, d);
-  const g2 = (As * ar.fyk) / p.gammaMsRe;
-  const sum = (e.staenger ?? []).filter((s) => s.virksom).reduce((s, st) => s + Math.min((st.l1 * Math.PI * d * b.fbd) / f, g2), 0);
+  if (virk.form !== 'overflade') return { V_re, V_a: irr('V_a') };
+  const bond = vedhaeftning({ fck: p.fck, eta1: virk.eta1, ds: ds, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
+  const alpha = forankringsFaktor(ar.krog, ar.cd, ds);
+  const NRdBen = (As * ar.fyk) / p.gammaMsRe;
+  const sum = (virk.staenger ?? []).filter((s) => s.virksom).reduce((s, st) => s + Math.min((st.l1 * Math.PI * ds * bond.fbd) / alpha, NRdBen), 0);
   const V_a: Eftervisning = { id: 'V_a', relevant: true, NEd, NRd: sum, NRk: 0, udnyttelse: udnyttelse(NEd, sum), styrendeAnker: id };
-  // kantstang (fig. 7.10 a, 7.2.2.2(3)f): trykstivere fra ankeret til knuderne ved de vinkelrette stænger; kantstangen er trækbånd mellem knuderne.
-  // Kraft pr. vinkelret stang = NEd/n (n = virksomme stænger pr. anker). Strutten har den tværgående komposant F_stang·tan(α) (α fra belastningsretningen),
+  // kantstang (fig. 7.10 a, 7.2.2.2(3)alpha): trykstivere fra ankeret til knuderne ved de vinkelrette stænger; kantstangen er trækbånd mellem knuderne.
+  // Kraft pr. vinkelret stang = NEd/nStaenger (nStaenger = virksomme stænger pr. anker). Strutten har den tværgående komposant F_stang·tan(α) (α fra belastningsretningen),
   // som kantstangen optager som træk: T_ek = F_stang·tan α (α = 45° → T_ek = F_stang).
   if (ar.kantstangDiameter != null && ar.kantstangDiameter > 0) {
-    const n = Math.max(1, e.ben), alfa = ((ar.trykstiverVinkel ?? 45) * Math.PI) / 180, T = (NEd / n) * Math.tan(alfa);
+    const nStaenger = Math.max(1, virk.ben), alfa = ((ar.trykstiverVinkel ?? 45) * Math.PI) / 180, Tek = (NEd / nStaenger) * Math.tan(alfa);
     const NRk_ek = ((Math.PI / 4) * ar.kantstangDiameter ** 2) * ar.fyk, NRd_ek = NRk_ek / p.gammaMsRe;
-    const V_ek: Eftervisning = { id: 'V_ek', relevant: true, NEd: T, NRd: NRd_ek, NRk: NRk_ek, udnyttelse: udnyttelse(T, NRd_ek), styrendeAnker: id };
+    const V_ek: Eftervisning = { id: 'V_ek', relevant: true, NEd: Tek, NRd: NRd_ek, NRk: NRk_ek, udnyttelse: udnyttelse(Tek, NRd_ek), styrendeAnker: id };
     return { V_re, V_a, V_ek };
   }
   return { V_re, V_a };

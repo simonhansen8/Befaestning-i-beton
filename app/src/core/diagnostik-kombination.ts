@@ -11,6 +11,7 @@ export function diagnostikKombination(
   const f = r.fordeling, t = r.traek;
   if (!f.konvergeret) e.push(diag('fejl', 'lastfordeling-ikke-konvergeret', EN('6.2.1'), null, { residual: f.residual }));
   const svage = t.traekAnkre.filter((_a, i) => t.kraefter[i]! < 0.05 * t.NEd_h);
+  if (t.NEd_g > 0) e.push(diag('info', 'anneks-a-videreforing', EN('Anneks A'), null, { N: t.NEd_g }));
   if (svage.length) e.push(diag('info', 'ankre-med-lille-traek', EN('6.2.1(3)'), null, { ankre: svage.map((a) => a.id).join(', ') }));
   if (f.C > 0) {
     const fcd = fck / ind.gammaC;

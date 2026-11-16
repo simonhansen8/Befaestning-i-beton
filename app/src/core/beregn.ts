@@ -4,7 +4,7 @@ import { fckAf } from './concrete';
 import { diagnostikKombination, diagnostikValgtArmeringskant } from './diagnostik-kombination';
 import type { Diagnostik } from './diagnostik';
 import { beregnKombination, vaelgArmeringsKant, type KombinationsResultat } from './kombination';
-import type { Last } from './loads';
+import { flytLastTilOrigo, type Last } from './loads';
 import { partialkoefficienter, type Partialkoefficienter } from './partials';
 import { parseIndstillinger, youngBeton, type IndstillingerInput, type Indstillinger } from './settings';
 import { afledStaal, type AnkerStaal, type AnkerStaalInput } from './steel';
@@ -19,6 +19,7 @@ export interface Projektmodel extends ValideringsModel {
 }
 
 export interface KombinationsOutput {
+  /** `last` er lasten henført til origo (inkl. moment og vridning fra lastpunktet plade.lastX/lastY). */
   index: number; navn: string; last: Last; alphaSus: number;
   resultat: KombinationsResultat; diagnostik: Diagnostik[];
   maksUdnyttelse: number; styrendeBrudform: string | null;
@@ -59,7 +60,9 @@ export function beregnProjekt(m: Projektmodel): ProjektResultat {
   if (modelDiag.some((d) => d.niveau === 'fejl')) {
     return { tilstand: 'fejl', ok: false, diagnostik: modelDiag, ...base, armeringskant: null, kombinationer: [], styrendeKombination: null, maksUdnyttelse: null, styrendeBrudform: null };
   }
-  const lk = m.laster.map((l) => ({ last: l as Last, alphaSus: l.alphaSus ?? m.anker.alphaSus }));
+  // Laster angriber i lastpunktet (plade.lastX/lastY); kernen regner med lasten flyttet til origo (ekstra moment og vridning).
+  const ex = m.plade.lastX ?? 0, ey = m.plade.lastY ?? 0;
+  const lk = m.laster.map((l) => ({ last: flytLastTilOrigo(l as Last, ex, ey), alphaSus: l.alphaSus ?? m.anker.alphaSus }));
   const valgt = vaelgArmeringsKant(m, st, p, ind, lk, Ec);
   const mm = valgt
     ? { ...m, beton: { ...m.beton, armering: { ...m.beton.armering, ankerarmeringForskydning: { ...m.beton.armering.ankerarmeringForskydning, kant: valgt.kant } } } }

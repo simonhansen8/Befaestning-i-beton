@@ -9,7 +9,7 @@ Programmet eftervise indstøbte bolte og indlimede gevindstænger i beton efter 
 4. Er resultatet ikke ok, vises **justeringsforslag** (fx større hef, betonklasse eller armering). **Anvend** ændrer modellen, og forslagene regnes om.
 
 ## Indlimede anker
-Vælg ankertype *Indlimet*. Blokken **Udfyld fra Hilti HIT-HY 200 V3** sætter d, d0, hef-interval, smin, cmin, τRk, ψ⁰sus, kcr/kucr, γinst og ψc fra ETA-19/0601. Tryk **Anvend** igen, hvis betonklassen ændres (ψc afhænger af den). Stålklasse og hef vælges selv. Værdier for andre produkter indtastes fra deres ETA.
+Vælg ankertype *Indlimet*. Blokken **Udfyld fra Hilti HIT-HY 200 V3** sætter d, d0, hef-interval, smin, cmin, τRk, ψ⁰sus, kcr/kucr, γinst og ψc fra ETA-19/0601. ψc følger betonklassen automatisk, og ved skift af boltdiameter hentes ETA-værdierne for den nye størrelse. Stålklasse og hef vælges selv. Værdier for andre produkter indtastes fra deres ETA.
 
 ## Visninger
 - **Plan**: fodplade, bolte med kraft, trykzone og kanter.
@@ -22,11 +22,14 @@ Vælg ankertype *Indlimet*. Blokken **Udfyld fra Hilti HIT-HY 200 V3** sætter d
 - **Ajour-mærket** øverst viser, om din fil er den nyeste version.
 
 ## Laster
-Laster indtastes som **designværdier** (inkl. evt. K_FI). Programmet ganger ikke K_FI på. Fortegn: N positiv = træk; Vx, Vy og momenter følger akserne vist i 3D.
+Laster indtastes som **designværdier** (inkl. K_FI: CC1 0,9, CC2 1,0, CC3 1,1 efter DS/EN 1990 DK NA). Programmet ganger ikke K_FI på. Fortegn: N positiv = træk; Vx, Vy og momenter følger akserne vist i 3D.
+
+Angriber lasten ikke i referencepunktet (origo), angives **Lastpunkt x/y** under Plade (fx søjlens akse). Programmet lægger selv tillægsmomenterne Mx = N·y, My = −N·x og vridningen T = x·Vy − y·Vx til. Lastpunktet vises som sigtekorn på plantegningen.
 
 ## Grænser og vigtige forbehold
 - Dækket: træk (stål, udtrækning/vedhæftning, betonkegle, spaltning, sideudsprængning, armering), forskydning (stål, kantbrud, pry-out, armering) og interaktion.
 - Ikke dækket: udmattelse, seismik, brand, ulykkeslast i brugerfladen (kernen er forberedt), ankerskinner, ekspansions- og skrueanker.
 - Indstøbte anker uden produktdata: ccr,sp og hmin er **skøn** og markeres som sådan. Hent dem fra produktets ETA.
 - Brudlegemerne i 3D er vejledende idealiseringer, ikke beregningsgrundlag.
-- Verifikation: kernen er afprøvet mod den gamle kerne, en uafhængig Python-reference, normens eksempler, DK NA Tabel 4.1 og et offentligt Hilti PROFIS-regneeksempel (enkeltanker). Grupper, momenter, spaltning og armering mangler endnu en uafhængig kilde, se `docs/verifikation.md` og `docs/kritiske-fund.md`.
+- Verifikation: kernen er afprøvet mod den gamle kerne, en uafhængig Python-reference (træk, spaltning, sideudsprængning, kantbrud inkl. hjørne og smalt element, indlimede anker, ankerarmering i træk), DK NA Tabel 4.1, ETA-19/0601 og fem PROFIS-rapporter. Forskydningsarmering og interaktion mangler endnu en uafhængig kilde, se `docs/verifikation.md` og `docs/kritiske-fund.md`.
+- Betonelementets bæreevne (EN 1992-4, Anneks A), fodpladens stivhed og lokalt tryk under pladen eftervises separat; det står som forudsætning i rapporten.

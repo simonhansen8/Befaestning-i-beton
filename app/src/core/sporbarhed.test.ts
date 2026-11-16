@@ -7,7 +7,7 @@ const kerne = new URL('./', import.meta.url);
 const golden = JSON.parse(readFileSync(new URL('../../../golden/cases.json', import.meta.url), 'utf8'));
 const expected = JSON.parse(readFileSync(new URL('../../../verifikation/expected.json', import.meta.url), 'utf8')) as { forventet: Record<string, number> }[];
 const kildekode = readdirSync(kerne).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts')).map((f) => readFileSync(new URL(f, kerne), 'utf8')).join('\n');
-const uafhaengige = [...new Set(expected.flatMap((c) => Object.keys(c.forventet)))].sort();
+const uafhaengige = [...new Set(expected.flatMap((c) => Object.keys(c.forventet).map((k) => k.split('@')[0]!)))].sort(); // 'N_a@Rd' = N_a sammenlignet på Rd
 const dok = new URL('../../../docs/sporbarhed.md', import.meta.url);
 
 describe('sporbarhed', () => {

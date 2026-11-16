@@ -23,7 +23,8 @@ export function partialkoefficienter(
     gammaC: s.gammaC, gamma3: g3, gammaInst, gammaInstV,
     gammaMc: s.gammaC * g3 * gammaInst, gammaMcV: s.gammaC * g3 * gammaInstV,
     gammaMp: s.gammaC * g3 * gammaInst, gammaMsp: s.gammaC * g3 * gammaInst,
-    gammaMs, gammaMsV, gammaMsVBetingelse, gammaMsRe: s.gammaMsRe,
+    // Armering: γs = 1,20·γ0·γ3 (DS/EN 1992-1-1 DK NA, Tabel 2.1Na) – γ3 indgår som for betonen. I ulykkestilfælde er γ3 = 1.
+    gammaMs, gammaMsV, gammaMsVBetingelse, gammaMsRe: s.gammaMsRe * g3,
     gammaCt: s.gammaCt * g3, alphaCt: s.alphaCt,
   };
 }

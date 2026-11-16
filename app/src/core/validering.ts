@@ -3,6 +3,7 @@ import { fckAfKlasse } from './concrete';
 import { DK_NA, DK_NA_ULYKKE, GAMMA3_AF_KONTROLKLASSE } from './constants';
 import { diag, EN, type Diagnostik } from './diagnostik';
 import { kantafstand, KANTER } from './geometry';
+import { erHiltiHY200V3, hiltiD0, hiltiPsiC, HILTI_HY200V3_ETA } from './produkter';
 import type { Indstillinger } from './settings';
 import type { Kernemodel } from './kombination';
 
@@ -56,9 +57,16 @@ export function validerModel(m: ValideringsModel, ind: Indstillinger, fck: numbe
     if (!s.revnet && i.tauRkUcr == null) e.push(diag('fejl', 'taurk-ucr-mangler', EN('4.7 (2)'), 'anker.tauRkUcr'));
     if (i.tauRkCr != null && i.tauRkUcr != null && i.tauRkUcr < i.tauRkCr) e.push(diag('advarsel', 'taurk-ucr-under-cr', 'ETA', 'anker.tauRkUcr'));
     e.push(diag('info', 'produktvaerdier-fra-eta', 'ETA', null));
+    const produkt = (i as { produkt?: unknown }).produkt;
+    if (!erHiltiHY200V3(produkt) && (i.ccrSp == null || i.hmin == null)) e.push(diag('advarsel', 'ccrsp-hilti-udtryk', EN('7.2.1.7'), 'anker.ccrSp', { ccrSp: i.ccrSp == null, hmin: i.hmin == null }));
+    if (erHiltiHY200V3(produkt)) {
+      const d0 = hiltiD0(c);
+      if (d0 == null || i.d0 !== d0) e.push(diag('advarsel', 'produktdata-passer-ikke-d', HILTI_HY200V3_ETA, 'anker.d', { d: c }));
+      if (Math.abs(i.psiC - hiltiPsiC(fck)) > 5e-4) e.push(diag('advarsel', 'psic-passer-ikke-beton', HILTI_HY200V3_ETA, 'anker.psiC', { psiC: i.psiC, forventet: hiltiPsiC(fck) }));
+    }
   } else {
     if (i.dh > 6 * i.th + c) e.push(diag('info', 'hoved-areal-begraenset', '7.2.1.5', 'anker.th', { dh: i.dh, grænse: 6 * i.th + c }));
-    if (i.ccrSp == null) e.push(diag('info', 'ccrsp-er-skoen', EN('7.2.1.7'), 'anker.ccrSp'));
+    if (i.ccrSp == null || i.hmin == null) e.push(diag('advarsel', 'ccrsp-er-skoen', EN('7.2.1.7'), 'anker.ccrSp', { ccrSp: i.ccrSp == null, hmin: i.hmin == null }));
   }
   if (fck > 60) e.push(diag('info', 'fck-over-60', EN('7.1(2)'), 'beton.fck', { fck }));
   if (!(fck >= 12 && fck <= 90)) e.push(diag('advarsel', 'fck-uden-for-c12-c90', EN('1.1'), 'beton.klasse', { fck }));
@@ -73,6 +81,11 @@ export function validerModel(m: ValideringsModel, ind: Indstillinger, fck: numbe
   if (tom) e.push(diag('fejl', 'plade-ikke-paa-beton', EN('6.2.1'), 'plade.bx'));
   else if (ud.length) e.push(diag('advarsel', 'plade-rager-ud-over-kant', EN('6.2.1'), 'plade.bx', { kanter: ud.join(', ') }));
   e.push(diag('info', 'plade-forudsat-stiv', EN('6.2.1 (2)'), 'plade.t'));
+  const lx = r.lastX ?? 0, ly = r.lastY ?? 0;
+  if (lx || ly) {
+    if (Math.abs(lx) > r.bx / 2 || Math.abs(ly) > r.by / 2) e.push(diag('advarsel', 'lastpunkt-uden-for-plade', EN('6.2.1'), 'plade.lastX', { x: lx, y: ly }));
+    else e.push(diag('info', 'lastpunkt-excentrisk', EN('6.2.1'), 'plade.lastX', { x: lx, y: ly }));
+  }
   e.push(diag('info', 'ligningsnumre-ikke-kontrolleret', 'EN 1992-4', null));
   if (r.t < c) e.push(diag('advarsel', 'plade-tynd', EN('6.2.1 (2)'), 'plade.t', { t: r.t, d: c }));
   if (r.hulfrigang === 'stor') e.push(diag('advarsel', 'stor-hulfrigang', EN('6.2.2.1 / Tabel 6.1'), 'plade.hulfrigang'));

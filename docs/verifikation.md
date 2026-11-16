@@ -7,6 +7,19 @@ Formålet er at vise, at kernen regner efter normen – ikke bare, at den ligner
 - Resultatet (`verifikation/expected.json`) sammenlignes af `app/src/core/verifikation.test.ts` med den nye kerne. Der sammenlignes karakteristiske kapaciteter (Rk); de afhænger ikke af nationale γ-værdier. Tolerancen er 1·10⁻⁹ relativt.
 - CI genskaber `expected.json` fra Python og fejler, hvis filen ændres uden at være committet.
 
+## Udvidelse 2026-11-16
+
+Referencen dækker nu også (tilfælde S1–S2, E1–E3, I1–I2, R1 i `reference.py`):
+
+- **Spaltning** (7.2.1.7) med ccr,sp og hmin fra produktet, enkeltbolt og to bolte langs kant, inkl. ψh,sp.
+- **Kantbrud for enkeltbolt** i hjørne (begge kanter eftervises, ψα = 2 for parallel last), i smalt og tyndt element (c'1) og med skrå last (α = 30°).
+- **Indlimede anker** (7.2.1.6): enkeltanker nær kant og gruppe i urevnet beton med ψg,Np > 1, samt NRk,c med produktets k-faktor.
+- **Ankerarmering i træk** (7.2.1.9): NRk,re og NRd,a med l1 i 35°-keglen og fbd efter EN 1992-1-1, 8.4.2 med γc,træk = 1,70 (DK NA).
+
+Kernen rammer alle tilfælde inden for 10⁻⁹. Testen fejler, hvis en værdi afviger 1 ‰ (kontrolleret ved at forstyrre de forventede tal).
+
+Stadig uden uafhængig kilde: forskydningsarmering (V_re, V_a, kantstang), N_cre, interaktion og grupper ved kant i forskydning.
+
 ## Håndberegnet eksempel (A1: M16 4.6, hef = 150 mm, C30/37, revnet, ingen kanter)
 
 | Brudform | Formel | Regning | Rk |
@@ -33,4 +46,4 @@ Fire PROFIS-rapporter med grupper, moment og vridning er gennemregnet og sammenl
 
 - Slidshuller, løftestang og armering er kun verificeret mod den gamle kerne (facit-sættet). Momentbelastede grupper, trykzone, indlimede anker og interaktion er nu også kontrolleret mod PROFIS (se ovenfor).
 - Nationale γ-værdier (fund #6) og estimater for c_cr,sp og h_min (fund #11) kræver kontrol mod DK NA og produktdata.
-- Spaltning og armering mangler stadig en uafhængig kilde.
+- Forskydningsarmering, N_cre og interaktionen mangler stadig en uafhængig kilde. Referencen er skrevet efter samme normlæsning; den fanger oversættelsesfejl, ikke en fælles fejllæsning.

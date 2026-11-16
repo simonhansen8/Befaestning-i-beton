@@ -5,7 +5,7 @@ import { parseIndstillinger } from './settings';
 import { afledStaal } from './steel';
 import { partialkoefficienter } from './partials';
 import { fordelTraek, skalerLast } from './loads';
-import { legacyKfi } from './facit-hjaelp';
+import { legacyGammaMsRe, legacyKfi } from './facit-hjaelp';
 import { fckAf } from './concrete';
 import { hovedareal, traekOversigt } from './tension';
 import { sideblowout } from './sideblowout';
@@ -17,7 +17,7 @@ const naer = (a: number | null, b: number | null) => (a == null || b == null ? a
 describe('sideblowout mod facit', () => {
   it.each(cases as any[])('model #$id', (c: any) => {
     const m = c.model;
-    const { indstillinger } = parseIndstillinger({ ...m.indstillinger, gamma3: undefined, Ec: null });
+    const { indstillinger } = parseIndstillinger({ ...m.indstillinger, gammaMsRe: legacyGammaMsRe(m), gamma3: undefined, Ec: null });
     const st = afledStaal({ staalklasse: m.anker.staalklasse, d: m.anker.d, gevind: m.anker.gevind, As: m.anker.As });
     const p = partialkoefficienter(indstillinger, { type: m.anker.type, fuk: st.fuk, fyk: st.fyk });
     const lk = skalerLast(m.laster[c.resultat.styrendeKombination], legacyKfi(m));

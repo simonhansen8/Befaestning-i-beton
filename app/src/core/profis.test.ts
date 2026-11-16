@@ -125,3 +125,22 @@ describe('PROFIS: Kassø L-jern (HUS4-H 10, mekanisk skrueanker – kun lastford
     expect(Math.abs(kN(r.NRk) / 1.74 / 15.164 - 1)).toBeLessThan(0.0015);
   });
 });
+
+// Lastangrebspunkt (plade.lastX/lastY): B12 indtastet som i PROFIS, dvs. N og V i lastpunktet uden omregnede momenter.
+describe('PROFIS MC-B12 med lastpunkt i stedet for omregnede momenter', () => {
+  const s = SAGER[0]!;
+  const m = model({ ...s, last: [169, 81, 0, 0, 0, 0] }, 30000);
+  m.plade.lastX = -8100 / 169; // PROFIS: N i x = −47,9 mm (svarer til My = 8,1 kNm)
+  m.plade.lastY = 20;
+  const r = beregnProjekt(m);
+  const k = r.kombinationer[0]!;
+  it('lasten flyttes til origo med Mx = N·y, My = −N·x og T = x·Vy − y·Vx', () => {
+    expect(k.last.Mx / 1e6).toBeCloseTo(3.38, 9);
+    expect(k.last.My / 1e6).toBeCloseTo(8.1, 9);
+    expect(k.last.T / 1e6).toBeCloseTo(-1.62, 9);
+  });
+  it('ankerkræfterne er de samme som i PROFIS', () => {
+    k.resultat.fordeling.F.forEach((f, i) => expect(Math.abs(kN(f) - s.F[i]!), `anker ${i + 1}`).toBeLessThan(0.0015));
+    expect(r.diagnostik.some((d) => d.kode === 'lastpunkt-excentrisk')).toBe(true);
+  });
+});

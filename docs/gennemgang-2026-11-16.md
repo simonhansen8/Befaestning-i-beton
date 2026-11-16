@@ -1,86 +1,86 @@
 # Faglig og teknisk gennemgang, 2026-11-16
 
-Grundlag: build 2026-11-10.9 (commit a799c39). Hele beregningskernen (`app/src/core`) er læst og holdt op mod EN 1992-4:2018. Udvalgte formler er regnet efter i hånden. Brugerfladen er afprøvet i en browser. Testsuiten (8877 enhedstests og 10 browsertests) er grøn.
+Grundlag: build 2026-11-10.9 (commit a799c39). Hele beregningskernen (`app/src/core`) er læst og holdt op mod EN 1992-4:2018. Udvalgte formler er regnet efter i hånden, og brugerfladen er afprøvet i en browser.
 
-Målestok: kan et anerkendt rådgivende ingeniørfirma bruge programmet i sit daglige arbejde?
+Anden runde er kontrolleret mod de dokumenter, brugeren har leveret: ETA-19/0601 (Hilti HIT-HY 200 V3), DS/EN 1990 DK NA:2024 og DS/EN 1992-1-1 DK NA:2024. Selve teksten til DS/EN 1992-4 var ikke blandt dokumenterne.
+
+Status efter rettelserne (build 2026-11-16.2): 8903 enhedstests og 10 browsertests er grønne.
 
 ## 1. Konklusion
 
-**Formlerne for de enkelte brudformer er generelt rigtige.** Lastfordelingen er robust (stiv plade med trykzone og vridning), og ankerkræfter og kapaciteter stemmer med PROFIS på grupper med moment.
+**Formlerne for brudformerne er rigtige**, og lastfordelingen er robust. Det er nu eftervist mod en uafhængig reference for træk, spaltning, sideudsprængning, kantbrud (inkl. hjørne og smalt element), indlimede anker og ankerarmering i træk. Desuden er programmet sammenlignet med fem PROFIS-rapporter og ETA-19/0601.
 
-**Programmet kan endnu ikke bruges i projekter uden forbehold.** Der er tre grunde:
+**Der var to fejl på den usikre side. Begge er rettet:**
 
-1. Der var en kritisk fejl, der overvurderede stålbæreevnen (afsnit 2). Den er rettet i build 2026-11-16.1.
-2. Interaktionen med ankerarmering bør kontrolleres mod Tabel 7.3 i normen (afsnit 3.1). Den kan være på den usikre side.
-3. Kantbrud, spaltning, sideudsprængning og ankerarmering er kun sammenlignet med den gamle kerne og med en reference skrevet af samme forfatter. Ingen af dem er kontrolleret mod en uafhængig kilde.
+- **As fulgte ikke boltdiameteren.** Stålbæreevnen blev overvurderet op til 2,9 gange. Rettet i build 2026-11-16.1.
+- **γ3 manglede på armeringens partialkoefficient.** Det gav 10 % for lav sikkerhed ved lempet kontrolklasse. Rettet i build 2026-11-16.2.
 
-Indtil disse tre ting er lukket, kan programmet bruges til **overslag og kontrolregning**, men ikke som eneste dokumentation.
+**Tilbage er to punkter**, der kræver selve EN 1992-4-teksten: k7 for enkeltankre og ligningsnumrene i rapporten (afsnit 3).
 
-## 2. Kritisk fejl (rettet)
+Derudover forudsætter programmet, at betonelementet (Anneks A) og fodpladen eftervises separat. Det står nu udtrykkeligt i rapporten.
 
-**Spændingsarealet As fulgte ikke boltdiameteren.** Standardmodellen gemmer As = 245 mm² (M20), og feltet er skrivebeskyttet. Når brugeren skiftede til fx M12, stod As stadig på 245 mm², og kernen regnede videre med den værdi. Det er eftervist i den byggede `index.html`.
+Med de forbehold kan programmet bruges i projekter, når en ingeniør har gennemgået det og dokumenteret gennemgangen (afsnit 6).
 
-Konsekvenser:
+## 2. Fejl fundet og rettet
 
-- N_Rk,s, V_Rk,s og M⁰Rk,s blev overvurderet med en faktor 2,9 for M12 og 1,6 for M16. Fejlen er på den usikre side.
-- Fordelingen af ankerkræfter blev også forkert, fordi ankerstivheden er Es·As.
-- "Mine produkter" havde samme fejl, fordi funktionen sætter d, men ikke As.
-
-Rettelse: kernen afleder nu altid As af d og gevind. En gemt As, der ikke passer, bruges ikke, og brugeren får en advarsel (`as-afledt-af-d`).
-
-**Projekter, der er regnet med en ældre build, og hvor d er ændret fra M20, skal regnes igen.**
-
-## 3. Normtekniske punkter, der skal afklares mod normteksten
-
-Punkterne er sorteret efter betydning. Normteksten var ikke tilgængelig under gennemgangen. Punkterne er derfor formuleret som spørgsmål, ikke som fastslåede fejl.
-
-| # | Punkt | Program | Risiko |
+| # | Fejl | Konsekvens | Rettelse |
 |---|---|---|---|
-| 3.1 | Interaktion med ankerarmering (7.2.3, Tabel 7.3, (7.57)) | Med armering for **både** træk og forskydning bruger programmet (7.55)/(7.56) med eksponent 1,5. Med armering for kun én af dem bruger det (7.57) med k11 = 2/3 (indtastet). Min læsning af normen er, at (7.57) gælder, når der er ankerarmering, og at k11 = 2/3 netop hører til armering for begge. | Kan være på den usikre side. Ved βN = βV = 0,6 giver (7.55) 0,93 (ok), mens (7.57) med k11 = 2/3 giver 1,42. |
-| 3.2 | k7 for ét enkelt ikke-duktilt anker (7.2.2.3.1) | k7 = 1 for et enkelt anker, 0,8 kun for grupper. | Op til 25 % på den usikre side for 4.8/5.8/6.8, hvis k7 også gælder enkeltankre. |
-| 3.3 | ccr,sp og hmin for indlimede anker uden ETA-værdier | Hilti HY 200-udtrykket bruges som standard for alle produkter, og brugeren får kun en info-besked. | Gælder kun det ene produkt. Bør være en advarsel eller fejl. |
-| 3.4 | ψre,V-kravet hef ≥ 2,5·cnom | Er indbygget som betingelse. | Hjemlen i normen er ikke fundet. Betingelsen er konservativ. |
-| 3.5 | Pry-out pr. enkeltanker ved modsatrettede forskydninger | Strengere end PROFIS (B12: 111 % mod 100 %). | Konservativ. Er allerede åben som QS-03. |
-| 3.6 | Ligningsnumre i rapporten | Er markeret som ikke kontrolleret. | Uacceptabelt i en afleveret rapport. Numrene skal kontrolleres én gang mod normen. |
+| 2.1 | As fulgte ikke boltdiameter eller gevind; "Mine produkter" havde samme fejl | N_Rk,s, V_Rk,s og M⁰Rk,s blev overvurderet: M12 2,9 gange, M16 1,6 gange | As afledes altid i kernen. En gemt As, der ikke passer, ignoreres med en advarsel. |
+| 2.2 | γMs,re = 1,20 uden γ3, selvom DS/EN 1992-1-1 DK NA, Tabel 2.1Na giver γs = 1,20·γ0·γ3 | Ved lempet kontrolklasse var ankerarmering, forskydningsarmering, forankring og splitarmering 10 % på den usikre side | γMs,re = 1,20·γ3. γc = 1,45·γ3 og γc,træk = 1,70·γ3 var allerede korrekte. |
+| 2.3 | ψc fra Hilti-forvalget fulgte ikke betonklassen | Sænkes klassen fra C50 til C20 efter forvalget, blev τRk ca. 10 % for høj | ψc følger klassen automatisk. Kernen advarer, hvis en fil har en forkert ψc. |
+| 2.4 | dh, th og d0 fulgte ikke boltdiameteren; Hilti-data fulgte ikke størrelsen | Et M20-hoved på et M12-anker gav ca. 3 gange for stor N_Rk,p | Uden produkt skaleres hovedmålene. Hilti-data hentes igen for den nye størrelse, og kernen advarer, hvis data ikke passer. |
+| 2.5 | Rustfri gevindstænger over M24 er klasse 50 (fyk 210), men programmet havde kun A4-70/A4-80 | Bæreevnen ville blive overvurderet, hvis brugeren valgte A4-70 til M27/M30 | Stålklasse A4-50 er tilføjet, med advarsel. 6.8 kan nu også vælges. |
+| 2.6 | Spaltning: skøn for ccr,sp og hmin gav kun en info-besked; for indlimede anker uden ETA-værdier blev Hilti-udtrykket brugt uden besked | Spaltning blev eftervist på et skøn uden tydelig advarsel | Begge giver nu en advarsel med forklaring. |
 
-Følgende er kontrolleret og fundet i orden:
+## 3. Normpunkter
 
-- Formler og faktorer: N_Rk,s; N_Rk,p (k2, Ah ≤ (6th+d)); N⁰Rk,c (k1); ψs,N, ψre,N, ψec,N og ψM,N med betingelser; h'ef for smalle elementer; vedhæftning (τRk,c, scr,Np, ψ⁰g,Np, ψg,Np, ψsus); spaltning (N⁰Rk = min(p; c), ψh,sp, kontrolfrihed 1,0/1,2·ccr,sp og h ≥ hmin); sideudsprængning (k5, Ac,Nb, ψs/g/ec,Nb); V_Rk,s (k6, løftestang med αM og MRk,s·(1 − NEd/NRd,s)); kantbrud (k9, α, β, lf, Ac,V, ψs/h/ec/α/re,V, smalle elementer c'1, grænsen max(10hef; 60d)); NRd,a og NRd,re for ankerarmering (fbd, α = 0,7, ds ≤ 16, fyk ≤ 600, 0,75hef/0,75c1, NEd,re = VEd(es/z+1)).
-- Partialkoefficienter efter DK NA, Ecm efter tabel 3.1, fctk,0.05 og η2.
-- Tabelværdier: gevindarealer og huldiametre i Tabel 6.1.
-- Fortegn for forskydning mod og væk fra kanten. V⁰Rk,c er regnet i hånden (17,54 kN for c1 = hef = 100, M20, C30/37) og stemmer.
+| # | Punkt | Afklaring |
+|---|---|---|
+| 3.1 | Interaktion med ankerarmering (7.2.3, Tabel 7.3) | **Afklaret (bruger):** med armering for både træk og forskydning gælder eksponent 1,5 (7.55/7.56). (7.57) med k11 gælder kun armering i én retning. Programmet gør det rigtige; første rundes formodning var forkert. |
+| 3.2 | k7 for ét ikke-duktilt anker (7.2.2.3.1) | **Åben**, kræver teksten til EN 1992-4. Programmet bruger k7 = 1,0 for enkeltankre. ETA-19/0601 giver k7 = 1,0 for Hilti-produktet, og forvalget sætter den værdi, så punktet har kun betydning for 4.8/5.8/6.8 uden produktdata. |
+| 3.3 | Ligningsnumre i rapporten | **Åben**, kræver teksten til EN 1992-4. Forbeholdet står fortsat i rapporten. |
+| 3.4 | ψre,V kun når hef ≥ 2,5·cnom | Konservativ betingelse. Bevares. |
+| 3.5 | Pry-out pr. enkeltanker ved modsatrettede forskydninger | Konservativ (QS-03). Kan slås fra i indstillingerne. |
 
-## 4. Praktisk brugbarhed: hvad mangler i forhold til et kommercielt værktøj
+**Kontrolleret mod DS/EN 1990 DK NA og DS/EN 1992-1-1 DK NA:**
 
-**Kan ikke undværes i daglig projektering:**
+- K_FI = 0,9 / 1,0 / 1,1 (CC1/CC2/CC3, STR).
+- γc = 1,45·γ3 og γc,træk = 1,70·γ3 (forankring regnes som trækbrud).
+- γs = 1,20·γ3.
+- γ3 efter Tabel 2.1Nc: 0,95 / 1,0 / 1,10. Udførelsesklasser giver 1,0.
+- γM = 1,0 ved ulykke.
+- fbd for ribbestål efter EN 1992-1-1, 8.4.2. DK NA's (8.100NA) gælder kun glat armering.
 
-- **EN 1992-4, Anneks A**: eftervisning af betonelementets forskydningsbæreevne ved last fra befæstelsen (fx træk over 60 kN i plader og bjælker) er hverken regnet eller nævnt. Det skal som minimum stå som en forudsætning i rapporten.
-- **Fodpladen**: stivheden (forudsætningen i 6.2.1(2)) eftervises ikke, og betontrykket under pladen er kun en advarsel ved 3fcd. Firmaet skal dokumentere pladen separat.
-- **Produktdata**: der er kun ét indbygget produkt (Hilti HY 200 V3). For indstøbte hovedbolte og svejste studs mangler ETA-/produktværdier (ccr,sp, hmin, cmin, smin, k8). I dag er de skøn, som kun giver en advarsel.
-- **Excentrisk lastangrebspunkt** kan ikke indtastes. Momenter fra excentricitet skal regnes om i hånden, hvilket er en kendt fejlkilde.
+**Kontrolleret mod ETA-19/0601:** alle værdier i Hilti-forvalget stemmer med ETA'en (se `produktdata-hilti-hy200v3.md`). Dokumentationens linje om τRk,cr var forkert (M12–M24 er 9,5, ikke 9,4); koden var rigtig.
 
-**Uden for omfanget, og bør stå tydeligt i rapporten:** seismik (Anneks C), brand (Anneks D), udmattelse, mekaniske ekspansions- og skrueankre samt ankerskinner.
+## 4. Nye funktioner
 
-**Følsomme afledte værdier af samme type som As-fejlen:**
-
-- ψc fra Hilti-forvalget bliver stående, hvis betonklassen ændres bagefter. Sænkes klassen fra C50 til C20, regnes τRk ca. 10 % for højt.
-- dh og th for indstøbte bolte bliver stående ved skift af d. Står M20-hovedet (dh = 40) til et M12-anker, bliver Ah og N_Rk,p ca. 3 gange for store.
-
-Begge dele bør enten afledes automatisk eller give en advarsel ved uoverensstemmelse.
+- **Lastangrebspunkt** (Plade → Lastpunkt x/y): programmet regner selv tillægsmomenterne Mx = N·y og My = −N·x og vridningen T = x·Vy − y·Vx. Fortegnene er bekræftet mod PROFIS MC-B12, og ankerkræfterne stemmer på 0,0015 kN. Lastpunktet vises på plantegningen og i rapporten.
+- **Forudsætninger i rapporten:**
+  - Anneks A (betonelementets bæreevne).
+  - Fodpladens stivhed.
+  - Lokalt tryk under pladen.
+  - Partialkoefficienterne med γ3.
+  - K_FI.
+- **Ny bemærkning ved hver kombination med træk:** det samlede træk skal føres videre i elementet (Anneks A).
 
 ## 5. Kode og test
 
-- **Struktur:** kernen er ren TypeScript med strukturerede resultater, sporbarhed og diagnoser. Det er en god og professionel opbygning.
-- **Navngivning:** i `edgebreakout.ts`, `shear.ts` og `reinforcement.ts` er navnene stadig ét bogstav (`O`, `Z`, `J`, `U`, `G`, `y`), som en rest fra den minificerede kilde. Det gør det svært for en ingeniør at gennemgå koden. Navnene bør omdøbes, før koden bruges i et kvalitetssikringsforløb.
-- **Testenes uafhængighed:** de fleste af de 8877 tests sammenligner med den gamle kerne. De beviser derfor overensstemmelse med den gamle kerne, ikke med normen. Den uafhængige dækning er Python-referencen for 10 rene tilfælde og fem PROFIS-rapporter uden kanter og armering.
-- **Hvad der mangler for kvalitetssikring:** sammenligning med publicerede regneeksempler for kantbrud, spaltning, sideudsprængning og ankerarmering. Det kan fx være fib Bulletin 58, eksemplerne i Eligehausen/Mallée/Silva eller PROFIS-rapporter med kanter og armering.
-- **Ydelse:** en beregning tager millisekunder, og den samlede fil er 756 kB. Der er intet at optimere her.
+- Variabelnavne på ét bogstav fra den gamle kode er omdøbt i kantbrud (`edgebreakout.ts`), pry-out og stålbrud (`shear.ts`) og ankerarmering (`reinforcement.ts`). Tallene er uændrede på alle 800 facit-modeller.
+- Den uafhængige Python-reference er udvidet fra 15 til 23 tilfælde. Testen fejler ved 1 ‰ afvigelse.
+- Bevidste afvigelser fra den gamle kerne (γ3 på γs og de nye advarsler) er registreret i facit-testene, så facit stadig sammenlignes tal for tal.
+- Stadig uden uafhængig kilde: forskydningsarmering (V_re, V_a, kantstang), N_cre, interaktion samt grupper ved kant i forskydning.
 
-## 6. Anbefalet rækkefølge
+## 6. Hvad der mangler, før programmet kan bruges i projekter
 
-1. Afklar 3.1 og 3.2 mod normteksten og ret dem om nødvendigt. Det er små ændringer i `interaction.ts` og `shear.ts`.
-2. Lad ψc, dh/th og d0 følge deres grundlag, eller giv en advarsel ved uoverensstemmelse, ligesom for As.
-3. Indsaml 6–10 uafhængige regneeksempler med kanter, spaltning og armering, og lås dem som tests.
-4. Kontroller ligningsnumrene mod normen og fjern forbeholdet i rapporten.
-5. Tilføj Anneks A og fodpladen som forudsætninger i rapporten. Som udvidelser kan der senere komme indtastning af lastangrebspunkt og produktdata for indstøbte bolte.
-6. Lad en uafhængig ingeniør gennemgå programmet og dokumentere det, før det tages i brug i projekter.
+1. Teksten til DS/EN 1992-4 (og helst DS/EN 1992-4 DK NA) til at afslutte 3.2 og 3.3.
+2. Et eller flere uafhængige regneeksempler med forskydningsarmering, fx en PROFIS-rapport med kant og armering.
+3. Gennemgang af en uafhængig ingeniør, dokumenteret.
+
+**Uden for omfanget, og står i rapporten:**
+
+- seismik, brand og udmattelse
+- mekaniske ankre og ankerskinner
+- fodplade og svejsninger
+- betonelementets bæreevne (Anneks A)
+- produktdata for indstøbte hovedbolte, der skal indtastes fra produktdokumentationen

@@ -32,6 +32,7 @@ describe('indlaesFil mod facit', () => {
     delete gl.meta.importNoter; // noter om afviste værdier tilføjes af brugerfladen, ikke af modellen
     // Bevidste tilføjelser siden facit: bekræftelser, drejning af bøjlepar og bøjleafstand for forskydningsarmering.
     delete ny.plade?.lasthoejde; // ny valgfri indtastning (højde af forskydningslast)
+    delete ny.plade?.lastX; delete ny.plade?.lastY; // nyt lastangrebspunkt (standard 0 = origo)
     const ar = ny.beton?.armering;
     if (ar) delete ar.kantarmeringBredde; // ny tegneinput: bøjlebredde for kantarmering
     if (ar?.ankerarmeringTraek) { delete ar.ankerarmeringTraek.bekraeft; delete ar.ankerarmeringTraek.drejet; delete ar.ankerarmeringTraek.planAfstand; delete ar.ankerarmeringTraek.vinkel; delete ar.ankerarmeringTraek.fladeDiameter; delete ar.ankerarmeringTraek.fladeAfstand; }

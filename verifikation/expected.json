@@ -613,5 +613,315 @@
    "V_cp": 91125.91741101981,
    "V_c": 24304.816450265476
   }
+ },
+ {
+  "navn": "S1 spaltning, enkeltbolt nær kant (ccr,sp og hmin fra produkt)",
+  "beskrivelse": "c = 150 < ccr,sp = 300 → eftervis; h = 300 ≥ hmin = 230; ψh,sp = min((300/230)^(2/3); max(1; ((150+225)/230)^(2/3)); 2).",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 300,
+  "kanter": {
+   "xNeg": 150,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 30000
+  },
+  "ccrSp": 300,
+  "hmin": 230,
+  "forventet": {
+   "N_sp": 68154.83292374692
+  }
+ },
+ {
+  "navn": "S2 spaltning, to bolte langs kant, tyndt element",
+  "beskrivelse": "To bolte s = 200 langs kanten, c = 120, ccr,sp = 250, h = 260, hmin = 250.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 260,
+  "kanter": {
+   "xNeg": 120,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    -100
+   ],
+   [
+    0,
+    100
+   ]
+  ],
+  "last": {
+   "N": 60000
+  },
+  "ccrSp": 250,
+  "hmin": 250,
+  "forventet": {
+   "N_sp": 80379.49700472697
+  }
+ },
+ {
+  "navn": "E1 kantbrud i hjørne",
+  "beskrivelse": "Enkeltbolt c1 = 100 (xNeg) og c2 = 80 (yNeg), last mod xNeg. Begge kanter eftervises (yNeg med parallel last, ψα = 2); den mest udnyttede styrer.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": 100,
+   "xPos": null,
+   "yNeg": 80,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 0,
+   "Vx": -20000
+  },
+  "forventet": {
+   "V_c": 12201.780329414445
+  }
+ },
+ {
+  "navn": "E2 kantbrud, smalt og tyndt element (c'1)",
+  "beskrivelse": "Bolt midt i en 200 mm bred bjælke (c2 = 100 til begge sider), h = 120, c1 = 100: c'1 = max(100/1,5; 120/1,5) = 80.",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 120,
+  "kanter": {
+   "xNeg": 100,
+   "xPos": null,
+   "yNeg": 100,
+   "yPos": 100
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 0,
+   "Vx": -15000
+  },
+  "forventet": {
+   "V_c": 11086.29617235803
+  }
+ },
+ {
+  "navn": "E3 kantbrud, skrå last (α = 30°)",
+  "beskrivelse": "Én kant (xNeg, c1 = 120); last 20 kN mod kanten 30° fra normalen: ψα,V = √(1/(cos²30° + 0,25·sin²30°)).",
+  "d": 16,
+  "hef": 150,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": 120,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 0,
+   "Vx": -17320.508075688773,
+   "Vy": 9999.999999999998
+  },
+  "forventet": {
+   "V_c": 25877.84291444712
+  }
+ },
+ {
+  "navn": "I1 indlimet enkeltanker nær kant (HY 200 V3, M16, revnet)",
+  "beskrivelse": "τRk,cr = 9,5·ψc (C30/37), hef = 125, c = 100: NRk,p med scr,Np = min(7,3·d·√τRk,ucr; 3hef) og NRk,c med kcr,N = 7,7.",
+  "d": 16,
+  "hef": 125,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 400,
+  "kanter": {
+   "xNeg": 100,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 30000
+  },
+  "type": "indlimet",
+  "tauRkCr": 9.5,
+  "tauRkUcr": 18,
+  "psiC": 1.0413797439924106,
+  "kcrN": 7.7,
+  "kucrN": 11,
+  "psi0Sus": 0.8,
+  "forventet": {
+   "N_p": 40984.31040260472,
+   "N_c": 38861.6650796182
+  }
+ },
+ {
+  "navn": "I2 indlimet gruppe, urevnet, ψg,Np > 1",
+  "beskrivelse": "To anker s = 150, τRk,ucr = 8 (lav vedhæftning) → ψ0g,Np = √2 − (√2−1)(τRk/τRk,c)^1,5 > 1 og ψg,Np = ψ0g − √(s/scr)(ψ0g − 1).",
+  "d": 16,
+  "hef": 125,
+  "dh": 29,
+  "th": 13,
+  "As": 157,
+  "fuk": 400,
+  "fyk": 240,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": false,
+  "h": 400,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    -75,
+    0
+   ],
+   [
+    75,
+    0
+   ]
+  ],
+  "last": {
+   "N": 40000
+  },
+  "type": "indlimet",
+  "tauRkCr": 5,
+  "tauRkUcr": 8,
+  "psiC": 1.0413797439924106,
+  "kcrN": 7.7,
+  "kucrN": 11,
+  "psi0Sus": 0.8,
+  "forventet": {
+   "N_p": 81355.590955759
+  }
+ },
+ {
+  "navn": "R1 ankerarmering i træk, én bøjle",
+  "beskrivelse": "M20, hef 200, Ø12-bøjle (2 ben) 50 mm fra ankeret, dæklag 40: l1 = 200 − r·tan35° − 40; NRk,re = 2·113·500; NRd,a = 2·l1·π·12·fbd (γc,træk = 1,70).",
+  "d": 20,
+  "hef": 200,
+  "dh": 36,
+  "th": 16,
+  "As": 245,
+  "fuk": 800,
+  "fyk": 640,
+  "duktil": true,
+  "klasse": "C30/37",
+  "revnet": true,
+  "h": 500,
+  "kanter": {
+   "xNeg": null,
+   "xPos": null,
+   "yNeg": null,
+   "yPos": null
+  },
+  "ankre": [
+   [
+    0,
+    0
+   ]
+  ],
+  "last": {
+   "N": 60000
+  },
+  "armT": {
+   "aktiv": true,
+   "diameter": 12,
+   "antalBoejler": 1,
+   "fyk": 500,
+   "afstand": 50,
+   "daeklagTop": 40,
+   "krog": true,
+   "eta1": 1,
+   "cd": null,
+   "foering": "stoed",
+   "forankringsdybde": null,
+   "planAfstand": null
+  },
+  "forventet": {
+   "N_re": 113097.33552923256,
+   "N_a@Rd": 24844.18031371487
+  }
  }
 ]

@@ -3,6 +3,8 @@ import { beregnProjekt, type ProjektResultat } from '../core/beregn';
 import type { Diagnostik } from '../core/diagnostik';
 import { indlaesFil, standardModel, type Afvist } from '../core/indlaes';
 import { afledAs, indlaesProjekt } from '../core/inddata';
+import { fckAf } from '../core/concrete';
+import { anvendHilti, erHiltiHY200V3, hiltiPsiC, STOERRELSER, type Stoerrelse } from '../core/produkter';
 import type { Model } from './skema-typer';
 import { saetSti, tolkFelt, type Tolket } from './vaerdi';
 import type { FeltDef } from './skema-typer';
@@ -25,8 +27,36 @@ const RANG = { fejl: 0, advarsel: 1, info: 2 } as const;
 
 /** Holder afledte felter i modellen i trit med deres grundlag (så skrivebeskyttede felter viser den værdi, der regnes med). */
 export function synkAfledte(model: Model): void {
-  const a = (model as { anker?: { d?: unknown; gevind?: unknown; As?: unknown } }).anker;
-  if (a && typeof a.d === 'number' && Number.isFinite(a.d) && a.d > 0) a.As = Math.round(afledAs(a.d, a.gevind !== false) * 10) / 10; // kun til visning; kernen afleder selv den eksakte værdi
+  const a = (model as { anker?: Record<string, any> }).anker;
+  if (!a) return;
+  if (typeof a.d === 'number' && Number.isFinite(a.d) && a.d > 0) a.As = Math.round(afledAs(a.d, a.gevind !== false) * 10) / 10; // kun til visning; kernen afleder selv den eksakte værdi
+  // ψc for Hilti HIT-HY 200 V3 følger betonklassen: ψc = (fck/20)^0,1 (ETA-19/0601, Tabel C1).
+  if (erHiltiHY200V3(a.produkt)) {
+    const fck = fckAf((model as { beton?: { klasse?: string; fck?: number | null } }).beton ?? {});
+    if (Number.isFinite(fck) && fck > 0) a.psiC = hiltiPsiC(fck);
+  }
+}
+
+/**
+ * Når boltdiameteren skiftes, følger de størrelsesafhængige værdier med:
+ * - Hilti HIT-HY 200 V3: produktdata hentes igen for den nye størrelse (samme temperaturområde og borehul).
+ * - Uden produkt: hovedmål (dh, th, hovedside) skaleres med d_ny/d_gammel, og d0 forskydes med samme tillæg.
+ * Andre produkter røres ikke (kernen advarer ikke om dem; brugeren skal anvende produktet igen).
+ */
+export function foelgDiameter(model: Model, dGammel: number, dNy: number): void {
+  const a = (model as { anker?: Record<string, any> }).anker;
+  if (!a || !(dGammel > 0) || !(dNy > 0) || dGammel === dNy) return;
+  if (erHiltiHY200V3(a.produkt)) {
+    if ((STOERRELSER as readonly number[]).includes(dNy)) {
+      const t = a.psi0Sus === 0.89 ? 'II' : a.psi0Sus === 0.72 ? 'III' : 'I';
+      anvendHilti(model as never, dNy as Stoerrelse, t, a.gammaInst === 1.4 ? 'vandfyldt' : 'toert-vaadt');
+    }
+    return;
+  }
+  if (a.produkt) return;
+  const k = dNy / dGammel, mm = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v * k) : v);
+  a.dh = mm(a.dh); a.th = mm(a.th); if (a.hovedSide != null) a.hovedSide = mm(a.hovedSide);
+  if (typeof a.d0 === 'number' && Number.isFinite(a.d0)) a.d0 = Math.max(dNy + 1, a.d0 + dNy - dGammel);
 }
 
 export function beregnTilstand(model: Model, valgt: number | null = null): Omit<Tilstand, 'feltfejl'> {
@@ -95,6 +125,7 @@ export class Store {
     delete feltfejl[f.k];
     const model = structuredClone(this.tilstand.model);
     saetSti(model, f.k, t.v);
+    if (f.k === 'anker.d') foelgDiameter(model, Number(this.tilstand.model.anker?.d), Number(t.v));
     synkAfledte(model);
     if (JSON.stringify(model) !== JSON.stringify(this.tilstand.model)) this.husk(f.k);
     this.opdater({ ...beregnTilstand(model, this.tilstand.valgtKombination), feltfejl });

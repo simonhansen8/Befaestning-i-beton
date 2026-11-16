@@ -133,6 +133,111 @@ def n_rk_cb(anchors, d, dh, fck, cracked, h, hef, edges):
     return N0 * (L * Hb) / (4 * c1) ** 2 * 1.0 * psi_g
 
 
+def psi_s_n(c, ccr):                         # (7.4)-form: ψs = 0,7 + 0,3·c/ccr ≤ 1
+    return min(1.0, 0.7 + 0.3 * c / ccr) if math.isfinite(c) else 1.0
+
+
+def n_rk_sp(anchors, d, dh, hef, fck, cracked, h, edges, ccr_sp, hmin, tight=True):
+    """7.2.1.7, (7.23)-(7.24): NRk,sp = N0 · Ac,N/A0c,N · ψs,N · ψre,N · ψec,N · ψh,sp
+    med N0 = min(NRk,p ; N0Rk,c), scr,sp = 2·ccr,sp og ψh,sp = (h/hmin)^(2/3) ≤ max(1; ((hef + 1,5·c1)/hmin)^(2/3)) ≤ 2."""
+    scr = 2 * ccr_sp
+    n0c = (8.9 if cracked else 12.7) * math.sqrt(fck) * hef ** 1.5
+    n0 = min(n_rk_p(fck, cracked, d, dh), n0c)
+    Ac = proj_area(anchors, scr, edges)
+    c = min(edge_dist(a, edges) for a in anchors)
+    psi_h = min((h / hmin) ** (2 / 3), max(1.0, ((hef + 1.5 * c) / hmin) ** (2 / 3)), 2.0)
+    psi_re = min(1.0, 0.5 + hef / 200) if tight else 1.0
+    return n0 * Ac / scr ** 2 * psi_s_n(c, ccr_sp) * psi_re * psi_h
+
+
+def v_rk_c_enkelt(a, d, hef, fck, cracked, h, edges, Vx, Vy):
+    """7.2.2.5 for ÉN bolt og alle frie kanter: for hver kant regnes komposanterne mod kanten (kun hvis den peger mod kanten)
+    og parallelt med den; α = vinklen fra normalen (90° for ren parallel last). Hjørne (c2 < 1,5c1), smalt element (
+    c'1 = max(c2,max/1,5; h/1,5) når begge c2 og h < 1,5c1) og tynd plade (ψh). Returnerer VRk,c for den mest udnyttede kant."""
+    dnom = d
+    lf = min(hef, 12 * dnom) if dnom <= 24 else min(hef, max(8 * dnom, 300))
+    k9 = 1.7 if cracked else 2.4
+    x, y = a
+    kanter = {  # navn: (afstand c1, normal mod kanten, afstande til de to sidekanter)
+        'xNeg': (lambda: (x + edges['xNeg'], (-1, 0), ('yNeg', 'yPos'))),
+        'xPos': (lambda: (edges['xPos'] - x, (1, 0), ('yNeg', 'yPos'))),
+        'yNeg': (lambda: (y + edges['yNeg'], (0, -1), ('xNeg', 'xPos'))),
+        'yPos': (lambda: (edges['yPos'] - y, (0, 1), ('xNeg', 'xPos'))),
+    }
+    def side(k):
+        if edges.get(k) is None: return math.inf
+        return {'xNeg': x + edges['xNeg'], 'xPos': edges['xPos'] - x if edges.get('xPos') is not None else math.inf,
+                'yNeg': y + edges['yNeg'], 'yPos': edges['yPos'] - y if edges.get('yPos') is not None else math.inf}[k]
+    bedst = None
+    for k, f in kanter.items():
+        if edges.get(k) is None: continue
+        c1, n, sider = f()
+        if c1 >= max(10 * hef, 60 * dnom): continue
+        vperp = Vx * n[0] + Vy * n[1]
+        vpar = abs(-Vx * n[1] + Vy * n[0])
+        vperp = max(0.0, vperp)
+        VEd = math.hypot(vperp, vpar)
+        if VEd < 1e-9: continue
+        aV = math.atan2(vpar, vperp) if vperp > 0 else math.pi / 2
+        c2a, c2b = side(sider[0]), side(sider[1])
+        if c2a < 1.5 * c1 and c2b < 1.5 * c1 and h < 1.5 * c1:
+            c1 = min(c1, max(max(c2a, c2b) / 1.5, h / 1.5))
+        alpha = 0.1 * math.sqrt(lf / c1)
+        beta = 0.1 * (dnom / c1) ** 0.2
+        V0 = k9 * dnom ** alpha * lf ** beta * math.sqrt(fck) * c1 ** 1.5
+        Ac = (min(1.5 * c1, c2a) + min(1.5 * c1, c2b)) * min(1.5 * c1, h)
+        A0 = 4.5 * c1 ** 2
+        psi_s = min(1.0, 0.7 + 0.3 * min(c2a, c2b) / (1.5 * c1))
+        psi_h = max(1.0, math.sqrt(1.5 * c1 / h))
+        psi_a = max(1.0, math.sqrt(1 / (math.cos(aV) ** 2 + (0.5 * math.sin(aV)) ** 2)))
+        VRk = V0 * Ac / A0 * psi_s * psi_h * psi_a
+        if bedst is None or VEd / VRk > bedst[0]: bedst = (VEd / VRk, VRk)
+    return bedst[1]
+
+
+def n_rk_p_bond(anchors, d, hef, fck, cracked, edges, tau_cr, tau_ucr, psi_c, k_cr, k_ucr, psi_sus=1.0, tight=True):
+    """7.2.1.6, (7.13)-(7.20): NRk,p = N0Rk,p · Ap,N/A0p,N · ψg,Np · ψs,Np · ψre,N · ψec,Np (ingen excentricitet).
+    N0Rk,p = ψsus·τRk·π·d·hef; τRk = τRk,(C20/25)·ψc; scr,Np = 7,3·d·√(ψsus·τRk,ucr) ≤ 3hef (τRk,ucr for C20/25);
+    ψ0g = √n − (√n − 1)·(τRk/τRk,c)^1,5 ≥ 1, τRk,c = k3/(π·d)·√(hef·fck); ψg = ψ0g − √(s/scr)·(ψ0g − 1) ≥ 1."""
+    tau = (tau_cr if cracked else tau_ucr) * psi_c
+    N0 = psi_sus * tau * math.pi * d * hef
+    scr = min(7.3 * d * math.sqrt(psi_sus * tau_ucr), 3 * hef)
+    Ap = proj_area(anchors, scr, edges)
+    n = len(anchors)
+    if n > 1:
+        tau_c = (k_cr if cracked else k_ucr) / (math.pi * d) * math.sqrt(hef * fck)
+        psi0g = max(1.0, math.sqrt(n) - (math.sqrt(n) - 1) * (tau / tau_c) ** 1.5)
+        # gennemsnitlig afstand mellem nabobolte (her ensartet)
+        s = sum(min(math.hypot(a[0] - b[0], a[1] - b[1]) for b in anchors if b is not a) for a in anchors) / n
+        psi_g = max(1.0, psi0g - math.sqrt(min(s, scr) / scr) * (psi0g - 1))
+    else:
+        psi_g = 1.0
+    c = min(edge_dist(a, edges) for a in anchors)
+    psi_re = min(1.0, 0.5 + hef / 200) if tight else 1.0
+    return N0 * Ap / scr ** 2 * psi_g * psi_s_n(c, scr / 2) * psi_re
+
+
+def n_rk_c_bond(anchors, hef, fck, cracked, edges, k_cr, k_ucr, tight=True):
+    """(7.2) med produktets k-faktor (ETA): ccr,N = 1,5hef, scr,N = 3hef."""
+    N0 = (k_cr if cracked else k_ucr) * math.sqrt(fck) * hef ** 1.5
+    Ac = proj_area(anchors, 3 * hef, edges)
+    c = min(edge_dist(a, edges) for a in anchors)
+    psi_re = min(1.0, 0.5 + hef / 200) if tight else 1.0
+    return N0 * Ac / (3 * hef) ** 2 * psi_s_n(c, 1.5 * hef) * psi_re
+
+
+def ankerarmering_traek(d_anker, hef, fck, ds, n_boejler, fyk, afstand, daeklag, krog, gamma_ct=1.7):
+    """7.2.1.9: NRk,re = Σ As,re·fyk,re (2 ben pr. bøjle); NRd,a = Σ l1·π·ds·fbd/α (7.2.1.9, EN 1992-1-1 8.4.2).
+    l1 = længden af hvert ben inde i brudkeglen (35° fra overfladen): l1 = hef − r·tan35° − dæklag, r = √(a² + (d/2 + ds/2 + 2)²).
+    fbd = 2,25·η1·η2·fctd, fctd = fctk,0,05/γc,træk (DK NA: 1,70), fctk,0,05 = 0,7·0,3·fck^(2/3); α = 1 (ingen kroge med cd > 3ds)."""
+    r = math.hypot(afstand, d_anker / 2 + ds / 2 + 2)
+    l1 = hef - r * math.tan(math.radians(35)) - daeklag
+    As = math.pi / 4 * ds ** 2
+    fbd = 2.25 * 1.0 * 1.0 * (0.7 * 0.3 * min(fck, 60) ** (2 / 3)) / gamma_ct
+    ben = 2 * n_boejler
+    return {'N_re': ben * As * fyk, 'N_a@Rd': ben * l1 * math.pi * ds * fbd, 'l1': l1}
+
+
 def case(name, d, hef, dh, th, As, fuk, fyk, ductile, klasse, cracked, h, edges, anchors, loads, beskrivelse):
     fck = FCK[klasse]
     e = {}
@@ -201,6 +306,49 @@ CASES = [
          {'N': 20000}, 'Enkeltbolt M16, hef 120, C20/25 revnet uden kanter: N0Rk,c = 8,9·√20·120^1,5 (offentlig PROFIS-rapport).'),
     case('P2 PROFIS-rapport: V0Rk,c', 16, 120, 29, 13, 157, 500, 300, True, 'C20/25', True, 1000, edge(xNeg=150), [(0, 0)],
          {'N': 0, 'Vx': -10000, 'Vedge': 'xNeg'}, 'Enkeltbolt M16, hef 120, c1 = 150, tyk plade (Ac,V = A0c,V, ψh = 1): V0Rk,c fra offentlig PROFIS-rapport.'),
+]
+
+
+def ekstra(name, beskrivelse, model, forventet):
+    """Tilfælde med egne inddata (spaltning, kantbrud for enkeltbolt, indlimede anker, ankerarmering)."""
+    base = {'d': 16, 'hef': 150, 'dh': 29, 'th': 13, 'As': 157, 'fuk': 400, 'fyk': 240, 'duktil': True, 'klasse': 'C30/37', 'revnet': True,
+            'h': 400, 'kanter': NOEDGE, 'ankre': [(0, 0)], 'last': {'N': 0}}
+    return {'navn': name, 'beskrivelse': beskrivelse, **base, **model, 'forventet': forventet}
+
+
+F30 = FCK['C30/37']
+PSIC30 = (30 / 20) ** 0.1
+CASES += [
+    ekstra('S1 spaltning, enkeltbolt nær kant (ccr,sp og hmin fra produkt)', 'c = 150 < ccr,sp = 300 → eftervis; h = 300 ≥ hmin = 230; ψh,sp = min((300/230)^(2/3); max(1; ((150+225)/230)^(2/3)); 2).',
+           {'h': 300, 'kanter': edge(xNeg=150), 'ccrSp': 300, 'hmin': 230, 'last': {'N': 30000}},
+           {'N_sp': n_rk_sp([(0, 0)], 16, 29, 150, F30, True, 300, edge(xNeg=150), 300, 230)}),
+    ekstra('S2 spaltning, to bolte langs kant, tyndt element', 'To bolte s = 200 langs kanten, c = 120, ccr,sp = 250, h = 260, hmin = 250.',
+           {'h': 260, 'kanter': edge(xNeg=120), 'ankre': [(0, -100), (0, 100)], 'ccrSp': 250, 'hmin': 250, 'last': {'N': 60000}},
+           {'N_sp': n_rk_sp([(0, -100), (0, 100)], 16, 29, 150, F30, True, 260, edge(xNeg=120), 250, 250)}),
+    ekstra('E1 kantbrud i hjørne', 'Enkeltbolt c1 = 100 (xNeg) og c2 = 80 (yNeg), last mod xNeg. Begge kanter eftervises (yNeg med parallel last, ψα = 2); den mest udnyttede styrer.',
+           {'kanter': edge(xNeg=100, yNeg=80), 'last': {'N': 0, 'Vx': -20000}},
+           {'V_c': v_rk_c_enkelt((0, 0), 16, 150, F30, True, 400, edge(xNeg=100, yNeg=80), -20000, 0)}),
+    ekstra('E2 kantbrud, smalt og tyndt element (c\'1)', 'Bolt midt i en 200 mm bred bjælke (c2 = 100 til begge sider), h = 120, c1 = 100: c\'1 = max(100/1,5; 120/1,5) = 80.',
+           {'h': 120, 'kanter': edge(xNeg=100, yNeg=100, yPos=100), 'last': {'N': 0, 'Vx': -15000}},
+           {'V_c': v_rk_c_enkelt((0, 0), 16, 150, F30, True, 120, edge(xNeg=100, yNeg=100, yPos=100), -15000, 0)}),
+    ekstra('E3 kantbrud, skrå last (α = 30°)', 'Én kant (xNeg, c1 = 120); last 20 kN mod kanten 30° fra normalen: ψα,V = √(1/(cos²30° + 0,25·sin²30°)).',
+           {'kanter': edge(xNeg=120), 'last': {'N': 0, 'Vx': -20000 * math.cos(math.radians(30)), 'Vy': 20000 * math.sin(math.radians(30))}},
+           {'V_c': v_rk_c_enkelt((0, 0), 16, 150, F30, True, 400, edge(xNeg=120), -20000 * math.cos(math.radians(30)), 20000 * math.sin(math.radians(30)))}),
+    ekstra('I1 indlimet enkeltanker nær kant (HY 200 V3, M16, revnet)', 'τRk,cr = 9,5·ψc (C30/37), hef = 125, c = 100: NRk,p med scr,Np = min(7,3·d·√τRk,ucr; 3hef) og NRk,c med kcr,N = 7,7.',
+           {'type': 'indlimet', 'hef': 125, 'kanter': edge(xNeg=100), 'tauRkCr': 9.5, 'tauRkUcr': 18, 'psiC': PSIC30, 'kcrN': 7.7, 'kucrN': 11, 'psi0Sus': 0.8, 'last': {'N': 30000}},
+           {'N_p': n_rk_p_bond([(0, 0)], 16, 125, F30, True, edge(xNeg=100), 9.5, 18, PSIC30, 7.7, 11),
+            'N_c': n_rk_c_bond([(0, 0)], 125, F30, True, edge(xNeg=100), 7.7, 11)}),
+    ekstra('I2 indlimet gruppe, urevnet, ψg,Np > 1', 'To anker s = 150, τRk,ucr = 8 (lav vedhæftning) → ψ0g,Np = √2 − (√2−1)(τRk/τRk,c)^1,5 > 1 og ψg,Np = ψ0g − √(s/scr)(ψ0g − 1).',
+           {'type': 'indlimet', 'hef': 125, 'revnet': False, 'ankre': [(-75, 0), (75, 0)], 'tauRkCr': 5, 'tauRkUcr': 8, 'psiC': PSIC30, 'kcrN': 7.7, 'kucrN': 11, 'psi0Sus': 0.8, 'last': {'N': 40000}},
+           {'N_p': n_rk_p_bond([(-75, 0), (75, 0)], 16, 125, F30, False, NOEDGE, 5, 8, PSIC30, 7.7, 11)}),
+]
+_arm = ankerarmering_traek(20, 200, F30, 12, 1, 500, 50, 40, True)
+CASES += [
+    ekstra('R1 ankerarmering i træk, én bøjle', 'M20, hef 200, Ø12-bøjle (2 ben) 50 mm fra ankeret, dæklag 40: l1 = 200 − r·tan35° − 40; NRk,re = 2·113·500; NRd,a = 2·l1·π·12·fbd (γc,træk = 1,70).',
+           {'d': 20, 'dh': 36, 'th': 16, 'As': 245, 'fuk': 800, 'fyk': 640, 'hef': 200, 'h': 500,
+            'armT': {'aktiv': True, 'diameter': 12, 'antalBoejler': 1, 'fyk': 500, 'afstand': 50, 'daeklagTop': 40, 'krog': True, 'eta1': 1, 'cd': None, 'foering': 'stoed', 'forankringsdybde': None, 'planAfstand': None},
+            'last': {'N': 60000}},
+           {'N_re': _arm['N_re'], 'N_a@Rd': _arm['N_a@Rd']}),
 ]
 
 if __name__ == '__main__':

@@ -90,12 +90,19 @@ export function produktOpdateringer(v: Record<string, unknown>): [string, number
  * Anvender Hilti HIT-HY 200 V3 på en model (indlimet anker): ETA-værdier, gevindareal og ψc efter betonens fck.
  * Samme vej bruges af brugerfladen og af verifikationstestene.
  */
+/** Er produktfeltet sat af Hilti HIT-HY 200 V3-forvalget? */
+export const erHiltiHY200V3 = (produkt: unknown): boolean => typeof produkt === 'string' && produkt.startsWith('Hilti HIT-HY 200 V3');
+/** ψc = (fck/20)^0,1 (ETA-19/0601, Tabel C1/C2, alle temperaturområder). */
+export const hiltiPsiC = (fck: number): number => (fck / 20) ** 0.1;
+/** Borehulsdiameter d0 for størrelsen (Bilag B2), null for størrelser uden for ETA'en. */
+export const hiltiD0 = (d: number): number | null => { const k = (STOERRELSER as readonly number[]).indexOf(d); return k < 0 ? null : D0[k]!; };
+
 export function anvendHilti(m: Parameters<typeof saetSti>[0], d: Stoerrelse, t: Temperaturomraade, hul: Borehul): ProduktVaerdier {
   const p = hiltiHY200V3(d, t, hul);
   for (const [sti, v] of tilOpdateringer(p)) saetSti(m, sti, v);
   saetSti(m, 'anker.type', 'indlimet');
   saetSti(m, 'anker.As', GEVINDAREAL[p.d] ?? Math.round((Math.PI / 4) * p.d * p.d));
   saetSti(m, 'anker.gevind', true);
-  saetSti(m, 'anker.psiC', (fckAf((m as any).beton) / 20) ** 0.1);
+  saetSti(m, 'anker.psiC', hiltiPsiC(fckAf((m as any).beton)));
   return p;
 }

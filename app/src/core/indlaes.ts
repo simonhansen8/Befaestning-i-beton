@@ -31,7 +31,7 @@ export function standardModel(dato = ''): Obj {
       psiC: 1, psi0Sus: 0.74, alphaSus: 0.6, kcrN: 7.7, kucrN: 11, ccrN: null, scrN: null, ccrSp: null, scrSp: null, hmin: null, cmin: null, smin: null,
       k7: null, k8: null, k11: 0.6667, gammaInst: 1.2, NRksEta: null, VRksEta: null, M0RksEta: null, betonMin: 'C20/25', betonMax: 'C50/60',
     },
-    plade: { bx: 340, by: 340, t: 25, hulfrigang: 'normal', afstandTilBeton: 0, lasthoejde: null, mellemlaeg: 'ingen', indspaending: 'fri' },
+    plade: { bx: 340, by: 340, t: 25, hulfrigang: 'normal', afstandTilBeton: 0, lasthoejde: null, lastX: 0, lastY: 0, mellemlaeg: 'ingen', indspaending: 'fri' },
     opstilling: {
       type: '4', sx: 240, sy: 240, n: 6, r: 150, vinkel: 0,
       anker: [{ id: 1, x: -120, y: -120, slids: null }, { id: 2, x: 120, y: -120, slids: null }, { id: 3, x: -120, y: 120, slids: null }, { id: 4, x: 120, y: 120, slids: null }],
@@ -82,7 +82,7 @@ const TILLADT: Record<string, readonly (string | null)[]> = {
   'indstillinger.staalInteraktionVedLoeftestang': ['eftervis', 'undtag'], 'indstillinger.pryoutEnkeltanker': ['retning', 'altid'],
   'beton.armering.ankerarmeringForskydning.kant': [null, 'xNeg', 'xPos', 'yNeg', 'yPos'],
   'beton.klasse': STANDARD_BETONKLASSER.slice(0, 11), 'anker.betonMin': STANDARD_BETONKLASSER.slice(0, 11), 'anker.betonMax': STANDARD_BETONKLASSER.slice(0, 11),
-  'anker.staalklasse': [...Object.keys(STAALKLASSER).filter((k) => ['4.6', '5.6', '5.8', '8.8', '10.9', 'A4-70', 'A4-80', 'SD'].includes(k)), 'bruger'],
+  'anker.staalklasse': [...Object.keys(STAALKLASSER).filter((k) => ['4.6', '5.6', '5.8', '6.8', '8.8', '10.9', 'A4-50', 'A4-70', 'A4-80', 'SD'].includes(k)), 'bruger'],
 };
 const STANDARD_DIAMETRE = [8, 10, 12, 16, 20, 22, 24, 27, 30];
 const erObj = (x: unknown): x is Obj => x != null && typeof x === 'object' && !Array.isArray(x);

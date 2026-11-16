@@ -5,7 +5,7 @@ import { parseIndstillinger } from './settings';
 import { afledStaal } from './steel';
 import { partialkoefficienter } from './partials';
 import { fordelForskydning, fordelTraek, skalerLast, slidsStivhed } from './loads';
-import { legacyKfi } from './facit-hjaelp';
+import { legacyGammaMsRe, legacyKfi } from './facit-hjaelp';
 import { fckAf } from './concrete';
 import { staalbrudTraek, traekOversigt } from './tension';
 import { harLoeftestang, pryout, staalbrudForskydning } from './shear';
@@ -19,7 +19,7 @@ const bondProdukt = (m: any) => (m.anker.type === 'indlimet' ? { produkt: { d: m
 
 function opsaet(c: any) {
   const m = c.model;
-  const { indstillinger } = parseIndstillinger({ ...m.indstillinger, gamma3: undefined, Ec: null });
+  const { indstillinger } = parseIndstillinger({ ...m.indstillinger, gammaMsRe: legacyGammaMsRe(m), gamma3: undefined, Ec: null });
   const st = afledStaal({ staalklasse: m.anker.staalklasse, d: m.anker.d, gevind: m.anker.gevind, As: m.anker.As });
   const p = partialkoefficienter(indstillinger, { type: m.anker.type, fuk: st.fuk, fyk: st.fyk, gammaInstIndlimet: m.anker.gammaInst });
   const lk = skalerLast(m.laster[c.resultat.styrendeKombination], legacyKfi(m));

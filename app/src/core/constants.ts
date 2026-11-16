@@ -19,6 +19,8 @@ export const STAALKLASSER = {
   '6.8': { fuk: 600, fyk: 480, duktil: false },
   '8.8': { fuk: 800, fyk: 640, duktil: true },
   '10.9': { fuk: 1000, fyk: 900, duktil: true },
+  /** Rustfri klasse 50 (EN ISO 3506-1); fx gevindstænger > M24 i CRC II/III efter ETA-19/0601, Tabel A1. */
+  'A4-50': { fuk: 500, fyk: 210, duktil: true },
   'A4-70': { fuk: 700, fyk: 450, duktil: true },
   'A4-80': { fuk: 800, fyk: 600, duktil: true },
   SD: { fuk: 450, fyk: 350, duktil: true },

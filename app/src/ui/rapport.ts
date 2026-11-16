@@ -127,6 +127,11 @@ html{scroll-behavior:smooth}
 @media (max-width:700px){.side{padding:12px}header.top{flex-direction:column;align-items:flex-start}.fig{flex-direction:column}.smaa{grid-template-columns:1fr}}
 `;
 
+const lastpunktTekst = (m: any): string => {
+  const x = Number(m?.plade?.lastX) || 0, y = Number(m?.plade?.lastY) || 0;
+  return x || y ? `<li>Lasterne angriber i lastpunktet (x, y) = (${dk(x, 0)}; ${dk(y, 0)}) mm. Der regnes med tillægsmomenterne M<sub>x</sub> = N·y, M<sub>y</sub> = −N·x og vridningen T = x·V<sub>y</sub> − y·V<sub>x</sub> om referencepunktet.</li>` : '<li>Lasterne angriber i referencepunktet (origo).</li>';
+};
+
 export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, dato = new Date().toISOString().slice(0, 10), valg: RapportValg = {}): string {
   const p = m.projekt ?? {};
   const k = r ? r.kombinationer : [];
@@ -199,7 +204,7 @@ export function rapportHtml(m: Model, r: ProjektResultat | null, build: string, 
 
   /* 6. Forudsætninger */
   const forb = h2('Forudsætninger og omfang', 'forudsaetninger') +
-    `<div class="forb"><p>Befæstning i beton efter DS/EN 1992-4:2018 og DS/EN 1992-4 DK NA:2024. Statisk/kvasistatisk brudgrænsetilstand.</p><h4>Forudsætninger</h4><ul><li>Laster indtastes som regningsmæssige værdier, inkl. K<sub>FI</sub> ved konsekvensklasse CC3.</li><li>Fodpladen forudsættes stiv (EN 1992-4, 6.2.1(2)); pladen, svejsninger og søjle eftervises separat.</li></ul><h4>Uden for omfang</h4><ul><li>Udmattelse, seismik, brand, ulykkeslast, ankerskinner, ekspansions-/skrue-/underskæringsankre, eftervisning af fodplade og svejsninger samt videreførelse af kræfter i betonelementet.</li></ul></div>`;
+    `<div class="forb"><p>Befæstning i beton efter DS/EN 1992-4:2018 og DS/EN 1992-4 DK NA:2024. Statisk/kvasistatisk brudgrænsetilstand.</p><h4>Forudsætninger</h4><ul><li>Laster indtastes som regningsmæssige værdier inkl. K<sub>FI</sub> (DS/EN 1990 DK NA: CC1 0,9 · CC2 1,0 · CC3 1,1); programmet ganger ikke K<sub>FI</sub> på.</li>${lastpunktTekst(m)}<li>Fodpladen forudsættes stiv (EN 1992-4, 6.2.1(2)), så ankerkræfterne kan fordeles lineært. Pladens stivhed og bæreevne, svejsninger og søjle eftervises separat.</li><li>Betontrykket under fodpladen er kun kontrolleret mod 3·f<sub>cd</sub>. Lokalt tryk (EN 1992-1-1, 6.7) og eventuel understøbning eftervises separat.</li><li>Kræfterne fra befæstelsen skal kunne føres videre i betonelementet (EN 1992-4, Anneks A). Elementets bæreevne, herunder forskydningsbæreevnen under ankerlasten, eftervises separat af den projekterende.</li><li>Partialkoefficienter efter DS/EN 1992-4 DK NA, Tabel 4.1, og DS/EN 1992-1-1 DK NA, Tabel 2.1Na (γ<sub>c</sub> = 1,45·γ<sub>3</sub>, γ<sub>c,træk</sub> = 1,70·γ<sub>3</sub>, armering γ<sub>s</sub> = 1,20·γ<sub>3</sub>).</li></ul><h4>Uden for omfang</h4><ul><li>Udmattelse, seismik, brand, ulykkeslast, ankerskinner, ekspansions-/skrue-/underskæringsankre, eftervisning af fodplade og svejsninger samt betonelementets bæreevne (Anneks A).</li></ul></div>`;
 
   /* 7. Bemærkninger */
   const bem = r ? [...r.diagnostik, ...r.kombinationer.flatMap((c) => c.diagnostik.map((d) => ({ ...d })))] : [];
