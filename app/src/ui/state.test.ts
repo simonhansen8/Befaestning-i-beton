@@ -24,6 +24,28 @@ describe('Store', () => {
     expect(s.tilstand.model.anker.hef).toBe(250);
     expect(s.tilstand.resultat!.maksUdnyttelse).not.toBe(for_);
   });
+  it('skift af boltdiameter eller gevind giver nyt spændingsareal (As følger d)', () => {
+    const s = new Store(standardModel('2026-01-01'));
+    expect(s.tilstand.resultat!.staal.As).toBe(245);
+    s.saetFelt(felt('anker.d'), '12');
+    expect(s.tilstand.model.anker.As).toBe(84.3);
+    expect(s.tilstand.resultat!.staal.As).toBe(84.3);
+    const NRk = s.tilstand.resultat!.kombinationer[0]!.resultat.brudformer.find((b) => b.id === 'N_s')!.Rk;
+    expect(NRk).toBeCloseTo(84.3 * 800, 6);
+    s.saetFelt(felt('anker.gevind'), false);
+    expect(s.tilstand.resultat!.staal.As).toBeCloseTo((Math.PI / 4) * 144, 9);
+    expect(s.tilstand.model.anker.As).toBe(113.1);
+  });
+  it('en gemt As, der ikke passer til d, bruges ikke og giver en advarsel', () => {
+    const m = standardModel('2026-01-01');
+    m.anker.d = 12; // As står stadig til M20 (245 mm²), som i filer gemt før rettelsen
+    const s = new Store(m);
+    expect(s.tilstand.resultat!.staal.As).toBe(84.3);
+    expect(s.tilstand.diagnostik.some((d) => d.kode === 'as-afledt-af-d')).toBe(true);
+    s.indlaesTekst(JSON.stringify(m));
+    expect(s.tilstand.model.anker.As).toBe(84.3);
+    expect(s.tilstand.diagnostik.some((d) => d.kode === 'as-afledt-af-d')).toBe(true);
+  });
   it('ugyldig indtastning ændrer ikke modellen', () => {
     const s = new Store(standardModel('2026-01-01'));
     expect(s.saetFelt(felt('anker.hef'), 'abc')).toBe(false);

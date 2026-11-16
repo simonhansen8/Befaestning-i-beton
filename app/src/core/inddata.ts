@@ -39,6 +39,10 @@ const ANTAL_MAX = 100;
 
 interface TalValg { gt?: number; min?: number; max?: number; nullable?: boolean; krit?: boolean }
 
+/** Spændingsareal As [mm²] afledt af nominel diameter og gevind (ISO 898-1; uden gevind π·d²/4). */
+export const afledAs = (d: number, gevind: boolean): number =>
+  gevind ? (GEVINDAREAL[d] ?? (Math.PI / 4) * (0.885 * d) ** 2) : (Math.PI / 4) * d * d;
+
 export function indlaesProjekt(raa: unknown): IndlaesResultat {
   const d: Diagnostik[] = [];
   let kritisk = false;
@@ -86,11 +90,12 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
   const y = type === 'indlimet';
   const dd = r('anker.d', l.d, 16, { gt: 0 });
   const gevind = boolsk(l.gevind, true);
-  let As = r('anker.As', l.As, null, { gt: 0, nullable: true });
-  if (As == null) {
-    As = gevind ? (GEVINDAREAL[dd] ?? (Math.PI / 4) * (0.885 * dd) ** 2) : (Math.PI / 4) * dd * dd;
-    if (gevind && GEVINDAREAL[dd] == null) info('advarsel', 'as-estimeret', 'ISO 898-1', 'anker.As', { d: dd, As });
-  }
+  // As afledes ALTID af d og gevind (feltet er skrivebeskyttet i brugerfladen). En gemt As, der ikke passer til d,
+  // stammer fra en tidligere diameter (fx standardmodellens M20) og ville give forkert stålbæreevne – den ignoreres.
+  const AsFil = r('anker.As', l.As, null, { gt: 0, nullable: true });
+  const As = afledAs(dd, gevind);
+  if (gevind && GEVINDAREAL[dd] == null) info('advarsel', 'as-estimeret', 'ISO 898-1', 'anker.As', { d: dd, As });
+  if (AsFil != null && Math.abs(AsFil - As) > 0.005 * As) info('advarsel', 'as-afledt-af-d', 'ISO 898-1', 'anker.As', { d: dd, angivet: AsFil, As });
   const klasse = String(l.staalklasse ?? '8.8');
   const sk = (STAALKLASSER as Record<string, { fuk: number; fyk: number; duktil: boolean }>)[klasse] ?? null;
   const fuk = r('anker.fuk', l.fuk, sk?.fuk ?? 800, { gt: 0 });

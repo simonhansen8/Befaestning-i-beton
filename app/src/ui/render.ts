@@ -377,7 +377,7 @@ export function opsaet(rod: HTMLElement, store: Store, build: string): void {
       h('div', { class: 'praesetvalg' },
         vaelg('Produkt', valgListe, produktValg, (v) => { produktValg = v as Valg; draw(); }), ...felter),
       h('p', { class: 'note' }, produktValg === 'hilti'
-        ? 'Sætter d, d0, hef-interval, smin, cmin, τRk,cr/ucr (C20/25), ψ⁰sus, kcr/kucr og γinst fra ETA\'en. ψc beregnes som (fck/20)^0,1 (rundet ned) for den aktuelle betonklasse; tryk Anvend igen, hvis betonklassen ændres. Stålklasse og hef vælges selv.'
+        ? 'Sætter d, d0, hef-interval, smin, cmin, τRk,cr/ucr (C20/25), ψ⁰sus, kcr/kucr og γinst fra ETA\'en. ψc beregnes som (fck/20)^0,1 (uden afrunding) for den aktuelle betonklasse; tryk Anvend igen, hvis betonklassen ændres. Stålklasse og hef vælges selv.'
         : produktValg === 'eget'
           ? 'Anden leverandør: indtast værdierne fra produktets ETA i felterne nedenfor, og gem dem her som dit eget produkt, så de kan genbruges. Dine produkter gemmes kun i denne browser.'
           : 'Vælg et produkt for at udfylde produktdata fra ETA\'en, eller indtast værdierne selv i felterne nedenfor.'));

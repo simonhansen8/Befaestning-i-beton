@@ -33,6 +33,7 @@ export const TEKSTER: Record<string, (d: D) => string> = {
   'bolt-id-ikke-entydige': () => 'Bolte-id er ikke entydige.',
   'ukendt-ankertype': (d) => `Ukendt ankertype "${d.angivet}" – regnet som indstøbt.`,
   'as-estimeret': (d) => `Spændingsarealet for d = ${t0(d.d)} mm findes ikke i tabellen – estimeret til ${t0(d.As)} mm². Angiv As.`,
+  'as-afledt-af-d': (d) => `Spændingsarealet afledes af boltdiameteren: d = ${t0(d.d)} mm giver As = ${t(d.As, 1)} mm². Den gemte værdi ${t(d.angivet, 1)} mm² passede ikke til d og er ikke brugt.`,
   'fyk-over-fuk': (d) => `fyk = ${t0(d.fyk)} MPa skal være mindre end fuk = ${t0(d.fuk)} MPa.`,
   'hoveddiameter-for-lille': (d) => `Hoveddiameter dh = ${t0(d.dh)} mm skal være større end d = ${t0(d.d)} mm.`,
   'gamma-inst-under-1': (d) => `γinst = ${t2(d.gammaInst)} < 1,0 – værdien bruges, men er ikke tilladt efter DK NA.`,

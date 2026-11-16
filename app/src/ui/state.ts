@@ -2,7 +2,7 @@
 import { beregnProjekt, type ProjektResultat } from '../core/beregn';
 import type { Diagnostik } from '../core/diagnostik';
 import { indlaesFil, standardModel, type Afvist } from '../core/indlaes';
-import { indlaesProjekt } from '../core/inddata';
+import { afledAs, indlaesProjekt } from '../core/inddata';
 import type { Model } from './skema-typer';
 import { saetSti, tolkFelt, type Tolket } from './vaerdi';
 import type { FeltDef } from './skema-typer';
@@ -22,6 +22,12 @@ export interface Tilstand {
 }
 
 const RANG = { fejl: 0, advarsel: 1, info: 2 } as const;
+
+/** Holder afledte felter i modellen i trit med deres grundlag (så skrivebeskyttede felter viser den værdi, der regnes med). */
+export function synkAfledte(model: Model): void {
+  const a = (model as { anker?: { d?: unknown; gevind?: unknown; As?: unknown } }).anker;
+  if (a && typeof a.d === 'number' && Number.isFinite(a.d) && a.d > 0) a.As = Math.round(afledAs(a.d, a.gevind !== false) * 10) / 10; // kun til visning; kernen afleder selv den eksakte værdi
+}
 
 export function beregnTilstand(model: Model, valgt: number | null = null): Omit<Tilstand, 'feltfejl'> {
   const n = indlaesProjekt(model as never);
@@ -89,6 +95,7 @@ export class Store {
     delete feltfejl[f.k];
     const model = structuredClone(this.tilstand.model);
     saetSti(model, f.k, t.v);
+    synkAfledte(model);
     if (JSON.stringify(model) !== JSON.stringify(this.tilstand.model)) this.husk(f.k);
     this.opdater({ ...beregnTilstand(model, this.tilstand.valgtKombination), feltfejl });
     return true;
@@ -97,6 +104,7 @@ export class Store {
   aendr(f: (m: Model) => void): void {
     const model = structuredClone(this.tilstand.model);
     f(model);
+    synkAfledte(model);
     if (JSON.stringify(model) === JSON.stringify(this.tilstand.model)) { this.opdater({ ...this.tilstand, feltfejl: {} }); return; }
     this.husk();
     this.opdater({ ...beregnTilstand(model, this.tilstand.valgtKombination), feltfejl: {} });
@@ -108,7 +116,16 @@ export class Store {
     const r = indlaesFil(raa);
     if (!r.model) { this.opdater({ ...this.tilstand, fejl: `Filen kan ikke indlæses (${r.fejl}).` }); return; }
     this.husk();
-    this.opdater({ ...beregnTilstand(r.model), afvist: r.afvist, diagnostik: [...r.noter, ...beregnTilstand(r.model).diagnostik], feltfejl: {} });
+    // En gemt As, der ikke passer til d (fx fra en ældre version), rettes og noteres, så brugeren ser det.
+    const gemt = (r.model as { anker?: { As?: unknown } }).anker?.As;
+    synkAfledte(r.model);
+    const ny = (r.model as { anker?: { As?: unknown; d?: unknown } }).anker;
+    const noter = [...r.noter];
+    if (typeof gemt === 'number' && typeof ny?.As === 'number' && Math.abs(gemt - ny.As) > 0.005 * ny.As) {
+      noter.push({ niveau: 'advarsel', kode: 'as-afledt-af-d', felt: 'anker.As', paragraf: 'ISO 898-1', data: { d: ny.d as number, angivet: gemt, As: ny.As } });
+    }
+    const b = beregnTilstand(r.model);
+    this.opdater({ ...b, afvist: r.afvist, diagnostik: [...noter, ...b.diagnostik], feltfejl: {} });
   }
   vaelgKombination(i: number): void { this.opdater({ ...this.tilstand, valgtKombination: i }); }
   tilJson(): string { return JSON.stringify(this.tilstand.model, null, 2); }

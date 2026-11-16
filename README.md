@@ -5,6 +5,7 @@ Beregningsprogram til eftervisning af indstøbte bolte og indlimede anker i beto
 - Brugsvejledning: [docs/BRUGSVEJLEDNING.md](docs/BRUGSVEJLEDNING.md)
 - Arkitektur og genopbygning: [docs/GENOPBYGNING.md](docs/GENOPBYGNING.md)
 - Verifikation og kendte forbehold: [docs/verifikation.md](docs/verifikation.md), [docs/kritiske-fund.md](docs/kritiske-fund.md)
+- Seneste faglige gennemgang: [docs/gennemgang-2026-11-16.md](docs/gennemgang-2026-11-16.md)
 - Sporbarhed (formel → norm): [docs/sporbarhed.md](docs/sporbarhed.md)
 - Tests: [tests/README.md](tests/README.md)
 
