@@ -54,6 +54,19 @@ export interface KantbrudResultat {
 }
 
 /** V0, Ac,V, ψs,V, ψh,V for en række ankre ved en kant (7.2.2.5). */
+export type PsiReVMangel = 'urevnet' | 'ingen' | 'hef' | 'a-mangler' | 'a>100' | 'a>2c1' | 'dia<12';
+/** Uopfyldte krav for ψre,V = 1,4 (kantarmering og tætte bøjler, 7.2.2.5); tom liste = ψre,V = 1,4. */
+export function psiReVMangler(p: { revnet: boolean; kantarmering: string; hef: number; cnom: number; afstand: number | null; diameter: number | null; c1: number }): PsiReVMangel[] {
+  const m: PsiReVMangel[] = [];
+  if (!p.revnet) m.push('urevnet');
+  if (p.kantarmering !== 'boejler') m.push('ingen');
+  if (!(p.hef >= 2.5 * p.cnom)) m.push('hef');
+  if (p.afstand == null) m.push('a-mangler');
+  else { if (!(p.afstand <= 100)) m.push('a>100'); if (!(p.afstand <= 2 * p.c1)) m.push('a>2c1'); }
+  if (!(p.diameter != null && p.diameter >= 12)) m.push('dia<12');
+  return m;
+}
+
 export function kantGeometri(p: { kanter: Partial<Kanter>; fck: number; revnet: boolean; hef: number; dnom: number; h: number }, kant: KantNavn, row: Anker[], c1org: number): KantGeometri {
   const [lo, hi] = udstraekningLangsKant(kant, p.kanter);
   const T = row.map((a) => koordLangsKant(a, kant));
@@ -103,9 +116,7 @@ export function kantbrud(p: KantInput): KantbrudResultat {
     const R = kantGeometri(geo, D.kant, row, c1);
     const psiEcV = R.c1 > 0 ? 1 / (1 + (2 * eV) / (3 * R.c1)) : 1;
     const psiA = Math.max(1, Math.sqrt(1 / (Math.cos(aV) ** 2 + (0.5 * Math.sin(aV)) ** 2)));
-    const psiRe =
-      p.revnet && p.kantarmering === 'boejler' && p.hef >= 2.5 * p.cnom && p.kantarmeringAfstand != null && p.kantarmeringDiameter != null &&
-      p.kantarmeringAfstand <= 100 && p.kantarmeringAfstand <= 2 * R.c1 && p.kantarmeringDiameter >= 12 ? 1.4 : 1;
+    const psiRe = psiReVMangler({ revnet: p.revnet, kantarmering: p.kantarmering, hef: p.hef, cnom: p.cnom, afstand: p.kantarmeringAfstand, diameter: p.kantarmeringDiameter, c1: R.c1 }).length === 0 ? 1.4 : 1;
     let f08 = 1;
     if (ankre.length === 2 && Math.abs(last.T) > 1e-6) {
       const Y = ankre.map((_a, i) => p.fordeling.Vx[i]! * D.n[0] + p.fordeling.Vy[i]! * D.n[1]);
