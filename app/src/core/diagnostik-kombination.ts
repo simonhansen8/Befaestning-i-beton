@@ -41,6 +41,33 @@ export function diagnostikKombination(
   }
   return e;
 }
+
+/**
+ * Armeringens forankring og dæklag, som den gamle kerne ikke kontrollerede (holdes uden for facit-sammenligningen):
+ * trækarmeringens ben skal forankres lbd uden for brudkeglen (7.2.1.2(2), EN 1992-1-1, 8.4.4) og kunne være i elementet.
+ */
+export function diagnostikArmering(m: Kernemodel, r: KombinationsResultat): Diagnostik[] {
+  const e: Diagnostik[] = [];
+  const f = r.forankT, cnom = m.beton.cnom, h = m.beton.h;
+  if (f && r.armT.virksom) {
+    if (f.foering === 'ingen' && f.udenForKeglen < f.lbd - 0.5) {
+      e.push(diag('advarsel', 'traekarmering-lbd-for-kort', EN('7.2.1.2(2)') + ' / EN 1992-1-1, 8.4.4', 'beton.armering.ankerarmeringTraek.forankringsdybde',
+        { udenFor: f.udenForKeglen, lbd: f.lbd, ende: f.endeDybde, kraevet: f.kraevetDybde, antaget: f.antaget, maks: h - cnom }));
+    }
+    if (f.endeDybde > h - cnom + 0.5) e.push(diag('advarsel', 'traekarmering-for-dyb', EN('7.2.1.2(2)'), 'beton.armering.ankerarmeringTraek.forankringsdybde', { ende: f.endeDybde, h, cnom, stoed: f.foering === 'stoed' }));
+  }
+  return e;
+}
+
+/** Dæklag til ankerarmeringen (kun advarsel; dybderne indgår i l1 og es). */
+export function diagnostikArmeringsDaeklag(m: Kernemodel): Diagnostik[] {
+  const e: Diagnostik[] = [];
+  const ar = m.beton.armering, cnom = m.beton.cnom;
+  const t = ar.ankerarmeringTraek, v = ar.ankerarmeringForskydning;
+  if (t.aktiv && t.daeklagTop - t.diameter / 2 < cnom - 0.5) e.push(diag('advarsel', 'armering-daeklag-for-lille', 'EN 1992-1-1, 4.4.1', 'beton.armering.ankerarmeringTraek.daeklagTop', { hvad: 'T', dybde: t.daeklagTop, d: t.diameter, cnom }));
+  if (v.aktiv && v.daekToAkse != null && v.daekToAkse - v.diameter / 2 < cnom - 0.5) e.push(diag('advarsel', 'armering-daeklag-for-lille', 'EN 1992-1-1, 4.4.1', 'beton.armering.ankerarmeringForskydning.daekToAkse', { hvad: 'V', dybde: v.daekToAkse, d: v.diameter, cnom }));
+  return e;
+}
 export type { Last };
 
 /** Oplysning når forskydningsarmeringens kant er valgt automatisk (mest udnyttede kant uden armering). */

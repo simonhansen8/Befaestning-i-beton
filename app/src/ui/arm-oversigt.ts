@@ -46,16 +46,21 @@ export function kantvalg(m: Model, kr: any): { aktiv: boolean; tekst: string; ad
   if (!av.aktiv) l.push({ aktiv: false, tekst: 'Ankerarmering for forskydning (7.2.2.6, fig. 7.10) er slået fra.' });
   else if (dak) l.push({ aktiv: true, tekst: `Ankerarmering for forskydning (${av.type === 'overflade' ? 'overfladearmering' : av.type === 'boejle' ? 'bøjler' : 'løkker'}, 7.2.2.6) bærer forskydningen mod kant ${kant(kr.armKant.kant)}. Betonkantbrud og ψre,V regnes ikke for den række.` });
   else l.push({ aktiv: false, tekst: 'Ankerarmering for forskydning er slået til, men virker ikke (se advarslerne) – betonkantbrud med ψre,V regnes i stedet.' });
-  const psi = kr?.armKant ? kr?.kantbrud?.forreste?.[kr.armKant.kant]?.psiRe : undefined;
+  // ψre,V som beregnet pr. belastet kant (kanterPr); den forreste række har ingen ψre,V
+  const pr = Object.values((kr?.kantbrud?.kanterPr ?? {}) as Record<string, { kant: string; psiRe: number }>);
+  const psiTekst = pr.length ? pr.map((q) => `${kant(q.kant)}: ${String(q.psiRe).replace('.', ',')}`).join(', ') : null;
+  const andre = dak ? pr.filter((q) => q.kant !== kr.armKant.kant) : pr;
   if (ar.kantarmering === 'ingen') l.push({ aktiv: false, tekst: 'Kantarmering for betonkantbrud (ψre,V, 7.2.2.5(13)): ingen – ψre,V = 1,0.' });
-  else if (dak) l.push({ aktiv: false, tekst: 'Kantarmering for betonkantbrud (ψre,V): ikke i brug for den række, der dækkes af ankerarmeringen. Den gælder stadig for øvrige kanter og rækker.' });
-  else l.push({ aktiv: true, tekst: `Kantarmering for betonkantbrud (ψre,V, 7.2.2.5(13)): ψre,V = ${psi != null ? String(psi).replace('.', ',') : '1,4 hvis kravene er opfyldt'} i V_Rk,c.` });
+  else if (dak) l.push({ aktiv: false, tekst: `Kantarmering for betonkantbrud (ψre,V): ikke i brug for den række, der dækkes af ankerarmeringen. Den gælder stadig for øvrige kanter og rækker${andre.length ? ` (ψre,V = ${andre.map((q) => `${kant(q.kant)}: ${String(q.psiRe).replace('.', ',')}`).join(', ')})` : ''}.` });
+  else l.push({ aktiv: true, tekst: `Kantarmering for betonkantbrud (ψre,V, 7.2.2.5(13)): ${psiTekst ? `ψre,V = ${psiTekst}` : 'ψre,V = 1,4 hvis kravene er opfyldt'} i V_Rk,c.` });
   if (dak) {
+    // l1 og α1 findes kun for overfladearmering (V_a); bøjler og løkker eftervises for flydning (V_re)
     const u = (id: string) => kr?.brudformer?.find((x: { id: string }) => x.id === id)?.udnyttelse as number | null | undefined;
     const alfa = forankringsFaktor(av.krog, av.cd, av.diameter || 10);
     const tal = (x: number) => x.toFixed(2).replace('.', ',');
     const over = (['V_a', 'V_re', 'V_ek'] as const).filter((id) => (u(id) ?? 0) > 1);
-    l.push({ aktiv: true, advarsel: over.length > 0, tekst: `Forankring i brudprismet: l1 = ${kr.armV.l1 != null ? Math.round(kr.armV.l1) : '–'} mm, α1 = ${tal(alfa)}${av.krog && alfa === 1 ? ' (krogens virkning kræver cd > 3⌀: angiv cd)' : ''}.${over.length ? ` Ankerarmeringen kan ikke bære forskydningen: ${over.map((id) => `${id} = ${Math.round((u(id) ?? 0) * 100)} %`).join(', ')}. Den erstatter betonkantbruddet, så resultatet kan være dårligere end uden armering. Øg l1 eller armering, angiv cd, eller slå ankerarmeringen fra.` : ''}` });
+    const forankTekst = av.type === 'overflade' ? `Forankring i brudprismet: l1 = ${kr.armV.l1 != null ? Math.round(kr.armV.l1) : '–'} mm, α1 = ${tal(alfa)}${av.krog && alfa === 1 ? ' (krogens virkning kræver cd > 3⌀: angiv cd)' : ''}.` : `${av.type === 'boejle' ? 'Bøjlerne' : 'Løkkerne'} ligger an mod skaftet; eftervises for flydning (V_re, k10 = 0,5).`;
+    l.push({ aktiv: true, advarsel: over.length > 0, tekst: `${forankTekst}${over.length ? ` Ankerarmeringen kan ikke bære forskydningen: ${over.map((id) => `${id} = ${Math.round((u(id) ?? 0) * 100)} %`).join(', ')}. Den erstatter betonkantbruddet, så resultatet kan være dårligere end uden armering. ${av.type === 'overflade' ? 'Øg l1 eller armering, angiv cd' : 'Øg antal eller diameter'}, eller slå ankerarmeringen fra.` : ''}` });
   }
   return l;
 }

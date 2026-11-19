@@ -9,7 +9,7 @@ import { minKantafstand, type Kanter, type KantNavn } from './geometry';
 import type { Partialkoefficienter } from './partials';
 import {
   armeringForskydningVirkning, armeringTraekVirkning, armeringsKant, forankringsLaengde, type ForankringsLaengde, eftervisForskydningsArmering, eftervisTraekArmering, vaelgArmKant,
-  type ArmeringT, type ArmeringV, type ForskydningsArmering, type TraekArmering,
+  traekForankring, type ArmeringT, type ArmeringV, type ForskydningsArmering, type ForskydningsArmeringResultat, type TraekArmering, type TraekForankring,
 } from './reinforcement';
 import { sideblowout, type SideblowoutGruppe } from './sideblowout';
 import { harLoeftestang, pryout, staalbrudForskydning } from './shear';
@@ -58,6 +58,9 @@ export interface Detaljer {
   /** Forreste række og excentricitet er i kantbrud.styrende / kanterPr. */
   NV_s?: { betaN: number; betaV: number };
   NV?: { betaN: number; betaV: number; styrendeTraek: string | null; styrendeForskydning: string | null; ligning: string; I755?: number; I756?: number; k11: number; valg: string };
+  /** Ankerarmering: fbd og α for N_a; es, z, fbd og α for V_re/V_a. */
+  N_a?: { fbd: number; alpha: number; NRdBen: number };
+  V_re?: ForskydningsArmeringResultat['mellem'];
   stor: boolean;
 }
 
@@ -69,6 +72,8 @@ export interface KombinationsResultat {
   armT: ArmeringT; armV: ArmeringV; tilfaelde: ArmeringsTilfaelde; kantbrud: KantbrudResultat;
   /** Forankringslængde lbd uden for brudlegemet for ankerarmeringen (kun hvis aktiv). */
   forank: { T: ForankringsLaengde | null; V: ForankringsLaengde | null };
+  /** Trækarmeringens ben: forankring uden for brudkeglen sammenholdt med lbd (kun hvis aktiv). */
+  forankT: TraekForankring | null;
   /** Hvorfor spaltning/stålbrud er irrelevant (til diagnostik). */
   spaltningAarsag: string | null; staalForskydningAarsag: string | null; loeftestang: boolean;
   /** Valgt armeringskant (forreste række) og om forskydningsarmeringen dækker en kant. */
@@ -149,6 +154,7 @@ export function beregnKombination(
   });
   out.push(trad(V_cp, V_cp.VEd, V_cp.VRd, V_cp.VRk));
   out.push({ id: 'V_c', relevant: V_c.relevant, Ed: V_c.VEd, Rd: V_c.VRd, Rk: V_c.VRk, udnyttelse: V_c.udnyttelse, styrendeAnker: V_c.styrendeAnker });
+  let vMellem: ForskydningsArmeringResultat['mellem'] | undefined;
   if (armV.aktiv) {
     if (armV.virksom && armKant) {
       const r = eftervisForskydningsArmering({
@@ -157,6 +163,7 @@ export function beregnKombination(
       });
       out.push(fraTraek(r.V_re), fraTraek(r.V_a));
       if (r.V_ek) out.push(fraTraek(r.V_ek));
+      vMellem = r.mellem;
     }
   }
 
@@ -164,9 +171,11 @@ export function beregnKombination(
   const undtag = ind.staalInteraktionVedLoeftestang === 'undtag' && lof.medLoeftestang;
   const NV_s = interaktionStaal({ ankreIds: ankre.map((a) => a.id), F: f.F, Veff: V_s.Veff, VRd_i: V_s.VRd_i, NRd_s: N_s.NRd });
   out.push({ id: 'NV_s', relevant: undtag ? false : NV_s.relevant, Ed: 0, Rd: 0, Rk: 0, udnyttelse: undtag ? null : NV_s.udnyttelse, styrendeAnker: NV_s.styrendeAnker });
-  const fl = (a: { aktiv: boolean; diameter: number; eta1: number | null; fyk: number; krog: boolean; cd: number | null }, id: string): ForankringsLaengde | null =>
-    a.aktiv ? forankringsLaengde({ fck, eta1: a.eta1 ?? 1, ds: a.diameter, fyk: a.fyk, gammaS: p.gammaMsRe, krog: false, cd: null, alphaCt: p.alphaCt, gammaCt: p.gammaCt, udnyttelse: out.find((b) => b.id === id)?.udnyttelse ?? 1 }) : null;
-  const forank = { T: fl(ar.ankerarmeringTraek, 'N_re'), V: fl(ar.ankerarmeringForskydning, 'V_re') };
+  // lbd for den lige del uden for brudlegemet (α1 = 1). η1 som i N_a/V_a: for forskydningsarmering den automatiske værdi efter h (armV.eta1).
+  const fl = (a: { aktiv: boolean; diameter: number; fyk: number }, eta1: number, id: string): ForankringsLaengde | null =>
+    a.aktiv ? forankringsLaengde({ fck, eta1, ds: a.diameter, fyk: a.fyk, gammaS: p.gammaMsRe, krog: false, cd: null, alphaCt: p.alphaCt, gammaCt: p.gammaCt, udnyttelse: out.find((b) => b.id === id)?.udnyttelse ?? 1 }) : null;
+  const forank = { T: fl(ar.ankerarmeringTraek, ar.ankerarmeringTraek.eta1 ?? 1, 'N_re'), V: fl(ar.ankerarmeringForskydning, armV.aktiv ? armV.eta1 : (ar.ankerarmeringForskydning.eta1 ?? 1), 'V_re') };
+  const forankT = forank.T ? traekForankring(ar.ankerarmeringTraek, armT, m.anker.hef, forank.T.lbd) : null;
   const tilfaelde: ArmeringsTilfaelde = armT.virksom && armV.virksom ? 'begge' : armT.virksom ? 'traek' : armV.virksom ? 'forskydning' : 'ingen';
   const NV = interaktionBeton(out.map((b) => ({ id: b.id, relevant: b.relevant, udnyttelse: b.udnyttelse })), tilfaelde, ind.interaktion, m.anker.k11);
   out.push({ id: NV.id, relevant: NV.relevant, Ed: 0, Rd: 0, Rk: 0, udnyttelse: NV.udnyttelse, styrendeAnker: null });
@@ -186,8 +195,10 @@ export function beregnKombination(
     V_cp: { kegle: V_cp.kegle, k8: V_cp.k8, enkeltStyrer: V_cp.enkeltStyrer },
     NV_s: { betaN: NV_s.betaN, betaV: NV_s.betaV },
     NV: { betaN: NV.betaN, betaV: NV.betaV, styrendeTraek: NV.styrendeTraek, styrendeForskydning: NV.styrendeForskydning, ligning: NV.ligning, I755: NV.I755, I756: NV.I756, k11: m.anker.k11, valg: ind.interaktion },
+    ...(tr.mellem && tr.N_a.relevant ? { N_a: tr.mellem } : {}),
+    ...(vMellem ? { V_re: vMellem } : {}),
   };
-  return { detaljer, brudformer: out, maksUdnyttelse: maks, styrendeBrudform: styrende, fordeling: f, traek: t, forskydning: v, armT, armV, tilfaelde, forank, kantbrud: forste, spaltningAarsag: N_sp.aarsag, staalForskydningAarsag: V_s.aarsag ?? null, loeftestang: lof.medLoeftestang, armKant: armKant ? { kant: armKant.kant } : null };
+  return { detaljer, brudformer: out, maksUdnyttelse: maks, styrendeBrudform: styrende, fordeling: f, traek: t, forskydning: v, armT, armV, tilfaelde, forank, forankT, kantbrud: forste, spaltningAarsag: N_sp.aarsag, staalForskydningAarsag: V_s.aarsag ?? null, loeftestang: lof.medLoeftestang, armKant: armKant ? { kant: armKant.kant } : null };
 }
 
 /**

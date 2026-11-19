@@ -118,6 +118,7 @@ export function beregningsdetalje(id: string, m: Model, k: KombinationsResultat)
       a.push(t('Benenes afstand til ankeret', `√(x² + e²), x = ${T(at.afstand, 0)} mm (grænse 0,75·h<sub>ef</sub> = ${T(0.75 * hef, 0)} mm)`, mm(ar.rad)));
       a.push(t('Forankringslængde i brudkeglen pr. bøjle', 'l<sub>1</sub> = h<sub>ef</sub> − tan35°·afstand − c<sub>top</sub> − (j−1)(⌀+1); krav ≥ ' + T(ar.l1min, 0) + ' mm', ar.l1Liste.map((v) => T(v, 0)).join(' / ') + ' mm'));
       if (id === 'N_re') a.push(t('Flydning', 'N<sub>Rk,re</sub> = n·A<sub>s</sub>·f<sub>yk</sub>', `${ar.ben}·${T(Math.PI / 4 * at.diameter ** 2, 1)}·${T(at.fyk, 0)} = ${kN(b.Rk)}`));
+      if (id === 'N_a' && d.N_a) a.push(t('Vedhæftning og bøjningsfaktor', 'f<sub>bd</sub> = 2,25·η<sub>1</sub>·η<sub>2</sub>·f<sub>ctd</sub> (η<sub>1</sub> = ' + T(at.eta1, 1) + '), α; maks. pr. ben A<sub>s</sub>·f<sub>yk</sub>/γ<sub>Ms,re</sub>', `${T(d.N_a.fbd, 2)} MPa, ${T(d.N_a.alpha, 1)}; ${kN(d.N_a.NRdBen)}`));
       if (id === 'N_a') a.push(t('Forankring i brudkeglen', 'N<sub>Rd,a</sub> = 2·Σ min(l<sub>1</sub>·π·⌀·f<sub>bd</sub>/α; A<sub>s</sub>·f<sub>yk</sub>/γ<sub>Ms,re</sub>)', kN(b.Rd)));
       if (id === 'N_cre') a.push(t('Betonkegle ved armeringens ende', "N<sub>Rk,c,re</sub> med h'<sub>ef,re</sub> = " + (at.forankringsdybde ?? hef) + ' mm', kN(b.Rk)));
       a.push(...afslut(b, id === 'N_cre' ? 'γ<sub>Mc</sub>' : 'γ<sub>Ms,re</sub>', id === 'N_a' ? null : id === 'N_cre' ? g.Mc : g.MsRe).slice(id === 'N_a' ? 0 : 1));
@@ -169,7 +170,9 @@ export function beregningsdetalje(id: string, m: Model, k: KombinationsResultat)
       const av = m.beton.armering.ankerarmeringForskydning, ar = k.armV;
       a.push(t('Udformning, stangdiameter, virksomme ben pr. anker', 'k<sub>10</sub>' + (ar.form === 'overflade' ? ' = 1,0' : ' = 0,5'), `${ar.form}, ⌀${T(av.diameter, 0)} mm, ${ar.antalVirksomme}`));
       if (ar.staenger) a.push(t('Stænger (lateral afstand v, l<sub>1</sub>)', '|v| ≤ 0,75·c<sub>1</sub>, l<sub>1</sub> = c<sub>1</sub> − √(v²+z<sub>s</sub>²)/1,5 − c<sub>nom</sub>', ar.staenger.map((s) => `${T(s.v, 0)}: ${T(s.l1, 0)}${s.virksom ? '' : ' ✗'}`).join('; ') + ' mm'));
+      if (d.V_re) a.push(t('Største forskydning pr. anker, arm og indre momentarm', 'V<sub>Ed</sub>, e<sub>s</sub>, z = 0,85·min(h − c<sub>nom</sub>; 2h<sub>ef</sub>; 2c<sub>1</sub>)', `${kN(d.V_re.VEd)}, ${mm(d.V_re.es)}, ${mm(d.V_re.z)}`));
       a.push(t('Last på armeringen', 'N<sub>Ed,re</sub> = (e<sub>s</sub>/z + 1)·V<sub>Ed</sub> (Fig. 6.8)', kN(b.Ed)));
+      if (id === 'V_a' && d.V_re?.fbd != null) a.push(t('Vedhæftning og bøjningsfaktor', 'f<sub>bd</sub> (η<sub>1</sub> = ' + T(ar.eta1, 1) + '), α', `${T(d.V_re.fbd, 2)} MPa, ${T(d.V_re.alpha, 1)}`));
       a.push(id === 'V_re'
         ? t('Flydning', 'N<sub>Rk,re</sub> = k<sub>10</sub>·n·A<sub>s</sub>·f<sub>yk</sub>', kN(b.Rk))
         : t('Forankring i brudprismet', 'N<sub>Rd,a</sub> = Σ min(l<sub>1</sub>·π·⌀·f<sub>bd</sub>/α; A<sub>s</sub>·f<sub>yk</sub>/γ<sub>Ms,re</sub>)', kN(b.Rd)));

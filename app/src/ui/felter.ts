@@ -887,7 +887,7 @@ export const SEKTIONER: Sektion[] = [
         type: "num",
         minEx: 0,
         show: traekArmeringAktiv,
-        tip: "Afstand fra boltens akse til planet gennem et bøjleparrets to ben. Tomt: lige fri af skaftet (d/2 + ⌀/2 + 2). Afstanden til benene er √(x² + e<sub>s</sub>²) og må højst være 0,75·h<sub>ef</sub> – ellers er benene ikke virksomme, og programmet advarer. Mindre end ⌀/2 giver en bøjle gennem skaftet og advares også.",
+        tip: "Afstand fra boltens akse til planet gennem et bøjleparrets to ben. Tomt: lige fri af skaftet (d/2 + ⌀/2 + 2). Afstanden til benene er √(x² + e<sub>s</sub>²) og må højst være 0,75·h<sub>ef</sub> – ellers er benene ikke virksomme, og programmet advarer. Mindre end d/2 + ⌀/2 (boltens og stangens radius) giver en bøjle gennem skaftet og advares også.",
         ref: "EN 1992-4, 7.2.1.2(2)c",
       },
       {
@@ -962,7 +962,7 @@ export const SEKTIONER: Sektion[] = [
         std: (m: Model) => stdTekst(m.anker.hef),
         show: (m: Model) =>
               traekArmeringAktiv(m) && m.beton.armering.ankerarmeringTraek.foering === "ingen",
-        tip: "Dybde til armeringens ende/bøjning. Bruges til betonkeglebrud ved armeringens ende (N<sub>cre</sub>). Tomt = ankerets h<sub>ef</sub> (konservativt).",
+        tip: "Dybde til armeringens ende/bøjning. Bruges til betonkeglebrud ved armeringens ende (N<sub>cre</sub>) og i 3D. Tomt = ankerets h<sub>ef</sub> (konservativt for N<sub>cre</sub>). Programmet advarer, hvis benene derved forankres mindre end l<sub>bd</sub> uden for brudkeglen (EN 1992-1-1, 8.4.4), og oplyser den nødvendige dybde.",
         ref: "EN 1992-4, 7.2.1.2 (2) e / (7.1)",
       },
       {
