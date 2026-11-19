@@ -91,7 +91,7 @@ export interface TraekArmeringInput {
   gammaMsRe: number; gammaMc: number; gammaCt: number; alphaCt: number;
   kegle: Omit<KegleInput, 'ankre' | 'e1' | 'e2' | 'momentfaktor' | 'hefOverstyring'>;
 }
-export interface TraekArmeringResultat { N_re: Eftervisning; N_a: Eftervisning; N_cre: Eftervisning }
+export interface TraekArmeringResultat { N_re: Eftervisning; N_a: Eftervisning; N_cre: Eftervisning; mellem?: { fbd: number; alpha: number; NRdBen: number } }
 
 const irr = (id: string): Eftervisning => ({ id, relevant: false, NEd: 0, NRd: 0, NRk: 0, udnyttelse: null, styrendeAnker: null });
 
@@ -116,7 +116,7 @@ export function eftervisTraekArmering(p: TraekArmeringInput, t: TraekOversigt): 
     const A = k.NRk / p.gammaMc;
     N_cre = { id: 'N_cre', relevant: true, NEd: t.NEd_g, NRd: A, NRk: k.NRk, udnyttelse: udnyttelse(t.NEd_g, A), styrendeAnker: t.traekAnkre[0]?.id ?? null };
   }
-  return { N_re, N_a, N_cre };
+  return { N_re, N_a, N_cre, mellem: { fbd: b.fbd, alpha: f, NRdBen: g } };
 }
 
 // ------------------------------------------------------------ Forskydning
@@ -194,8 +194,9 @@ export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
   const l = t.benPrAnker ?? Math.floor((t.antalBenIAlt ?? 0) / a);
   let c = l, u: number | null = null, h: number | null = null, stg: Staenger[] | null = null;
   let boejler: ArmeringV['boejler'] = null, zone: number | null = null;
+  // ⌀ ≤ 16 mm gælder al ankerarmering (7.2.1.2(2)a / 7.2.2.2(3)); felternes grænse er den samme for alle udformninger
+  if (dia > 16) mangler.push('dia-over-16');
   if (form === 'overflade') {
-    if (dia > 16) mangler.push('dia-over-16');
     h = (t.krog ? 4 : 10) * dia;
     if (e) {
       const { staenger, U } = overfladeStaenger(p, e.kant, e.R.c1);
@@ -233,7 +234,11 @@ export interface ForskydningsArmeringInput {
   /** Basisfordeling (alle ankre) af forskydning. */
   fordeling: ForskydningsFordeling; ankre: Anker[];
 }
-export interface ForskydningsArmeringResultat { V_re: Eftervisning; V_a: Eftervisning; V_ek?: Eftervisning }
+export interface ForskydningsArmeringResultat {
+  V_re: Eftervisning; V_a: Eftervisning; V_ek?: Eftervisning;
+  /** Mellemresultater til visning: es, z, største forskydning pr. anker, fbd og α (kun overfladearmering). */
+  mellem: { es: number; z: number; VEd: number; fbd: number | null; alpha: number | null };
+}
 
 /** V_re (flydning af armering inkl. excentricitet) og V_a (forankring, kun overfladearmering). */
 export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): ForskydningsArmeringResultat {
@@ -255,12 +260,14 @@ export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): Fors
   const NRk = k10 * e.ben * As * ar.fyk;
   const NRd = NRk / p.gammaMsRe;
   const V_re: Eftervisning = { id: 'V_re', relevant: true, NEd, NRd, NRk, udnyttelse: udnyttelse(NEd, NRd), styrendeAnker: id };
-  if (e.form !== 'overflade') return { V_re, V_a: irr('V_a') };
+  const mellem = { es, z, VEd: y, fbd: null as number | null, alpha: null as number | null };
+  if (e.form !== 'overflade') return { V_re, V_a: irr('V_a'), mellem };
   const b = vedhaeftning({ fck: p.fck, eta1: e.eta1, ds: d, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
   const f = forankringsFaktor(ar.krog, ar.cd, d);
   const g2 = (As * ar.fyk) / p.gammaMsRe;
   const sum = (e.staenger ?? []).filter((s) => s.virksom).reduce((s, st) => s + Math.min((st.l1 * Math.PI * d * b.fbd) / f, g2), 0);
   const V_a: Eftervisning = { id: 'V_a', relevant: true, NEd, NRd: sum, NRk: 0, udnyttelse: udnyttelse(NEd, sum), styrendeAnker: id };
+  mellem.fbd = b.fbd; mellem.alpha = f;
   // kantstang (fig. 7.10 a, 7.2.2.2(3)f): trykstivere fra ankeret til knuderne ved de vinkelrette stænger; kantstangen er trækbånd mellem knuderne.
   // Kraft pr. vinkelret stang = NEd/n (n = virksomme stænger pr. anker). Strutten har den tværgående komposant F_stang·tan(α) (α fra belastningsretningen),
   // som kantstangen optager som træk: T_ek = F_stang·tan α (α = 45° → T_ek = F_stang).
@@ -268,7 +275,25 @@ export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): Fors
     const n = Math.max(1, e.ben), alfa = ((ar.trykstiverVinkel ?? 45) * Math.PI) / 180, T = (NEd / n) * Math.tan(alfa);
     const NRk_ek = ((Math.PI / 4) * ar.kantstangDiameter ** 2) * ar.fyk, NRd_ek = NRk_ek / p.gammaMsRe;
     const V_ek: Eftervisning = { id: 'V_ek', relevant: true, NEd: T, NRd: NRd_ek, NRk: NRk_ek, udnyttelse: udnyttelse(T, NRd_ek), styrendeAnker: id };
-    return { V_re, V_a, V_ek };
+    return { V_re, V_a, V_ek, mellem };
   }
-  return { V_re, V_a };
+  return { V_re, V_a, mellem };
+}
+
+export interface TraekForankring {
+  /** Dybde hvor benene skærer brudkeglen (35°), dybde til benenes ende og længden derimellem (mm). */
+  keglDybde: number; endeDybde: number; udenForKeglen: number;
+  /** Krævet forankringslængde uden for keglen og den dybde, benene mindst skal nå. */
+  lbd: number; kraevetDybde: number;
+  /** true: dybden er ikke angivet, og programmet bruger h_ef (som i N_cre). */
+  antaget: boolean; foering: 'stoed' | 'ingen';
+}
+/** Benenes forankring uden for brudkeglen (7.2.1.2(2), lbd efter EN 1992-1-1, 8.4.4). Ved 'ingen' (kegle ved armeringens ende) ender
+ *  benene i den angivne forankringsdybde (tom = h_ef, samme forudsætning som N_cre); ved 'stoed' føres de lbd forbi keglen og stødes. */
+export function traekForankring(ar: TraekArmering, v: ArmeringT, hef: number, lbd: number): TraekForankring | null {
+  if (!ar.aktiv || !v.aktiv) return null;
+  const keglDybde = hef - Math.tan((35 * Math.PI) / 180) * v.rad;
+  const antaget = ar.foering === 'ingen' && ar.forankringsdybde == null;
+  const endeDybde = ar.foering === 'ingen' ? (ar.forankringsdybde ?? hef) : keglDybde + lbd;
+  return { keglDybde, endeDybde, udenForKeglen: endeDybde - keglDybde, lbd, kraevetDybde: keglDybde + lbd, antaget, foering: ar.foering };
 }

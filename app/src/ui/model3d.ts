@@ -32,6 +32,8 @@ const q0x = (ankre: { x: number; y: number }[], w: 'x' | 'y' | 'xmax' | 'ymax'):
 const dk = (v: number, d = 1) => v.toFixed(d).replace('.', ',').replace('-', '−');
 
 type P3 = [number, number, number];
+/** Hovedets radius for et indstøbt anker (firkantet hoved: halv side). */
+const a2r = (a: Model): number | null => { const dh = a.hovedForm === 'firkant' ? (a.hovedSide ?? a.dh) : a.dh; return dh != null ? dh / 2 : null; };
 /** Cylinder (stang eller ankerdel) givet ved aksens endepunkter og radius. */
 interface Legeme { fra: P3; til: P3; r: number }
 type Familie = 'traek' | 'traekFlade' | 'forskydning' | 'forskydningKant' | 'kantBoejle' | 'kantStang';
@@ -130,8 +132,9 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
     const fs = at.fladeDiameter ?? 10, ss = at.fladeAfstand ?? 150, cn = be.cnom ?? 30;
     const rad = Math.hypot(x, M), zKegle = -(hef - Math.tan((35 * Math.PI) / 180) * rad); // dybde hvor benet skærer brudkeglen
     const lbd = k?.forank?.T?.lbd ?? null;
-    // 'stoed': benet føres lbd forbi keglen; 'ingen': benet ender i den angivne dybde (forankringsdybde, standard hef eller keglen + lbd)
-    const bundZ = at.foering === 'ingen' ? -(at.forankringsdybde ?? (lbd != null ? -zKegle + lbd : hef)) : (lbd != null ? zKegle - lbd : -hef);
+    // 'stoed': benet føres lbd forbi keglen; 'ingen': benet ender i den angivne forankringsdybde – tom = hef, samme forudsætning som N_cre
+    // (beregningen advarer, hvis det giver mindre end lbd uden for keglen)
+    const bundZ = at.foering === 'ingen' ? -(k?.forankT?.endeDybde ?? at.forankringsdybde ?? hef) : (lbd != null ? zKegle - lbd : -hef);
     const alleInaktive = !!k && !k.armT.virksom, ikkeVirk = k?.armT.ikkeVirksomme ?? 0;
     const dorn = dornDiameter(p);
     // stykke af en linje (p0 + t·dv) inden for elementet minus dæklag
@@ -225,7 +228,11 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       const zbund = Math.min(bundZ, zKegle - 1);
       if (zKegle < zt) {
         dele.push({ type: 'maal', fra: benZ(zt), til: benZ(zKegle), tekst: `l1 = ${dk(zt - zKegle, 0)} mm${k ? ` (min. ${dk(k.armT.l1min, 0)})` : ''}` });
-        dele.push({ type: 'maal', fra: benZ(zKegle), til: benZ(zbund), tekst: `${lbd != null ? `lbd = ${dk(lbd, 0)} mm (σsd = ${dk(k!.forank.T!.sigmaSd, 0)} MPa)` : 'forankring'}${at.foering === 'ingen' ? ` (ender i ${dk(-bundZ, 0)})` : ''}` });
+        const udenFor = zKegle - zbund, kort = lbd != null && udenFor < lbd - 0.5;
+        dele.push({ type: 'maal', fra: benZ(zKegle), til: benZ(zbund), tekst: lbd == null ? 'forankring'
+          : kort ? `forankring uden for keglen ${dk(udenFor, 0)} mm < lbd = ${dk(lbd, 0)} mm (ender i ${dk(-bundZ, 0)}${at.forankringsdybde == null ? ' = hef' : ''})`
+          : `lbd = ${dk(lbd, 0)} mm (σsd = ${dk(k!.forank.T!.sigmaSd, 0)} MPa)${at.foering === 'ingen' ? ` (ender i ${dk(-bundZ, 0)}; forankret ${dk(udenFor, 0)} mm uden for keglen)` : ''}` });
+        if (kort) dele.push({ type: 'tekst', pos: benZ(zbund - 10), tekst: `OBS: trækbøjlernes ben er kun forankret ${dk(udenFor, 0)} mm uden for brudkeglen, men kræver lbd = ${dk(lbd!, 0)} mm – angiv armeringens forankringsdybde ≥ ${dk(-zKegle + lbd!, 0)} mm` });
       }
       dele.push({ type: 'tekst', pos: [ben[0] - u0[0] * 25, ben[1] - u0[1] * 25, zt - 30], tekst: 'TRÆKARMERING (fig. 7.2): lodrette hårnåle' });
       dele.push({ type: 'tekst', pos: [ben[0] + u0[0] * 25, ben[1] + u0[1] * 25, zbund + 10], tekst: `bukkediameter ${dk(dorn, 0)} mm (${p <= 16 ? '4' : '7'}⌀) · radius til bøjlens akse ${dk(dorn / 2 + r, 0)} mm` });
@@ -283,7 +290,9 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
           const b0 = lateral[0]!, fE0 = langs(q) + c1 - cnom, v1 = tvaers(q) + b0.v + 25;
           dele.push({ type: 'maal', fra: G(fE0, v1, zs), til: G(fE0 - b0.l, v1, zs), tekst: `l1 = ${dk(b0.l, 0)} mm (min. ${dk((av.krog ? 4 : 10) * p, 0)})` });
           dele.push({ type: 'maal', fra: G(fE0 - b0.l, v1, zs), til: G(fE0 - b0.l - hale, v1, zs), tekst: lbdV != null ? `lbd = ${dk(lbdV, 0)} mm (σsd = ${dk(k.forank.V!.sigmaSd, 0)} MPa)` : 'forankring' });
-          dele.push({ type: 'tekst', pos: G(fE0, v1 + 60, zs - 30), tekst: ek ? `kantstang ⌀${dk(av.kantstangDiameter ?? 0, 0)} (fig. 7.10 a): T_ek = ${dk(ek.Ed / 1000, 1)} kN ≤ ${dk(ek.Rd / 1000, 1)} kN (α = ${dk(av.trykstiverVinkel ?? 45, 0)}°) · ${ek.udnyttelse != null ? dk(ek.udnyttelse * 100, 0) + ' %' : ''}` : 'kantstang langs kanten (7.2.2.2(3)f): angiv ⌀ for at eftervise med trykstivere' });
+          dele.push({ type: 'tekst', pos: G(fE0, v1 + 60, zs - 30), tekst: ek ? `kantstang ⌀${dk(av.kantstangDiameter ?? 0, 0)} (fig. 7.10 a): T_ek = ${dk(ek.Ed / 1000, 1)} kN ${ek.udnyttelse != null && ek.udnyttelse > 1 ? '>' : '≤'} ${dk(ek.Rd / 1000, 1)} kN (α = ${dk(av.trykstiverVinkel ?? 45, 0)}°) · ${ek.udnyttelse != null ? dk(ek.udnyttelse * 100, 0) + ' %' : ''}`
+            : av.kantstangDiameter && av.kantstangDiameter > 0 ? `kantstang ⌀${dk(av.kantstangDiameter, 0)} langs kanten (7.2.2.2(3)f): eftervises først, når forskydningsarmeringen er virksom`
+            : 'kantstang langs kanten (7.2.2.2(3)f): angiv ⌀ for at eftervise med trykstivere' });
           if (av.krog) dele.push({ type: 'tekst', pos: G(fE0, v1, zs + 12), tekst: `krog: bukkediameter ${dk(dornV, 0)} mm, lige ende 10⌀ = ${dk(10 * p, 0)} mm` });
         }
       } else if (række.length) {
@@ -345,35 +354,50 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       { fri: fri('yNeg'), langs: false, e0: y0, inw: 1, lo: x0 + c, hi: x1 - c, navn: 'yNeg' }, { fri: fri('yPos'), langs: false, e0: y1, inw: -1, lo: x0 + c, hi: x1 - c, navn: 'yPos' },
     ];
     let markeret = false;
+    // Ved et hjørne mellem to armerede kanter krydser de to kanters armering hinanden: kanterne langs x (y−/y+) lægges i laget indenfor
+    // (⌀ + 1 mm længere inde fra over- og underside), og bøjlerne holdes fri af den vinkelrette kants bøjningszone (dorn + to stænger).
+    const lagdelt = (fri('xNeg') || fri('xPos')) && (fri('yNeg') || fri('yPos'));
+    const hjoerneZone = c + rk + Rb + 2 * rk + 1;
+    // ankrene som forhindringer for kantbøjlerne (skaft eller hoved, hvis større)
+    const rA = Math.max(d / 2, indstoebt ? (a2r(a) ?? 0) : 0);
     for (const e2 of kanter2) {
       if (!e2.fri) continue;
       // punkt i bøjlens plan: s = afstand fra kanten (indad), z = dybde, t = placering langs kanten
       const P = (t: number, sv: number, z: number): Pkt3 => (e2.langs ? [e2.e0 + e2.inw * sv, t, z] : [t, e2.e0 + e2.inw * sv, z]);
-      const s0 = c + rk, s1 = c + bs - rk, zt0 = -(c + rk), zb0 = -(Math.min(be.h, dybde) - c - rk); // bøjlens akse (yderste fibre i cnom)
+      const lag = lagdelt && !e2.langs ? dkb + 1 : 0;
+      const s0 = c + rk, s1 = c + bs - rk, zt0 = -(c + rk + lag), zb0 = -(Math.min(be.h, dybde) - c - rk - lag); // bøjlens akse (yderste fibre i cnom)
       const ind = Math.max(0, Rb - 2 * rk) / Math.SQRT2; // fra bøjningens centrum mod hjørnet til kantstangens akse
       for (const [sv, zv] of [[s0 + Rb - ind, zt0 - Rb + ind], [s0 + Rb - ind, zb0 + Rb - ind]] as const) stang(P(e2.lo, sv, zv), P(e2.hi, sv, zv), rk, { gruppe: nyGruppe('kantStang') });
       if (a != null && a > 0) {
-        const n = Math.min(200, Math.floor((e2.hi - e2.lo) / a)), N = 6;
+        // bøjlernes placering langs kanten: fri af den vinkelrette kants bøjninger og – så vidt muligt – af ankrene (forskudt net med afstanden a)
+        const [pLo, pHi] = e2.langs ? [fri('yNeg') ? y0 : null, fri('yPos') ? y1 : null] : [fri('xNeg') ? x0 : null, fri('xPos') ? x1 : null];
+        const tLo = pLo != null ? Math.max(e2.lo, pLo + hjoerneZone) : e2.lo, tHi = pHi != null ? Math.min(e2.hi, pHi - hjoerneZone) : e2.hi;
+        const naer = ankre.map((q) => ({ t: e2.langs ? q.y : q.x, sv: e2.inw * ((e2.langs ? q.x : q.y) - e2.e0) })).filter((q) => q.sv < c + bs + rA);
+        const konflikter = (o: number) => { let n2 = 0; for (let t = tLo + o; t <= tHi + 1e-9; t += a) if (naer.some((q) => Math.abs(t - q.t) < rA + rk + 0.5)) n2++; return n2; };
+        let off = 0, bedst = konflikter(0);
+        for (let o = 2.5; o < a && bedst > 0; o += 2.5) { const k2 = konflikter(o); if (k2 < bedst) { bedst = k2; off = o; } }
+        const t0 = tLo + off;
+        const n = tHi >= t0 ? Math.min(200, Math.floor((tHi - t0) / a + 1e-9)) : -1, N = 6;
         const hj = (cs: number, cz: number, a0: number, a1: number): [number, number][] => Array.from({ length: N + 1 }, (_, i) => [cs + Rb * Math.cos(a0 + ((a1 - a0) * i) / N), cz + Rb * Math.sin(a0 + ((a1 - a0) * i) / N)]);
         // åben hårnålebøjle (C): bøjningen ligger ved kanten (dornbøjede hjørner) om kantstængerne, benene går vandret ind i elementet
         const sti: [number, number][] = [[s1, zt0], ...hj(s0 + Rb, zt0 - Rb, Math.PI / 2, Math.PI), ...hj(s0 + Rb, zb0 + Rb, Math.PI, (3 * Math.PI) / 2), [s1, zb0]];
         for (let i = 0; i <= n; i++) {
-          const t = e2.lo + i * a;
+          const t = t0 + i * a;
           const gruppe = nyGruppe('kantBoejle');
           for (let j2 = 0; j2 + 1 < sti.length; j2++) { const p1 = sti[j2]!, p2 = sti[j2 + 1]!; if (Math.hypot(p1[0] - p2[0], p1[1] - p2[1]) > 1e-6) stang(P(t, p1[0], p1[1]), P(t, p2[0], p2[1]), rk, { variant: 'forankring', gruppe }); }
         }
         if (visMaal && !markeret && n >= 1) {
           markeret = true;
-          dele.push({ type: 'maal', fra: P(e2.lo, s0, zt0), til: P(e2.lo + a, s0, zt0), tekst: `a = ${dk(a, 0)} mm` });
-          dele.push({ type: 'maal', fra: P(e2.lo, 0, 0.5), til: P(e2.lo, c, 0.5), tekst: `cnom = ${dk(c, 0)} mm` });
-          dele.push({ type: 'maal', fra: P(e2.lo, c, zt0 + rk + 1), til: P(e2.lo, c + bs, zt0 + rk + 1), tekst: `ben ind i elementet = ${dk(bs, 0)} mm (min. 10⌀ = ${dk(10 * dkb, 0)})` });
-          dele.push({ type: 'tekst', pos: P(e2.lo, s1, zt0 + 15), tekst: `åben kantbøjle (åben ind mod elementet) ⌀${dk(dkb, 0)}: bukkediameter ${dk(dornK, 0)} mm (${dkb <= 16 ? '4' : '7'}⌀)` });
+          dele.push({ type: 'maal', fra: P(t0, s0, zt0), til: P(t0 + a, s0, zt0), tekst: `a = ${dk(a, 0)} mm` });
+          dele.push({ type: 'maal', fra: P(t0, 0, 0.5), til: P(t0, c, 0.5), tekst: `cnom = ${dk(c, 0)} mm` });
+          dele.push({ type: 'maal', fra: P(t0, c, zt0 + rk + 1), til: P(t0, c + bs, zt0 + rk + 1), tekst: `ben ind i elementet = ${dk(bs, 0)} mm (min. 10⌀ = ${dk(10 * dkb, 0)})` });
+          dele.push({ type: 'tekst', pos: P(t0, s1, zt0 + 15), tekst: `åben kantbøjle (åben ind mod elementet) ⌀${dk(dkb, 0)}: bukkediameter ${dk(dornK, 0)} mm (${dkb <= 16 ? '4' : '7'}⌀)` });
           const c1 = Math.abs(((e2.navn === 'xNeg' ? q0x(ankre, 'x') + (be.kanter?.xNeg ?? 0) : e2.navn === 'xPos' ? (be.kanter?.xPos ?? 0) - q0x(ankre, 'xmax') : e2.navn === 'yNeg' ? q0x(ankre, 'y') + (be.kanter?.yNeg ?? 0) : (be.kanter?.yPos ?? 0) - q0x(ankre, 'ymax'))));
           // samme krav som beregningen (edgebreakout.ts); c1 fra beregningen for kanten, hvis den er regnet (evt. reduceret c1 i smalle elementer)
           const kand = k?.kantbrud?.kanterPr?.[e2.navn as 'xNeg'];
           const mangler = psiReVMangler({ revnet: !!be.revnet, kantarmering: 'boejler', hef, cnom: c, afstand: a, diameter: dkb, c1: kand?.R?.c1 ?? c1 });
           const tekstM: Record<string, string> = { urevnet: 'betonen er urevnet', hef: `hef < 2,5·cnom = ${dk(2.5 * c, 0)} mm`, 'a>100': 'a > 100 mm', 'a>2c1': 'a > 2·c1', 'dia<12': '⌀ < 12 mm', 'a-mangler': 'a ikke angivet', ingen: 'ingen kantarmering' };
-          dele.push({ type: 'tekst', pos: P(e2.lo + a, s1, zt0 - 40), tekst: `krav ψre,V = 1,4 (revnet beton, kantstang ⌀ ≥ 12 mm, a ≤ 100 mm og a ≤ 2·c1 = ${dk(2 * (kand?.R?.c1 ?? c1), 0)} mm, hef ≥ 2,5·cnom)${mangler.length ? ` IKKE opfyldt: ${mangler.map((x) => tekstM[x] ?? x).join(', ')} – ψre,V = 1,0` : ' (opfyldt)'}` });
+          dele.push({ type: 'tekst', pos: P(t0 + a, s1, zt0 - 40), tekst: `krav ψre,V = 1,4 (revnet beton, kantstang ⌀ ≥ 12 mm, a ≤ 100 mm og a ≤ 2·c1 = ${dk(2 * (kand?.R?.c1 ?? c1), 0)} mm, hef ≥ 2,5·cnom)${mangler.length ? ` IKKE opfyldt: ${mangler.map((x) => tekstM[x] ?? x).join(', ')} – ψre,V = 1,0` : ' (opfyldt)'}` });
         }
       }
     }

@@ -296,3 +296,22 @@ describe('armeringen i 3D kan udføres: ingen stænger gennem ankre eller hinand
     expect(await tekst((i) => { i.beton.revnet = false; })).toContain('IKKE opfyldt: betonen er urevnet');
   });
 });
+
+describe('kantarmering (ψre,V) ved hjørner og ankre', () => {
+  it('to armerede kanter mødes i et hjørne uden at stængerne skærer hinanden, og bøjlerne går uden om ankrene', () => {
+    const i: any = structuredClone(m);
+    i.beton.kanter = { xNeg: 250, xPos: null, yNeg: 250, yPos: null }; i.beton.revnet = true;
+    i.beton.armering.kantarmering = 'boejler'; i.beton.armering.kantarmeringAfstand = 100; i.beton.armering.kantarmeringDiameter = 12; i.beton.armering.kantarmeringBredde = 150;
+    const s = byg3d(i, null, null);
+    expect(s.noter.filter((n) => n.startsWith('OBS'))).toEqual([]);
+    // kanterne langs x (y−) ligger ⌀ + 1 mm længere inde end kanterne langs y (x−)
+    const st = s.dele.filter((x: any) => x.type === 'stang') as any[];
+    const top = (f: (x: any) => boolean) => Math.max(...st.filter(f).map((x) => Math.max(x.fra[2], x.til[2])));
+    const langsY = (x: any) => Math.abs(x.fra[0] - x.til[0]) < 1e-6 && Math.abs(x.fra[1] - x.til[1]) > 300; // kantstang langs y (kant x−)
+    const langsX = (x: any) => Math.abs(x.fra[1] - x.til[1]) < 1e-6 && Math.abs(x.fra[0] - x.til[0]) > 300; // kantstang langs x (kant y−)
+    expect(top(langsY) - top(langsX)).toBeCloseTo(13, 6);
+    // ankre 130 mm fra kanten x−: bøjlernes planer holder afstand til skafterne
+    i.beton.kanter = { xNeg: 250, xPos: null, yNeg: null, yPos: null };
+    expect(byg3d(i, null, null).noter.filter((n) => n.includes('kantbøjlerne') && n.includes('anker'))).toEqual([]);
+  });
+});

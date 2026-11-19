@@ -1,7 +1,7 @@
 // Samlet beregning af et projekt: validering, alle lastkombinationer, valg af armeringskant og strukturerede resultater.
 // Rene tal og kodede diagnoser; ingen tekst. Laster er altid designværdier (inkl. K_FI).
 import { fckAf } from './concrete';
-import { diagnostikKombination, diagnostikValgtArmeringskant } from './diagnostik-kombination';
+import { diagnostikArmering, diagnostikArmeringsDaeklag, diagnostikKombination, diagnostikValgtArmeringskant } from './diagnostik-kombination';
 import type { Diagnostik } from './diagnostik';
 import { beregnKombination, vaelgArmeringsKant, type KombinationsResultat } from './kombination';
 import type { Last } from './loads';
@@ -54,6 +54,7 @@ export function beregnProjekt(m: Projektmodel): ProjektResultat {
     ...bemaerkninger.map((b): Diagnostik => ({ niveau: b.niveau, kode: 'indstilling-justeret', felt: b.felt, paragraf: '', data: { tekst: b.tekst } })),
     ...validerModel(m, ind, fck, m.indstillinger?.sigmaAdm ?? 0),
     ...afvigelserFraDkNa(ind, p.gamma3),
+    ...diagnostikArmeringsDaeklag(m as never),
   ];
   const base = { indstillinger: ind, partialkoefficienter: p, staal: st, fck, Ec };
   if (modelDiag.some((d) => d.niveau === 'fejl')) {
@@ -67,7 +68,7 @@ export function beregnProjekt(m: Projektmodel): ProjektResultat {
   if (valgt) modelDiag.push(diagnostikValgtArmeringskant(valgt));
   const kombinationer: KombinationsOutput[] = lk.map((k, index) => {
     const r = beregnKombination(mm, st, p, ind, k.last, Ec, k.alphaSus);
-    const diagnostik = diagnostikKombination(mm, ind, r, fck, k.alphaSus);
+    const diagnostik = [...diagnostikKombination(mm, ind, r, fck, k.alphaSus), ...diagnostikArmering(mm, r)];
     return {
       index, navn: k.last.navn ?? `LK${index + 1}`, last: k.last, alphaSus: k.alphaSus, resultat: r, diagnostik,
       maksUdnyttelse: r.maksUdnyttelse, styrendeBrudform: r.styrendeBrudform,
