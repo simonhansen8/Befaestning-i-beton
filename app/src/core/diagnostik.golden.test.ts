@@ -5,7 +5,7 @@ import { parseIndstillinger } from './settings';
 import { afledStaal } from './steel';
 import { partialkoefficienter } from './partials';
 import { skalerLast } from './loads';
-import { legacyKfi } from './facit-hjaelp';
+import { AFVIGER_OVERFLADESTAENGER, legacyKfi, overfladeAfviger } from './facit-hjaelp';
 import { beregnKombination, vaelgArmeringsKant } from './kombination';
 import { fckAf } from './concrete';
 import { validerModel, afvigelserFraDkNa } from './validering';
@@ -27,6 +27,7 @@ describe('diagnostik mod facit', () => {
     const raa = m.laster[c.resultat.styrendeKombination];
     const aS = raa.alphaSus ?? m.anker.alphaSus;
     const r = beregnKombination(mm, st, p, indstillinger, skalerLast(raa, legacyKfi(m)), 30000, aS);
+    if (AFVIGER_OVERFLADESTAENGER.has(c.id)) { expect(overfladeAfviger(r.armV)).toBe(true); return; }
     const fck = fckAf(m.beton);
     const d = [
       ...validerModel(mm, indstillinger, fck, m.indstillinger.sigmaAdm ?? 0),

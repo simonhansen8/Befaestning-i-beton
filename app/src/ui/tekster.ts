@@ -114,6 +114,8 @@ export const TEKSTER: Record<string, (d: D) => string> = {
   'forskydningsarmering-kant-valgt-automatisk': (d) => `Forskydningsarmeringens kant (${kant(d.kant)}) er valgt automatisk som den mest udnyttede kant uden armering (lastkombination ${t0(Number(d.kombination) + 1)}).`,
   'traekarmering-lbd-for-kort': (d) => `Trækarmeringens ben ${d.antaget ? 'regnes at ende i dybden hef = ' : 'ender i dybden '}${t0(d.ende)} mm og er kun forankret ${t0(d.udenFor)} mm uden for brudkeglen; der kræves lbd = ${t0(d.lbd)} mm (EN 1992-1-1, 8.4.4). Angiv armeringens forankringsdybde ≥ ${t0(d.kraevet)} mm${Number(d.kraevet) > Number(d.maks) ? ` – det kan ikke nås i elementet (h − cnom = ${t0(d.maks)} mm): før trækket videre med stød, eller øg hef` : ''}.`,
   'traekarmering-for-dyb': (d) => `Trækarmeringens ben skal nå ${t0(d.ende)} mm ned${d.stoed ? ' (lbd forbi brudkeglen)' : ''}, men elementet er kun ${t0(d.h)} mm tykt med dæklag ${t0(d.cnom)} mm.`,
+  'overfladestang-gennem-anker': (d) => `${t0(d.antal)} overfladestang${Number(d.antal) === 1 ? '' : 'e'} ville gå gennem et anker og regnes ikke med. Ret afstanden x, stangafstanden s eller antallet af stænger pr. anker.`,
+  'overfladestaenger-deles': (d) => `${t0(d.antal)} overfladestang${Number(d.antal) === 1 ? '' : 'e'} fra nabo-ankre falder sammen og er regnet som én stang, der deles af ankrene (tælles ikke dobbelt).`,
   'armering-daeklag-for-lille': (d) => `${d.hvad === 'T' ? 'Trækbøjlernes overkant' : 'Forskydningsarmeringen'}: aksen ligger ${t0(d.dybde)} mm under overfladen, så dæklaget er ${t0(Number(d.dybde) - Number(d.d) / 2)} mm < cnom = ${t0(d.cnom)} mm.`,
   // Interne koder
   'fejl': (d) => String(d.tekst ?? 'Fejl'),

@@ -25,7 +25,10 @@ export function oversigtForskydning(m: Model, a: ArmeringV | null): string[] {
   if (!a || !a.aktiv) return [];
   const l: string[] = [];
   if (a.form === 'overflade' && a.staenger) {
-    l.push(`Stænger pr. anker: ${a.staenger.map((s) => `v = ${f0(s.v)} mm: l₁ = ${f0(s.l1)} mm ${s.virksom ? '✓' : '✗ (ikke virksom)'}`).join('; ')}.`);
+    const andel = (x: number | undefined) => (x != null && x < 1 - 1e-9 ? ` (deles, ${x === 0.5 ? '½' : String(Math.round(x * 100) / 100).replace('.', ',')})` : '');
+    l.push(`Stænger for det dimensionsgivende anker: ${a.staenger.map((s) => `v = ${f0(s.v)} mm: l₁ = ${f0(s.l1)} mm${andel(s.andel)} ${s.virksom ? '✓' : '✗ (ikke virksom)'}`).join('; ')}. Virksomme stænger i alt: ${String(Math.round(a.antalVirksomme * 100) / 100).replace('.', ',')}.`);
+    if ((a.sammenfald ?? 0) > 0) l.push(`${a.sammenfald} stang${a.sammenfald === 1 ? '' : 'e'} fra nabo-ankre falder sammen (fri afstand < max(⌀; 20 mm)) og regnes som én fysisk stang, der deles mellem ankrene.`);
+    if ((a.konflikter ?? 0) > 0) l.push(`${a.konflikter} stang${a.konflikter === 1 ? '' : 'e'} ville gå gennem et anker og regnes ikke med (grå i 3D) – ret x, s eller antal.`);
     l.push(`l₁ beregnes: c₁ − √(v² + z_s²)/1,5 − c_nom (kan begrænses ved at indtaste l₁). Krav l₁ ≥ ${f0(a.l1min ?? 0)} mm og |v| ≤ 0,75·c₁.`);
   } else {
     l.push(`Virksomme ben pr. anker: ${f0(a.antalVirksomme)}.`);

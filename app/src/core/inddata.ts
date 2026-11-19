@@ -179,6 +179,7 @@ export function indlaesProjekt(raa: unknown): IndlaesResultat {
     kantstangDiameter: r(`${fv}.kantstangDiameter`, G.kantstangDiameter, null, { gt: 0, nullable: true, krit: false }),
     trykstiverVinkel: r(`${fv}.trykstiverVinkel`, G.trykstiverVinkel, 45, { gt: 0, max: 90, krit: false }),
     afstandBoejler: r(`${fv}.afstandBoejler`, G.afstandBoejler, null, { gt: 0, nullable: true, krit: false }),
+    stangAfstand: r(`${fv}.stangAfstand`, G.stangAfstand, null, { gt: 0, nullable: true, krit: false }),
   };
   if (forsk.benPrAnker == null && forsk.antalBenIAlt == null) forsk.benPrAnker = 2;
   const tv = 'beton.armering.ankerarmeringTraek';

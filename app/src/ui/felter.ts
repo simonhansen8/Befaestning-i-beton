@@ -1113,8 +1113,24 @@ export const SEKTIONER: Sektion[] = [
         show: (m: Model) =>
               forskArmeringAktiv(m) &&
               m.beton.armering.ankerarmeringForskydning.type === "overflade",
-        tip: "Antal rette stænger pr. anker i forreste række (skiftevis på hver side af bolten).",
+        tip: "Antal stænger vinkelret på kanten pr. anker i forreste række, skiftevis på hver side af bolten (±x, ±(x + s), …). Stængerne er ét fysisk stangsæt: falder to ankres stænger sammen, er det én stang, som deles (½ til hvert anker), og en stang gennem et anker regnes ikke med (vises grå og advares). Brug et lige antal for symmetri om bolten.",
         ref: "EN 1992-4, 7.2.2.6",
+      },
+      {
+        k: "beton.armering.ankerarmeringForskydning.stangAfstand",
+        hl: "arm.V.s",
+        sym: "s",
+        lbl: "Stangafstand (samme side af bolten)",
+        unit: "mm",
+        type: "num",
+        minEx: 0,
+        nullable: true,
+        std: (m: Model) => stdTekst(Math.max(4 * (m.beton.armering.ankerarmeringForskydning.diameter || 10), 50)),
+        show: (m: Model) =>
+              forskArmeringAktiv(m) &&
+              m.beton.armering.ankerarmeringForskydning.type === "overflade",
+        tip: "C/c-afstand mellem et ankers stænger på samme side af bolten, når der er mere end 2 stænger pr. anker. Tomt: max(4⌀; 50 mm).",
+        ref: "EN 1992-4, 7.2.2.2(3)c",
       },
       {
         k: "beton.armering.ankerarmeringForskydning.antalLoekker",

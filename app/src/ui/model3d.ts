@@ -253,24 +253,27 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
       const kantAfst = (q: { x: number; y: number }) => ({ xNeg: q.x + (be.kanter?.xNeg ?? 0), xPos: (be.kanter?.xPos ?? 0) - q.x, yNeg: q.y + (be.kanter?.yNeg ?? 0), yPos: (be.kanter?.yPos ?? 0) - q.y })[kant as 'xNeg'];
       const alle = !k.armV.virksom;
       if (av.type === 'overflade' || !av.type) {
-        const lateral: { v: number; l: number; ok: boolean }[] = k.armV.staenger?.length
-          ? k.armV.staenger.map((s: { v: number; l1: number; virksom: boolean }) => ({ v: s.v, l: Math.max(0, s.l1), ok: s.virksom }))
-          : [d / 2 + r + 2, -(d / 2 + r + 2)].map((v) => ({ v, l: Math.max(0, k.armV.l1 ?? fr.c1 - cnom), ok: k.armV.virksom }));
-        for (const q of række) {
-          const a0 = langs(q), t0 = tvaers(q), fE = a0 + kantAfst(q) - cnom;
-          for (const b of lateral) {
-            const inaktiv = !b.ok, gruppe = nyGruppe('forskydning');
-            // krog ved kanten: 90°-bøjning (dorn 4⌀/7⌀) og 10⌀ lige ende (EN 1992-1-1, Fig. 8.1b); stangen regnes fra bøjningens start
-            const Rh = av.krog ? dornV / 2 + r : 0, v0 = t0 + b.v;
-            if (av.krog) {
-              const N = 8, bue = Array.from({ length: N + 1 }, (_, i) => { const a = Math.PI / 2 - ((Math.PI / 2) * i) / N; return [fE - Rh + Rh * Math.cos(a), zs - Rh + Rh * Math.sin(a)] as [number, number]; });
-              for (let i = 0; i < N; i++) stang(G(bue[i]![0], v0, bue[i]![1]), G(bue[i + 1]![0], v0, bue[i + 1]![1]), r, { inaktiv, gruppe });
-              stang(G(fE, v0, zs - Rh), G(fE, v0, zs - Rh - 10 * p), r, { inaktiv, gruppe });
-            }
-            stang(G(fE - Rh, v0, zs), G(fE - b.l, v0, zs), r, { inaktiv, gruppe });
-            stang(G(fE - b.l, v0, zs), G(fE - b.l - hale, v0, zs), r, { inaktiv, variant: 'forankring', gruppe });
+        // de fysiske stænger (hver tegnes én gang): tværkoordinat i tegningens system, l1 og om den regnes med (grå: ikke virksom eller gennem et anker)
+        const tAx: [number, number] = kant === 'xNeg' || kant === 'xPos' ? [0, 1] : [1, 0], sig = per[0] * tAx[0] + per[1] * tAx[1];
+        const fys: { vAbs: number; l: number; ok: boolean }[] = k.armV.alle?.length
+          ? k.armV.alle.map((b: { pos: number; l1: number; virksom: boolean; konflikt: boolean }) => ({ vAbs: sig * b.pos, l: Math.max(0, b.l1), ok: b.virksom && !b.konflikt }))
+          : række.flatMap((q) => (k.armV.staenger?.length
+            ? k.armV.staenger.map((b: { v: number; l1: number; virksom: boolean }) => ({ vAbs: tvaers(q) + b.v, l: Math.max(0, b.l1), ok: b.virksom }))
+            : [d / 2 + r + 2, -(d / 2 + r + 2)].map((v) => ({ vAbs: tvaers(q) + v, l: Math.max(0, k.armV.l1 ?? fr.c1 - cnom), ok: k.armV.virksom }))));
+        const fE = række[0] ? langs(række[0]) + kantAfst(række[0]) - cnom : 0;
+        for (const b of fys) {
+          const inaktiv = !b.ok, gruppe = nyGruppe('forskydning');
+          // krog ved kanten: 90°-bøjning (dorn 4⌀/7⌀) og 10⌀ lige ende (EN 1992-1-1, Fig. 8.1b); stangen regnes fra bøjningens start
+          const Rh = av.krog ? dornV / 2 + r : 0, v0 = b.vAbs;
+          if (av.krog) {
+            const N = 8, bue = Array.from({ length: N + 1 }, (_, i) => { const a = Math.PI / 2 - ((Math.PI / 2) * i) / N; return [fE - Rh + Rh * Math.cos(a), zs - Rh + Rh * Math.sin(a)] as [number, number]; });
+            for (let i = 0; i < N; i++) stang(G(bue[i]![0], v0, bue[i]![1]), G(bue[i + 1]![0], v0, bue[i + 1]![1]), r, { inaktiv, gruppe });
+            stang(G(fE, v0, zs - Rh), G(fE, v0, zs - Rh - 10 * p), r, { inaktiv, gruppe });
           }
+          stang(G(fE - Rh, v0, zs), G(fE - b.l, v0, zs), r, { inaktiv, gruppe });
+          stang(G(fE - b.l, v0, zs), G(fE - b.l - hale, v0, zs), r, { inaktiv, variant: 'forankring', gruppe });
         }
+        if (visMaal && (k.armV.konflikter ?? 0) > 0) dele.push({ type: 'tekst', pos: G(fE, 0, zs), tekst: `OBS: ${k.armV.konflikter} overfladestang${k.armV.konflikter === 1 ? '' : 'e'} ville gå gennem et anker – tegnet grå og ikke medregnet (ret x, s eller antal)` });
         if (række[0]) {
           // kantarmering langs kanten (EN 1992-4, 7.2.2.2 (3) f): skal altid forefindes ved overfladearmering. Med krog ligger den inde i krogens
           // bøjning an mod dornens inderside (knuden i trykstivermodellen); ellers lige under stængernes ender. Gennemgående langs kanten
@@ -287,7 +290,7 @@ export function byg3d(m: Model, k: KombinationsResultat | null, last: Record<str
           const q = række[0], z0 = 0.5, c1 = kantAfst(q);
           dele.push({ type: 'tekst', pos: G(langs(q) + c1, tvaers(q) - 0.75 * c1 - 40, z0 + 25), tekst: 'FORSKYDNINGSARMERING (fig. 7.10 a): vandret ⟂ kant' });
           dele.push({ type: 'maal', fra: G(langs(q), tvaers(q) - 0.75 * c1, z0), til: G(langs(q), tvaers(q) + 0.75 * c1, z0), tekst: `±0,75·c1 = ${dk(0.75 * c1, 0)} mm` });
-          const b0 = lateral[0]!, fE0 = langs(q) + c1 - cnom, v1 = tvaers(q) + b0.v + 25;
+          const b0 = fys.reduce((a, b) => (Math.abs(b.vAbs - tvaers(q)) < Math.abs(a.vAbs - tvaers(q)) ? b : a), fys[0]!), fE0 = langs(q) + c1 - cnom, v1 = b0.vAbs + 25;
           dele.push({ type: 'maal', fra: G(fE0, v1, zs), til: G(fE0 - b0.l, v1, zs), tekst: `l1 = ${dk(b0.l, 0)} mm (min. ${dk((av.krog ? 4 : 10) * p, 0)})` });
           dele.push({ type: 'maal', fra: G(fE0 - b0.l, v1, zs), til: G(fE0 - b0.l - hale, v1, zs), tekst: lbdV != null ? `lbd = ${dk(lbdV, 0)} mm (σsd = ${dk(k.forank.V!.sigmaSd, 0)} MPa)` : 'forankring' });
           dele.push({ type: 'tekst', pos: G(fE0, v1 + 60, zs - 30), tekst: ek ? `kantstang ⌀${dk(av.kantstangDiameter ?? 0, 0)} (fig. 7.10 a): T_ek = ${dk(ek.Ed / 1000, 1)} kN ${ek.udnyttelse != null && ek.udnyttelse > 1 ? '>' : '≤'} ${dk(ek.Rd / 1000, 1)} kN (α = ${dk(av.trykstiverVinkel ?? 45, 0)}°) · ${ek.udnyttelse != null ? dk(ek.udnyttelse * 100, 0) + ' %' : ''}`
