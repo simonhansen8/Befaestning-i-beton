@@ -56,6 +56,12 @@ export function diagnostikArmering(m: Kernemodel, r: KombinationsResultat): Diag
     }
     if (f.endeDybde > h - cnom + 0.5) e.push(diag('advarsel', 'traekarmering-for-dyb', EN('7.2.1.2(2)'), 'beton.armering.ankerarmeringTraek.forankringsdybde', { ende: f.endeDybde, h, cnom, stoed: f.foering === 'stoed' }));
   }
+  // overfladearmering for forskydning: fysisk stangsæt (stænger gennem et anker regnes ikke med, sammenfaldende stænger deles)
+  const av = r.armV;
+  if (av.aktiv && av.form === 'overflade' && r.armKant) {
+    if ((av.konflikter ?? 0) > 0) e.push(diag('advarsel', 'overfladestang-gennem-anker', EN('7.2.2.2(3)'), 'beton.armering.ankerarmeringForskydning.afstand', { antal: av.konflikter ?? 0 }));
+    if ((av.sammenfald ?? 0) > 0) e.push(diag('info', 'overfladestaenger-deles', EN('7.2.2.2(3)'), 'beton.armering.ankerarmeringForskydning.benPrAnker', { antal: av.sammenfald ?? 0 }));
+  }
   return e;
 }
 

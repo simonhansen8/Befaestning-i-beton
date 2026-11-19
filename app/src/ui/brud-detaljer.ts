@@ -169,7 +169,7 @@ export function beregningsdetalje(id: string, m: Model, k: KombinationsResultat)
     case 'V_re': case 'V_a': {
       const av = m.beton.armering.ankerarmeringForskydning, ar = k.armV;
       a.push(t('Udformning, stangdiameter, virksomme ben pr. anker', 'k<sub>10</sub>' + (ar.form === 'overflade' ? ' = 1,0' : ' = 0,5'), `${ar.form}, ⌀${T(av.diameter, 0)} mm, ${ar.antalVirksomme}`));
-      if (ar.staenger) a.push(t('Stænger (lateral afstand v, l<sub>1</sub>)', '|v| ≤ 0,75·c<sub>1</sub>, l<sub>1</sub> = c<sub>1</sub> − √(v²+z<sub>s</sub>²)/1,5 − c<sub>nom</sub>', ar.staenger.map((s) => `${T(s.v, 0)}: ${T(s.l1, 0)}${s.virksom ? '' : ' ✗'}`).join('; ') + ' mm'));
+      if (ar.staenger) a.push(t('Stænger (lateral afstand v, l<sub>1</sub>)', '|v| ≤ 0,75·c<sub>1</sub>, l<sub>1</sub> = c<sub>1</sub> − √(v²+z<sub>s</sub>²)/1,5 − c<sub>nom</sub>', ar.staenger.map((s) => `${T(s.v, 0)}: ${T(s.l1, 0)}${s.andel != null && s.andel < 1 - 1e-9 ? ` (×${T(s.andel, 2)}, delt)` : ''}${s.virksom ? '' : ' ✗'}`).join('; ') + ' mm'));
       if (d.V_re) a.push(t('Største forskydning pr. anker, arm og indre momentarm', 'V<sub>Ed</sub>, e<sub>s</sub>, z = 0,85·min(h − c<sub>nom</sub>; 2h<sub>ef</sub>; 2c<sub>1</sub>)', `${kN(d.V_re.VEd)}, ${mm(d.V_re.es)}, ${mm(d.V_re.z)}`));
       a.push(t('Last på armeringen', 'N<sub>Ed,re</sub> = (e<sub>s</sub>/z + 1)·V<sub>Ed</sub> (Fig. 6.8)', kN(b.Ed)));
       if (id === 'V_a' && d.V_re?.fbd != null) a.push(t('Vedhæftning og bøjningsfaktor', 'f<sub>bd</sub> (η<sub>1</sub> = ' + T(ar.eta1, 1) + '), α', `${T(d.V_re.fbd, 2)} MPa, ${T(d.V_re.alpha, 1)}`));

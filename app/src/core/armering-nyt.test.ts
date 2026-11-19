@@ -134,3 +134,52 @@ describe('gennemgang af armeringen (beregning og 3D stemmer overens)', () => {
     expect(vre.Ed).toBeCloseTo((k.detaljer.V_re!.es / k.detaljer.V_re!.z + 1) * k.detaljer.V_re!.VEd, 6);
   });
 });
+
+describe('overfladearmering for forskydning er ét fysisk stangsæt', () => {
+  const raekke = (s: number, benPr = 3, x = 50) => {
+    const m = kopi(); m.opstilling = { type: 'fri', anker: [] as any[] };
+    let id = 1;
+    for (const ax of [-60, 60]) for (const y of [-s, 0, s]) m.opstilling.anker.push({ id: id++, x: ax, y, slids: null });
+    m.beton.kanter = { xNeg: 300, xPos: null, yNeg: null, yPos: null };
+    m.plade.bx = 240; m.plade.by = 2 * s + 120;
+    m.laster = [{ navn: 'L', N: 0, Vx: -60e3, Vy: 0, Mx: 0, My: 0, T: 0, alphaSus: 0 }];
+    Object.assign(m.beton.armering.ankerarmeringForskydning, { aktiv: true, type: 'overflade', diameter: 10, benPrAnker: benPr, fyk: 550, afstand: x, daekToAkse: 40, stangAfstand: null });
+    return m;
+  };
+  const res = (m: any) => beregnTilstand(m).resultat!.kombinationer[0]!.resultat;
+  it('ankre langt fra hinanden: hvert anker har sine egne stænger (som før)', () => {
+    const k = res(raekke(240));
+    expect(k.armV.staenger!.map((s) => s.v).sort((a, b) => a - b)).toEqual([-50, 50, 100]);
+    expect(k.armV.ben).toBe(3);
+    expect(k.armV.alle).toHaveLength(9);
+    expect([k.armV.sammenfald, k.armV.konflikter, k.armV.delte]).toEqual([0, 0, 0]);
+  });
+  it('tætte ankre: sammenfaldende stænger tælles én gang, og stænger gennem et anker regnes ikke med', () => {
+    const fjern = res(raekke(240)), taet = res(raekke(100));
+    // ankre 100 mm fra hinanden: +50 fra ét anker = −50 fra naboen (samme stang), +100 rammer nabo-ankeret
+    expect(taet.armV.sammenfald).toBeGreaterThan(0);
+    expect(taet.armV.konflikter).toBeGreaterThan(0);
+    expect(taet.armV.ben).toBeLessThan(fjern.armV.ben);
+    const rd = (k: any) => k.brudformer.find((b: any) => b.id === 'V_re')?.Rd ?? 0;
+    expect(rd(taet)).toBeLessThan(rd(fjern));
+    // ingen fysisk stang tælles mere end én gang i alt
+    const t = beregnTilstand(raekke(100));
+    expect(t.diagnostik.some((d) => d.kode === 'overfladestang-gennem-anker')).toBe(true);
+    expect(t.diagnostik.some((d) => d.kode === 'overfladestaenger-deles')).toBe(true);
+  });
+  it('stangafstanden s styrer placeringen af 3. og 4. stang', () => {
+    const m = raekke(400, 4); m.beton.armering.ankerarmeringForskydning.stangAfstand = 80;
+    expect(res(m).armV.staenger!.map((s) => s.v).sort((a, b) => a - b)).toEqual([-130, -50, 50, 130]);
+  });
+  it('3D tegner hver fysisk stang én gang (grå hvis den rammer et anker)', () => {
+    const m = raekke(100);
+    const k = res(m);
+    const s = byg3d(indlaesProjekt(m as never).model, k as never, null);
+    const zs = -40;
+    const stænger = (s.dele as any[]).filter((x) => x.type === 'stang' && !x.variant && x.fra[2] === zs && x.til[2] === zs);
+    const pos = new Set(stænger.map((x) => Math.round(x.fra[1] * 10)));
+    expect(pos.size).toBe(k.armV.alle!.length);
+    expect(stænger.filter((x) => x.inaktiv).length).toBeGreaterThanOrEqual(k.armV.konflikter!);
+    expect(s.noter.some((n) => n.includes('gennem et anker'))).toBe(true);
+  });
+});

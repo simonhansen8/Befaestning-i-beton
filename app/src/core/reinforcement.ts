@@ -1,7 +1,7 @@
 // Ankerarmering (EN 1992-4, 7.2.1.9 for træk og 7.2.2.6 for forskydning). Rene tal; ingen tekst.
 import { vedhaeftning } from './concrete';
 import { betonkegle, type KegleInput } from './cone';
-import { kantafstand, KANTER, type Kanter, type KantNavn, type Pkt } from './geometry';
+import { kantafstand, koordLangsKant, KANTER, type Kanter, type KantNavn, type Pkt } from './geometry';
 import type { Anker, ForskydningsFordeling } from './loads';
 import type { KantKandidat, ForresteRaekke } from './edgebreakout';
 import { udnyttelse, type Eftervisning, type TraekOversigt } from './tension';
@@ -24,6 +24,8 @@ export interface ForskydningsArmering {
   aktiv: boolean; type: 'boejle' | 'overflade' | 'loekke'; kant: KantNavn | null; diameter: number;
   benPrAnker: number | null; antalBenIAlt: number | null; antalLoekker: number | null; antalBoejler: number | null;
   fyk: number; afstand: number | null; daekToAkse: number | null; l1: number | null; krog: boolean; eta1: number | null; es: number | null; cd: number | null;
+  /** Overfladearmering: c/c-afstand mellem et ankers stænger på samme side (±x, ±(x+s), …); null = max(4⌀; 50 mm). */
+  stangAfstand?: number | null;
   /** Afstand mellem bøjler/løkker (c/c, ind i elementet fra ankeret); null = alle regnes med og lægges ⌀+1 under hinanden. */
   afstandBoejler?: number | null;
   /** Brugerens bekræftelse af 7.2.2.2(3)f): kantstang langs kanten er dimensioneret med trykstivere (45°). Kun overfladearmering. */
@@ -142,12 +144,19 @@ export function vaelgArmKant(ar: ForskydningsArmering, kanterPr: Partial<Record<
   return styrendeKant ? (forreste[styrendeKant] ?? null) : null;
 }
 
-export interface Staenger { v: number; l1: number; virksom: boolean }
+/** Overfladestang set fra ét anker: lateral afstand v, l1, om den er virksom, og hvor stor en andel af stangen ankeret råder over
+ *  (1, eller ½ når stangen ligger lige midt mellem to ankre og deles). */
+export interface Staenger { v: number; l1: number; virksom: boolean; andel?: number }
+/** Én fysisk overfladestang langs kanten: placering (koordinat langs kanten), tildelt anker og om den går gennem et anker. */
+export interface Overfladestang { pos: number; ankre: number[]; v: number; l1: number; virksom: boolean; konflikt: boolean; samlet: number }
 
 export type ManglerV = 'fyk-over-600' | 'dia-over-16' | 'ingen-virksomme-ben' | 'intet-virksomt-ben-forreste';
 export interface ArmeringV {
   aktiv: boolean; virksom: boolean; mangler: ManglerV[]; form: 'boejle' | 'overflade' | 'loekke' | null;
   ben: number; l1min: number | null; l1: number | null; eta1: number; staenger: Staenger[] | null; antalVirksomme: number;
+  /** Overfladearmering: alle fysiske stænger i forreste række (hver tælles én gang), samt hvor mange der deles af to ankre,
+   *  er slået sammen (samme sted fra to ankre) eller går gennem et anker. */
+  alle?: Overfladestang[] | null; delte?: number; sammenfald?: number; konflikter?: number; stangAfstand?: number | null;
   /** Bøjler/løkker med afstand fra første (mm) og om de ligger inden for 0,5·c1; null uden angivet bøjleafstand. */
   boejler: { pos: number; virksom: boolean }[] | null; zone: number | null;
 }
@@ -159,10 +168,14 @@ export interface VirkningVInput {
   armKant: ForresteRaekke | null;
 }
 
-/** Overfladearmeringens stænger pr. anker (7.2.2.2(3)): lateral afstand v, forankringslængde l1 og om de er virksomme. */
-function overfladeStaenger(p: VirkningVInput, kant: KantNavn, c1e: number | null): { staenger: Staenger[]; U: Anker[] } {
+/** Overfladearmeringens stænger (7.2.2.2(3)): hvert anker i forreste række får n stænger skiftevis på hver side (±x, ±(x+s), …).
+ *  Stængerne er ét fysisk stangsæt langs kanten: stænger fra to ankre, der ville ligge (næsten) samme sted, er én stang, som de deles
+ *  om (½ til hvert), så den ikke tælles to gange; en stang gennem et anker kan ikke udføres og regnes ikke med. Ellers tilhører hver
+ *  stang det anker, der har placeret den. For hvert anker: lateral afstand v, forankringslængde l1 og om stangen er virksom. */
+function overfladeStaenger(p: VirkningVInput, kant: KantNavn, c1e: number | null): { pr: Map<number, Staenger[]>; U: Anker[]; alle: Overfladestang[]; sammenfald: number; s: number } {
   const m = p.ar, k = m.diameter;
   const T = m.afstand ?? Math.max(p.ankerD * 1.8, 30);
+  const sP = m.stangAfstand != null && m.stangAfstand > 0 ? m.stangAfstand : Math.max(4 * k, 50);
   const daek = m.daekToAkse ?? 40;
   const F = p.ankre.map((q) => kantafstand(q, p.kanter, kant));
   const D = Math.min(...F);
@@ -172,13 +185,36 @@ function overfladeStaenger(p: VirkningVInput, kant: KantNavn, c1e: number | null
   const W = Math.max(1, Math.round(m.benPrAnker ?? Math.floor((m.antalBenIAlt ?? 2 * U.length) / U.length)));
   const G = (m.krog ? 4 : 10) * k;
   const Z = (v: number) => { const w = ne - Math.hypot(v, daek) / 1.5 - p.cnom; return m.l1 != null ? Math.min(m.l1, w) : w; };
-  const staenger: Staenger[] = [];
-  for (let i = 0; i < W; i++) {
-    const v = (i % 2 ? -1 : 1) * (T + Math.floor(i / 2) * Math.max(4 * k, 50));
-    const l1 = Z(v);
-    staenger.push({ v, l1, virksom: Math.abs(v) <= 0.75 * D && l1 >= G });
+  const tq = (q: Anker) => koordLangsKant(q, kant);
+  // 1) ønskede placeringer fra hvert anker
+  const kand: { t: number; ejer: Anker }[] = [];
+  for (const q of U) for (let i = 0; i < W; i++) kand.push({ t: tq(q) + (i % 2 ? -1 : 1) * (T + Math.floor(i / 2) * sP), ejer: q });
+  kand.sort((a, b) => a.t - b.t);
+  // 2) sammenfald: stænger med mindre fri afstand end max(⌀; 20 mm) (EN 1992-1-1, 8.2) er samme fysiske stang
+  const fri = k + Math.max(k, 20);
+  const grupper: { t: number; ejer: Anker }[][] = [];
+  for (const c of kand) { const g = grupper[grupper.length - 1]; if (g && c.t - g[g.length - 1]!.t < fri - 1e-9) g.push(c); else grupper.push([c]); }
+  const sammenfald = kand.length - grupper.length;
+  // 3) konflikt med ankre: stangen ligger på tværs af kanten og passerer ankre, der står inden for stangens længde fra kanten
+  const raekkevidde = D + Math.max(50 * k, 2 * ne);
+  const forhindringer = p.ankre.filter((_q, i) => F[i]! <= raekkevidde).map(tq);
+  const alle: Overfladestang[] = [];
+  const pr = new Map<number, Staenger[]>(U.map((q) => [q.id, []]));
+  const stang = (q: Anker, pos: number, andel: number): Staenger => {
+    const v = pos - tq(q), l1 = Z(v);
+    return { v, l1, virksom: Math.abs(v) <= 0.75 * D && l1 >= G, andel };
+  };
+  for (const g of grupper) {
+    const pos = g.reduce((a, b) => a + b.t, 0) / g.length;
+    const konflikt = forhindringer.some((t) => Math.abs(pos - t) < p.ankerD / 2 + k / 2 - 1e-9);
+    // stangen tilhører de(t) anker, der har placeret den; falder flere ankres stænger sammen, deles den efter antal
+    const ejere = [...new Set(g.map((c) => c.ejer))];
+    const s0 = stang(ejere[0]!, pos, 1);
+    alle.push({ pos, ankre: ejere.map((q) => q.id), v: s0.v, l1: s0.l1, virksom: !konflikt && s0.virksom, konflikt, samlet: g.length });
+    if (konflikt) continue;
+    for (const q of ejere) pr.get(q.id)!.push(stang(q, pos, g.filter((c) => c.ejer === q).length / g.length));
   }
-  return { staenger, U };
+  return { pr, U, alle, sammenfald, s: sP };
 }
 
 /** Virkning af ankerarmering for forskydning (xd). */
@@ -194,22 +230,27 @@ export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
   const l = t.benPrAnker ?? Math.floor((t.antalBenIAlt ?? 0) / a);
   let c = l, u: number | null = null, h: number | null = null, stg: Staenger[] | null = null;
   let boejler: ArmeringV['boejler'] = null, zone: number | null = null;
+  let ov: Pick<ArmeringV, 'alle' | 'delte' | 'sammenfald' | 'konflikter' | 'stangAfstand'> = {};
   // ⌀ ≤ 16 mm gælder al ankerarmering (7.2.1.2(2)a / 7.2.2.2(3)); felternes grænse er den samme for alle udformninger
   if (dia > 16) mangler.push('dia-over-16');
   if (form === 'overflade') {
     h = (t.krog ? 4 : 10) * dia;
     if (e) {
-      const { staenger, U } = overfladeStaenger(p, e.kant, e.R.c1);
-      let y: { bars: Staenger[]; virk: Staenger[] } | null = null;
+      const o = overfladeStaenger(p, e.kant, e.R.c1);
+      const antal = (b: Staenger[]) => b.filter((x) => x.virksom).reduce((sum, x) => sum + (x.andel ?? 1), 0);
+      // det anker i rækken, der råder over færrest virksomme stænger, er dimensionsgivende
+      let y: { bars: Staenger[]; n: number } | null = null;
       for (const id of e.ankre) {
-        const bars = U.some((q) => q.id === id) ? staenger : [];
-        const virk = bars.filter((b) => b.virksom);
-        if (!y || virk.length < y.virk.length) y = { bars, virk };
+        const bars = o.pr.get(id) ?? [];
+        const n = antal(bars);
+        if (!y || n < y.n) y = { bars, n };
       }
       stg = y ? y.bars : [];
-      c = y ? y.virk.length : 0;
-      u = stg.length ? Math.min(...stg.filter((b) => b.virksom).map((b) => b.l1)) : null;
+      c = y ? y.n : 0;
+      const virk = stg.filter((b) => b.virksom);
+      u = virk.length ? Math.min(...virk.map((b) => b.l1)) : null;
       if (c === 0) mangler.push('ingen-virksomme-ben');
+      ov = { alle: o.alle, delte: o.alle.filter((x) => !x.konflikt && x.ankre.length > 1).length, sammenfald: o.sammenfald, konflikter: o.alle.filter((x) => x.konflikt).length, stangAfstand: o.s };
     }
   } else {
     const n = form === 'boejle' ? (t.antalBoejler ?? Math.max(1, Math.ceil((l * a) / 2))) : (t.antalLoekker ?? Math.max(1, Math.ceil(l / 2)));
@@ -224,7 +265,7 @@ export function armeringForskydningVirkning(p: VirkningVInput): ArmeringV {
   }
   if (form !== 'boejle' && !(c >= 1)) mangler.push('intet-virksomt-ben-forreste');
   const eta1 = t.eta1 ?? (p.h <= 250 ? 1 : 0.7);
-  return { aktiv: true, virksom: mangler.length === 0, mangler, form, ben: c, l1min: h, l1: u, eta1, staenger: stg, antalVirksomme: c, boejler, zone };
+  return { aktiv: true, virksom: mangler.length === 0, mangler, form, ben: c, l1min: h, l1: u, eta1, staenger: stg, antalVirksomme: c, boejler, zone, ...ov };
 }
 
 export interface ForskydningsArmeringInput {
@@ -265,7 +306,7 @@ export function eftervisForskydningsArmering(p: ForskydningsArmeringInput): Fors
   const b = vedhaeftning({ fck: p.fck, eta1: e.eta1, ds: d, alphaCt: p.alphaCt, gammaCt: p.gammaCt });
   const f = forankringsFaktor(ar.krog, ar.cd, d);
   const g2 = (As * ar.fyk) / p.gammaMsRe;
-  const sum = (e.staenger ?? []).filter((s) => s.virksom).reduce((s, st) => s + Math.min((st.l1 * Math.PI * d * b.fbd) / f, g2), 0);
+  const sum = (e.staenger ?? []).filter((s) => s.virksom).reduce((s, st) => s + (st.andel ?? 1) * Math.min((st.l1 * Math.PI * d * b.fbd) / f, g2), 0);
   const V_a: Eftervisning = { id: 'V_a', relevant: true, NEd, NRd: sum, NRk: 0, udnyttelse: udnyttelse(NEd, sum), styrendeAnker: id };
   mellem.fbd = b.fbd; mellem.alpha = f;
   // kantstang (fig. 7.10 a, 7.2.2.2(3)f): trykstivere fra ankeret til knuderne ved de vinkelrette stænger; kantstangen er trækbånd mellem knuderne.
